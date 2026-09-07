@@ -25,10 +25,12 @@ export default function FamilyTree({ people = [] }: FamilyTreeProps) {
           const father = findPerson(husband.fatherId);
           const mother = findPerson(husband.motherId);
 
-          // 2. Wife/Spouses (Current Marriage Generation)
-          const wives = (husband.spouseIds || [])
-            .map((wifeId) => people.find((p) => p.id === wifeId))
-            .filter(Boolean);
+          // 2. Wife/Spouses (Current Marriage Generation - matches spouseIds or husbandId link)
+          const wives: Person[] = computedPeople.filter(
+            (p) =>
+              (husband.spouseIds || []).includes(p.id) ||
+              p.husbandId === husband.id
+          );
 
           // 3. Children (Next Generation Below)
           const children = computedPeople.filter((p) => p.fatherId === husband.id);
@@ -47,7 +49,13 @@ export default function FamilyTree({ people = [] }: FamilyTreeProps) {
                   <div className="parent-connector">+</div>
                   <div className="parent-pill mother">
                     <span className="pill-role">Mother</span>
-                    <strong>{mother ? mother.name : (husband.fatherId ? "Unrecorded Mother" : "Creation / Root")}</strong>
+                    <strong>
+                      {mother
+                        ? mother.name
+                        : husband.fatherId
+                        ? "Unrecorded Mother"
+                        : "Creation / Root"}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -61,9 +69,17 @@ export default function FamilyTree({ people = [] }: FamilyTreeProps) {
                   <span className="box-role">Husband / Patriarch</span>
                   <h3 className="person-name">{husband.name}</h3>
                   <p className="person-dates">
-                    {Math.abs(husband.birthYearBC)} BC – {Math.abs(husband.deathYearBC)} BC
+                    {husband.birthYearBC ? `${Math.abs(husband.birthYearBC)} BC` : "—"} –{" "}
+                    {husband.deathYearBC ? `${Math.abs(husband.deathYearBC)} BC` : "—"}
                   </p>
-                  <span className="lifespan-badge">{husband.yearsLived} years</span>
+                  {husband.yearsLived && (
+                    <span className="lifespan-badge">{husband.yearsLived} years</span>
+                  )}
+                  {husband.husbandMarriageAge && (
+                    <span className="marriage-age-badge">
+                      Married at age {husband.husbandMarriageAge}
+                    </span>
+                  )}
                 </div>
 
                 <div className="marriage-ring">💍</div>
@@ -71,16 +87,35 @@ export default function FamilyTree({ people = [] }: FamilyTreeProps) {
                 {/* Wife/Wives */}
                 <div className="wives-container">
                   {wives.length > 0 ? (
-                    wives.map((wife) => (
-                      <div key={wife!.id} className="person-box wife-box">
-                        <span className="box-role">Wife</span>
-                        <h3 className="person-name">{wife!.name}</h3>
-                        <p className="person-dates">Spouse of {husband.name}</p>
-                        {wife!.yearsLived && (
-                          <span className="lifespan-badge">{wife!.yearsLived} years</span>
-                        )}
-                      </div>
-                    ))
+                    wives.map((wife: Person) => {
+                      const wifeMarriageAge = wife.wifeMarriageAge ?? husband.wifeMarriageAge;
+                      const husbandMarriageAge = wife.husbandMarriageAge ?? husband.husbandMarriageAge;
+
+                      return (
+                        <div key={wife.id} className="person-box wife-box">
+                          <span className="box-role">Wife</span>
+                          <h3 className="person-name">{wife.name}</h3>
+                          <p className="person-dates">Spouse of {husband.name}</p>
+                          {wife.yearsLived && (
+                            <span className="lifespan-badge">{wife.yearsLived} years</span>
+                          )}
+                          {(wifeMarriageAge || husbandMarriageAge) && (
+                            <div className="marriage-ages" style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                              {husbandMarriageAge && (
+                                <span className="marriage-age-badge">
+                                  Husband age at marriage: {husbandMarriageAge}
+                                </span>
+                              )}
+                              {wifeMarriageAge && (
+                                <span className="marriage-age-badge">
+                                  Wife age at marriage: {wifeMarriageAge}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="person-box wife-box unrecorded">
                       <span className="box-role">Wife</span>
@@ -98,7 +133,7 @@ export default function FamilyTree({ people = [] }: FamilyTreeProps) {
                   <div className="children-section">
                     <span className="section-label">Children</span>
                     <div className="children-grid">
-                      {children.map((child) => {
+                      {children.map((child: Person) => {
                         const childMother = findPerson(child.motherId);
                         return (
                           <div key={child.id} className={`child-card ${child.gender}`}>

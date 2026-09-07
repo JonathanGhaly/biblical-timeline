@@ -6,37 +6,41 @@ export type DateInfo = {
   year?: number;
   precision?: DatePrecision;
 };
-
-export type Person = {
+export interface Person {
   id: string;
   name: string;
-  gender: Gender;
-  placeOfBirth?: string;
+  gender: "male" | "female";
   fatherId?: string;
   motherId?: string;
+  husbandId?: string;
+  wifeId?: string;
+  spouseIds?: string[];
+  fatherAgeAtBirth?: number;
   anchorPersonId?: string;
   anchorPersonAgeAtBirth?: number;
-  fatherAgeAtBirth?: number;
+  husbandMarriageAge?: number;
+  wifeMarriageAge?: number;
   yearsLived?: number;
-  spouseIds?: string[];
-  biblicalReferences?: string[];
+  birth?: { year?: number };
+  death?: { year?: number };
+  placeOfBirth?: string;
   notes?: string;
-  birth?: DateInfo;
-  death?: DateInfo;
-};
+  biblicalReferences?: string[];
+}
 
-export type BiblicalEvent = {
+export interface BiblicalEvent {
   id: string;
   title: string;
-  date?: DateInfo;
+  description?: string;
+  location?: string;
+  date?: { year?: number };
+  personIds?: string[];
+  biblicalReferences?: string[];
   anchorPersonId?: string;
   anchorAge?: number;
-  location?: string;
-  description?: string;
-  biblicalReferences?: string[];
-  personIds?: string[];
-};
-
+  anchorPersonAgeAtEvent?: number;
+  anchorPersonAgeAtBirth?: number;
+}
 export type GenealogyData = {
   people: Person[];
   events: BiblicalEvent[];
