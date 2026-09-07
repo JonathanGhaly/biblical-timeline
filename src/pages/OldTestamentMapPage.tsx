@@ -5,51 +5,57 @@ type City = {
   id: string;
   name: string;
   arabicName: string;
-  x: number; // Percentage from left (0 to 100)
-  y: number; // Percentage from top (0 to 100)
+  region: string;
+  x: number; // Percentage position (0 - 100)
+  y: number; // Percentage position (0 - 100)
   aliases: string[];
 };
 
-// Key Old Testament cities aligned with map coordinates
+// Cities across the entire Old Testament World (Fertile Crescent, Egypt, Mesopotamia, Persia)
 const OT_CITIES: City[] = [
-  { id: "damascus", name: "Damascus", arabicName: "دمشق", x: 90, y: 5, aliases: ["Damascus", "دمشق"] },
-  { id: "sidon", name: "Sidon", arabicName: "صيدون", x: 52, y: 3, aliases: ["Sidon", "صيدون"] },
-  { id: "tyre", name: "Tyre", arabicName: "صور", x: 44, y: 13, aliases: ["Tyre", "Tyros", "صور"] },
-  { id: "dan", name: "Dan", arabicName: "دان / لايش", x: 66, y: 10, aliases: ["Dan", "Laish", "دان"] },
-  { id: "kedesh", name: "Kedesh", arabicName: "قادش", x: 50, y: 16, aliases: ["Kedesh", "קדש", "قادش"] },
-  { id: "samaria", name: "Samaria", arabicName: "السامرة", x: 28, y: 46, aliases: ["Samaria", "السامرة"] },
-  { id: "shechem", name: "Shechem", arabicName: "شكيم", x: 40, y: 48, aliases: ["Shechem", "Sychar", "شكيم"] },
-  { id: "joppa", name: "Joppa", arabicName: "يافا", x: 21, y: 55, aliases: ["Joppa", "Jaffa", "يافا"] },
-  { id: "shiloh", name: "Shiloh", arabicName: "شيلوه", x: 41, y: 54, aliases: ["Shiloh", "شيلوه"] },
-  { id: "bethel", name: "Bethel", arabicName: "بيت إيل", x: 35, y: 60, aliases: ["Bethel", "Beth-el", "بيت إيل"] },
-  { id: "jericho", name: "Jericho", arabicName: "أريحا", x: 49, y: 63, aliases: ["Jericho", "أريحا"] },
-  { id: "jerusalem", name: "Jerusalem", arabicName: "أورشليم", x: 38, y: 67, aliases: ["Jerusalem", "Zion", "أورشليم", "Jebus"] },
-  { id: "bethlehem", name: "Bethlehem", arabicName: "بيت لحم", x: 38, y: 71, aliases: ["Bethlehem", "Ephrath", "بيت لحم"] },
-  { id: "hebron", name: "Hebron", arabicName: "حبرون / أربع", x: 34, y: 77, aliases: ["Hebron", "Kiriath-arba", "حبرون"] },
-  { id: "beersheba", name: "Beersheba", arabicName: "بئر سبع", x: 25, y: 86, aliases: ["Beersheba", "Beer-sheba", "بئر سبع"] },
-  { id: "ashdod", name: "Ashdod", arabicName: "أشدود", x: 16, y: 65, aliases: ["Ashdod", "أشدود"] },
-  { id: "ashkelon", name: "Ashkelon", arabicName: "أشقلون", x: 13, y: 69, aliases: ["Ashkelon", "أشقلون"] },
-  { id: "gaza", name: "Gaza", arabicName: "غزة", x: 5, y: 77, aliases: ["Gaza", "غزة"] },
+  // Egypt & Sinai
+  { id: "memphis", name: "Memphis / Noph", arabicName: "منف", region: "Egypt", x: 14, y: 75, aliases: ["Memphis", "Noph", "منف", "Egypt"] },
+  { id: "rameses", name: "Rameses / Goshen", arabicName: "رعمسيس / جاسان", region: "Egypt", x: 19, y: 65, aliases: ["Rameses", "Goshen", "جاسان", "رعمسيس"] },
+  { id: "sinai", name: "Mt. Sinai", arabicName: "جبل سيناء", region: "Sinai", x: 28, y: 82, aliases: ["Sinai", "Horeb", "سيناء", "حوريب"] },
+
+  // Canaan / Southern Levant
+  { id: "beersheba", name: "Beersheba", arabicName: "بئر سبع", region: "Canaan", x: 33, y: 62, aliases: ["Beersheba", "بئر سبع"] },
+  { id: "hebron", name: "Hebron", arabicName: "حبرون", region: "Canaan", x: 36, y: 57, aliases: ["Hebron", "حبرون"] },
+  { id: "jerusalem", name: "Jerusalem", arabicName: "أورشليم", region: "Canaan", x: 37, y: 52, aliases: ["Jerusalem", "Zion", "أورشليم", "Jebus"] },
+  { id: "jericho", name: "Jericho", arabicName: "أريحا", region: "Canaan", x: 39, y: 50, aliases: ["Jericho", "أريحا"] },
+  { id: "shechem", name: "Shechem", arabicName: "شكيم", region: "Canaan", x: 37, y: 44, aliases: ["Shechem", "شكيم"] },
+  { id: "dan", name: "Dan", arabicName: "دان", region: "Canaan", x: 40, y: 35, aliases: ["Dan", "دان"] },
+
+  // Northern Levant & Syria
+  { id: "tyre", name: "Tyre", arabicName: "صور", region: "Phoenicia", x: 38, y: 31, aliases: ["Tyre", "صور"] },
+  { id: "damascus", name: "Damascus", arabicName: "دمشق", region: "Syria", x: 44, y: 30, aliases: ["Damascus", "دمشق", "Aram"] },
+
+  // Upper Mesopotamia & Northern Kingdom Routes
+  { id: "haran", name: "Haran", arabicName: "حاران", region: "Mesopotamia", x: 53, y: 18, aliases: ["Haran", "حاران", "Paddan-aram"] },
+  { id: "nineveh", name: "Nineveh", arabicName: "نينوى", region: "Assyria", x: 67, y: 22, aliases: ["Nineveh", "Assyria", "نينوى", "آشور"] },
+
+  // Lower Mesopotamia (Babylonia & Sumer)
+  { id: "babylon", name: "Babylon", arabicName: "بابل", region: "Babylonia", x: 74, y: 52, aliases: ["Babylon", "Babel", "بابل", "Chaldea"] },
+  { id: "ur", name: "Ur of the Chaldees", arabicName: "أور الكلدانيين", region: "Babylonia", x: 82, y: 68, aliases: ["Ur", "أور"] },
+
+  // Persia / Elam
+  { id: "susa", name: "Susa / Shushan", arabicName: "شوشان", region: "Persia", x: 89, y: 54, aliases: ["Susa", "Shushan", "شوشان", "Persia"] },
 ];
 
 type OldTestamentMapPageProps = {
   events: BiblicalEvent[];
   people?: Person[];
-  mapSrc?: string;
 };
 
 export default function OldTestamentMapPage({
   events,
   people = [],
-  mapSrc = "/map.png", // Path to your uploaded Old Testament map image
 }: OldTestamentMapPageProps) {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
 
-  // Group events by city match
   const eventsByCity = useMemo(() => {
     const map = new Map<string, BiblicalEvent[]>();
-
     OT_CITIES.forEach((city) => {
       const matching = events.filter((e) => {
         if (!e.location) return false;
@@ -58,7 +64,6 @@ export default function OldTestamentMapPage({
       });
       map.set(city.id, matching);
     });
-
     return map;
   }, [events]);
 
@@ -73,34 +78,95 @@ export default function OldTestamentMapPage({
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ marginBottom: "20px" }}>
         <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0 0 4px 0", color: "#0f172a" }}>
-          Old Testament Interactive Map
+          Old Testament World Interactive Map
         </h2>
         <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
-          Click on any city marker to view historical events that took place in that location.
+          Explore key biblical locations spanning Egypt, Canaan, Mesopotamia, Assyria, Babylon, and Persia.
         </p>
       </div>
 
-      {/* Map Container */}
+      {/* Interactive Map Canvas Container */}
       <div
         style={{
           position: "relative",
           width: "100%",
-          maxWidth: "800px",
-          margin: "0 auto",
+          aspectRatio: "16 / 9",
+          minHeight: "480px",
+          background: "#e0f2fe",
           borderRadius: "16px",
           overflow: "hidden",
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-          border: "1px solid #cbd5e1",
-          background: "#f8fafc",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+          border: "2px solid #cbd5e1",
         }}
       >
-        <img
-          src={mapSrc}
-          alt="Old Testament Map"
-          style={{ width: "100%", height: "auto", display: "block" }}
-        />
+        {/* SVG Landmass & Water Map Background */}
+        <svg
+          viewBox="0 0 1000 562.5"
+          style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
+        >
+          {/* Main Landmass (Ancient Near East Base) */}
+          <path
+            d="M 0,0 L 1000,0 L 1000,562.5 L 0,562.5 Z"
+            fill="#fef3c7"
+          />
 
-        {/* City Overlay Pins */}
+          {/* Mediterranean Sea */}
+          <path
+            d="M 0,0 L 360,0 L 370,120 L 350,220 L 310,270 L 260,330 L 170,360 L 0,360 Z"
+            fill="#7dd3fc"
+          />
+
+          {/* Red Sea & Gulfs */}
+          <path
+            d="M 120,562.5 L 200,430 L 230,420 L 240,460 L 260,430 L 290,440 L 220,562.5 Z"
+            fill="#38bdf8"
+          />
+
+          {/* Nile River & Delta */}
+          <path
+            d="M 140,562.5 Q 150,470 180,410 L 170,360 L 210,360 Q 180,420 170,562.5 Z"
+            fill="#0284c7"
+          />
+
+          {/* Persian Gulf */}
+          <path
+            d="M 810,562.5 L 820,440 L 930,390 L 1000,430 L 1000,562.5 Z"
+            fill="#38bdf8"
+          />
+
+          {/* Rivers: Tigris & Euphrates */}
+          <path
+            d="M 520,100 Q 620,150 730,300 Q 780,380 820,440"
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="3"
+          />
+          <path
+            d="M 480,110 Q 560,220 700,340 Q 760,400 825,445"
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="3.5"
+          />
+
+          {/* Jordan River & Dead Sea */}
+          <path
+            d="M 370,270 L 370,310 L 368,340"
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="2.5"
+          />
+          <ellipse cx="368" cy="345" rx="5" ry="12" fill="#0284c7" />
+
+          {/* Region Labels */}
+          <text x="70" y="440" fill="#92400e" fontSize="16" fontWeight="bold" opacity="0.6">EGYPT</text>
+          <text x="310" y="240" fill="#92400e" fontSize="14" fontWeight="bold" opacity="0.6">CANAAN</text>
+          <text x="580" y="210" fill="#92400e" fontSize="16" fontWeight="bold" opacity="0.6">MESOPOTAMIA</text>
+          <text x="720" y="160" fill="#92400e" fontSize="16" fontWeight="bold" opacity="0.6">ASSYRIA</text>
+          <text x="740" y="380" fill="#92400e" fontSize="16" fontWeight="bold" opacity="0.6">BABYLONIA</text>
+          <text x="890" y="320" fill="#92400e" fontSize="16" fontWeight="bold" opacity="0.6">PERSIA</text>
+        </svg>
+
+        {/* City Marker Overlays */}
         {OT_CITIES.map((city) => {
           const cityEvents = eventsByCity.get(city.id) || [];
           const hasEvents = cityEvents.length > 0;
@@ -109,54 +175,49 @@ export default function OldTestamentMapPage({
             <div
               key={city.id}
               onClick={() => setSelectedCity(city)}
-              title={`${city.name} (${city.arabicName}) - ${cityEvents.length} event(s)`}
               style={{
                 position: "absolute",
                 left: `${city.x}%`,
                 top: `${city.y}%`,
                 transform: "translate(-50%, -50%)",
                 cursor: "pointer",
-                zIndex: 10,
+                zIndex: 20,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
               }}
             >
-              {/* Pin Indicator */}
               <div
                 style={{
-                  width: "16px",
-                  height: "16px",
+                  width: "20px",
+                  height: "20px",
                   borderRadius: "50%",
-                  backgroundColor: hasEvents ? "#ef4444" : "#0284c7",
+                  backgroundColor: hasEvents ? "#dc2626" : "#2563eb",
                   border: "2px solid #ffffff",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  transition: "transform 0.15s ease",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  color: "#ffffff",
+                  fontSize: "0.65rem",
+                  fontWeight: "bold",
                 }}
               >
-                {hasEvents && (
-                  <span style={{ color: "#ffffff", fontSize: "0.6rem", fontWeight: "bold" }}>
-                    {cityEvents.length}
-                  </span>
-                )}
+                {hasEvents ? cityEvents.length : "•"}
               </div>
 
-              {/* Tooltip Label */}
               <div
                 style={{
-                  marginTop: "2px",
-                  background: "rgba(15, 23, 42, 0.85)",
+                  marginTop: "3px",
+                  background: "rgba(15, 23, 42, 0.88)",
                   color: "#ffffff",
-                  padding: "1px 6px",
+                  padding: "2px 6px",
                   borderRadius: "4px",
-                  fontSize: "0.7rem",
+                  fontSize: "0.72rem",
                   fontWeight: "600",
                   whiteSpace: "nowrap",
                   pointerEvents: "none",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                 }}
               >
                 {city.name}
@@ -172,7 +233,7 @@ export default function OldTestamentMapPage({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 23, 42, 0.5)",
+            background: "rgba(15, 23, 42, 0.6)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -189,7 +250,7 @@ export default function OldTestamentMapPage({
               width: "90%",
               maxHeight: "80vh",
               overflowY: "auto",
-              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -199,7 +260,7 @@ export default function OldTestamentMapPage({
                   {selectedCity.name} ({selectedCity.arabicName})
                 </h3>
                 <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                  {activeCityEvents.length} event(s) recorded
+                  Region: {selectedCity.region} • {activeCityEvents.length} event(s)
                 </span>
               </div>
               <button
@@ -212,7 +273,7 @@ export default function OldTestamentMapPage({
 
             {activeCityEvents.length === 0 ? (
               <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                No explicit biblical events currently tagged for this city in your dataset.
+                No events currently matched with this location in your dataset.
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -226,13 +287,10 @@ export default function OldTestamentMapPage({
                       border: "1px solid #e2e8f0",
                       background: "#f8fafc",
                       cursor: "pointer",
-                      transition: "background 0.15s ease",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "#f8fafc")}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <h4 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "0.95rem", fontWeight: "700" }}>
+                      <h4 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "0.95rem" }}>
                         {evt.title}
                       </h4>
                       {evt.date?.year !== undefined && (
@@ -260,7 +318,7 @@ export default function OldTestamentMapPage({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 23, 42, 0.5)",
+            background: "rgba(15, 23, 42, 0.6)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -277,7 +335,6 @@ export default function OldTestamentMapPage({
               width: "90%",
               maxHeight: "85vh",
               overflowY: "auto",
-              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -317,7 +374,7 @@ export default function OldTestamentMapPage({
               )}
               {(selectedEvent.biblicalReferences || []).length > 0 && (
                 <p style={{ margin: 0 }}>
-                  <strong>Biblical References:</strong> {(selectedEvent.biblicalReferences || []).join(", ")}
+                  <strong>Scripture:</strong> {(selectedEvent.biblicalReferences || []).join(", ")}
                 </p>
               )}
 
