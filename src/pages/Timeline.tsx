@@ -1,17 +1,33 @@
 import { useState, useMemo } from "react";
-import type { Person, BiblicalEvent } from "../types/genealogy";
+import type { Person, BiblicalEvent, Language } from "../types/genealogy";
+import {
+  UI_TRANSLATIONS,
+  getEventDisplayTitle,
+  getEventDisplayDescription,
+  formatYearDisplay,
+} from "../utils/i18n";
+import { MapPin, BookOpen, Edit3, X } from "lucide-react";
+import { CopticCross } from "../components/Coptic/CopticCross";
 
 type TimelineProps = {
   people: Person[];
   events: BiblicalEvent[];
   onUpdateEvent?: (updatedEvent: BiblicalEvent) => void;
+  lang?: Language;
 };
 
-export default function Timeline({ people, events, onUpdateEvent }: TimelineProps) {
+export default function Timeline({
+  people,
+  events,
+  onUpdateEvent,
+  lang = "en",
+}: TimelineProps) {
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<BiblicalEvent | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const t = UI_TRANSLATIONS[lang];
 
   const filteredEvents = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -21,15 +37,30 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
 
     return sorted.filter((evt) => {
       const matchTitle = evt.title.toLowerCase().includes(term);
+      const matchArTitle = (evt.arabicTitle || "").toLowerCase().includes(term);
       const matchDesc = evt.description?.toLowerCase().includes(term) ?? false;
+      const matchArDesc = evt.arabicDescription?.toLowerCase().includes(term) ?? false;
       const matchLocation = evt.location?.toLowerCase().includes(term) ?? false;
-      const matchRef = (evt.biblicalReferences || []).some((r) => r.toLowerCase().includes(term));
+      const matchRef = (evt.biblicalReferences || []).some((r) =>
+        r.toLowerCase().includes(term)
+      );
       const matchPeople = (evt.personIds || []).some((id) => {
         const p = people.find((person) => person.id === id);
-        return p?.name.toLowerCase().includes(term);
+        return (
+          p?.name.toLowerCase().includes(term) ||
+          (p?.arabicName && p.arabicName.toLowerCase().includes(term))
+        );
       });
 
-      return matchTitle || matchDesc || matchLocation || matchRef || matchPeople;
+      return (
+        matchTitle ||
+        matchArTitle ||
+        matchDesc ||
+        matchArDesc ||
+        matchLocation ||
+        matchRef ||
+        matchPeople
+      );
     });
   }, [events, people, searchTerm]);
 
@@ -58,260 +89,239 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "800px" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "28px",
-          gap: "16px",
-          flexWrap: "wrap",
-        }}
-      >
-        <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", margin: 0, color: "#0f172a" }}>
-          Timeline
-        </h2>
+    <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
+        <div>
+          <div className="flex items-center gap-2">
+            <CopticCross size={26} />
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+              {t.navTimeline}
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-[#6B5E4E] dark:text-[#A99F8D] mt-1">
+            {lang === "ar"
+              ? "التسلسل الزمني التاريخي لأحداث العهد القديم من الخليقة عبر العصور."
+              : "Sacred vertical chronology tracking epochs, covenants, and historical milestones."}
+          </p>
+        </div>
 
-        <input
-          type="text"
-          placeholder="Filter events by name, reference..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: "8px 14px",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            width: "280px",
-            fontSize: "0.9rem",
-            outline: "none",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-          }}
-        />
-      </div>
-
-      <div style={{ position: "relative", paddingLeft: "110px" }}>
-        <div
-          style={{
-            position: "absolute",
-            left: "95px",
-            top: "18px",
-            bottom: "18px",
-            width: "2px",
-            backgroundColor: "#cbd5e1",
-          }}
-        />
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {filteredEvents.map((event) => {
-            const year = event.date?.year;
-            const yearStr = year !== undefined ? `${Math.abs(year)} ${year < 0 ? "BC" : "AD"}` : "";
-
-            return (
-              <div key={event.id} style={{ position: "relative" }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    left: "-110px",
-                    top: "16px",
-                    width: "80px",
-                    textAlign: "right",
-                    fontSize: "0.85rem",
-                    fontWeight: "700",
-                    color: "#64748b",
-                  }}
-                >
-                  {yearStr}
-                </div>
-
-                <div
-                  style={{
-                    position: "absolute",
-                    left: "-19px",
-                    top: "20px",
-                    width: "10px",
-                    height: "10px",
-                    borderRadius: "50%",
-                    backgroundColor: "#ffffff",
-                    border: "2px solid #64748b",
-                    zIndex: 1,
-                  }}
-                />
-
-                <div
-                  onClick={() => handleOpenModal(event)}
-                  style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "8px",
-                    padding: "16px 20px",
-                    cursor: "pointer",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  }}
-                >
-                  <h3 style={{ margin: "0 0 8px 0", fontSize: "1.05rem", fontWeight: "700", color: "#1e293b" }}>
-                    {event.title}
-                  </h3>
-
-                  {event.description && (
-                    <p style={{ margin: "0 0 10px 0", fontSize: "0.875rem", color: "#475569", lineHeight: "1.5" }}>
-                      {event.description}
-                    </p>
-                  )}
-
-                  {event.location && (
-                    <p style={{ margin: "0 0 10px 0", fontSize: "0.85rem", color: "#64748b" }}>
-                      Location: {event.location}
-                    </p>
-                  )}
-
-                  {(event.personIds || []).length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-                      {(event.personIds || []).map((personId) => {
-                        const p = people.find((person) => person.id === personId);
-                        return (
-                          <span
-                            key={personId}
-                            style={{
-                              background: "#e2e8f0",
-                              color: "#334155",
-                              padding: "2px 10px",
-                              borderRadius: "12px",
-                              fontSize: "0.75rem",
-                              fontWeight: "500",
-                            }}
-                          >
-                            {p ? p.name : personId}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {(event.biblicalReferences || []).length > 0 && (
-                    <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                      {(event.biblicalReferences || []).join(", ")}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="relative">
+          <input
+            type="search"
+            placeholder={lang === "ar" ? "تصفية الأحداث بالاسم أو الشاهد..." : "Filter events by name, reference..."}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-64 px-4 py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#121110] text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+          />
         </div>
       </div>
 
+      {/* Vertical Timeline Track */}
+      <div className="relative border-s-2 border-[#D4AF37]/60 ms-6 sm:ms-44 ps-6 sm:ps-8 py-4 space-y-8">
+        {filteredEvents.map((event) => {
+          const displayTitle = getEventDisplayTitle(event, lang);
+          const displayDesc = getEventDisplayDescription(event, lang);
+          const formattedYear = formatYearDisplay(event.date?.year, lang);
+          const secondaryTitle = lang === "ar" ? event.title : event.arabicTitle;
+
+          return (
+            <div key={event.id} className="relative group">
+              {/* Timeline Gold Rosette Node */}
+              <div
+                className={`absolute -start-[31px] sm:-start-[45px] top-1.5 w-6 h-6 rounded-full border-2 border-[#D4AF37] bg-white dark:bg-[#121110] flex items-center justify-center shadow-md group-hover:scale-125 transition-transform z-10`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-[#800020]" />
+              </div>
+
+              {/* Year Stamp Pill (Shown on start side with generous breathing room before the bullet) */}
+              <div
+                className={`sm:absolute sm:-start-52 sm:top-1 hidden sm:flex items-center justify-end w-36 pe-5`}
+              >
+                <span className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#800020] dark:text-[#F3E5AB] bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-2xs font-mono tracking-tight whitespace-nowrap">
+                  {formattedYear}
+                </span>
+              </div>
+
+              {/* Event Card */}
+              <div
+                onClick={() => handleOpenModal(event)}
+                className="cursor-pointer p-5 rounded-2xl border-2 border-[#D4AF37]/40 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-lg hover:border-[#D4AF37] transition-all space-y-2.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+                      {displayTitle}
+                    </h3>
+                    {secondaryTitle && (
+                      <p className="text-xs text-[#7A6E5E] dark:text-[#A99F8D]">
+                        {secondaryTitle}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Mobile Year Badge */}
+                  <span className="sm:hidden px-2 py-0.5 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
+                    {formattedYear}
+                  </span>
+                </div>
+
+                {event.location && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#6B5E4E] dark:text-[#A99F8D]">
+                    <MapPin size={13} className="text-[#800020] dark:text-[#D4AF37]" />
+                    <span>{event.location}</span>
+                  </div>
+                )}
+
+                {displayDesc && (
+                  <p className="text-xs text-[#4A3E31] dark:text-[#C5BBAE] leading-relaxed line-clamp-3">
+                    {displayDesc}
+                  </p>
+                )}
+
+                {event.biblicalReferences && event.biblicalReferences.length > 0 && (
+                  <div className="pt-2 border-t border-[#D4AF37]/20 flex items-center gap-1.5 text-[11px] text-[#8C6F12] dark:text-[#F3E5AB] font-semibold">
+                    <BookOpen size={12} />
+                    <span>{event.biblicalReferences.join(", ")}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* View / Edit Modal */}
       {selectedEvent && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "12px",
-              padding: "24px",
-              maxWidth: "520px",
-              width: "90%",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
-            }}
+            className="relative w-full max-w-lg p-6 rounded-2xl bg-[#FBF8EF] dark:bg-[#1C1A17] border-2 border-[#D4AF37] shadow-2xl text-[#2D2721] dark:text-[#E6E0D4] space-y-4"
             onClick={(e) => e.stopPropagation()}
+            dir={lang === "ar" ? "rtl" : "ltr"}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
-                {isEditing ? "Edit Event" : selectedEvent.title}
-              </h3>
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/30 pb-3">
+              <div className="flex items-center gap-2">
+                <CopticCross size={24} />
+                <h3 className="text-xl font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+                  {isEditing ? t.editEvent : getEventDisplayTitle(selectedEvent, lang)}
+                </h3>
+              </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#64748b" }}
+                className="p-1 rounded-lg hover:bg-[#D4AF37]/20 text-[#6B5E4E]"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
             {isEditing && editForm ? (
-              <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Title
+                  <label className="font-bold text-[#800020] dark:text-[#D4AF37]">
+                    {t.eventTitleEn} *
                   </label>
                   <input
                     type="text"
+                    required
                     value={editForm.title}
                     onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    required
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110]"
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Year
-                  </label>
-                  <input
-                    type="number"
-                    value={editForm.date?.year ?? ""}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        date: { ...editForm.date, year: parseInt(e.target.value) || 0 },
-                      })
-                    }
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Location
+                  <label className="font-bold text-[#800020] dark:text-[#D4AF37]">
+                    {t.eventTitleAr}
                   </label>
                   <input
                     type="text"
-                    value={editForm.location ?? ""}
-                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    value={editForm.arabicTitle || ""}
+                    onChange={(e) => setEditForm({ ...editForm, arabicTitle: e.target.value })}
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] font-amiri"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  style={{
-                    padding: "10px",
-                    borderRadius: "6px",
-                    background: "#2563eb",
-                    color: "#ffffff",
-                    border: "none",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
-                >
-                  Save Changes
-                </button>
+                <div>
+                  <label className="font-bold text-[#800020] dark:text-[#D4AF37]">
+                    {t.eventDescEn}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editForm.description || ""}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110]"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[#800020] dark:text-[#D4AF37]">
+                    {t.eventDescAr}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editForm.arabicDescription || ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, arabicDescription: e.target.value })
+                    }
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] font-amiri"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-1.5 rounded-lg border border-[#D4AF37]/50 text-xs font-semibold"
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-[#800020] to-[#A01128] text-white font-bold text-xs shadow"
+                  >
+                    {t.save}
+                  </button>
+                </div>
               </form>
             ) : (
-              <div>
-                <p style={{ margin: "0 0 12px 0", color: "#334155" }}>{selectedEvent.description}</p>
-                <button
-                  onClick={handleStartEdit}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    background: "#f1f5f9",
-                    border: "1px solid #cbd5e1",
-                    cursor: "pointer",
-                  }}
-                >
-                  Edit Event
-                </button>
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
+                    {formatYearDisplay(selectedEvent.date?.year, lang)}
+                  </span>
+                  {selectedEvent.location && (
+                    <span className="flex items-center gap-1 text-[#6B5E4E] dark:text-[#A99F8D]">
+                      <MapPin size={12} />
+                      {selectedEvent.location}
+                    </span>
+                  )}
+                </div>
+
+                {getEventDisplayDescription(selectedEvent, lang) && (
+                  <p className="leading-relaxed bg-[#D4AF37]/10 p-3 rounded-xl border border-[#D4AF37]/20">
+                    {getEventDisplayDescription(selectedEvent, lang)}
+                  </p>
+                )}
+
+                {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
+                  <div className="flex items-center gap-1.5 font-semibold text-[#8C6F12] dark:text-[#F3E5AB]">
+                    <BookOpen size={13} />
+                    <span>{selectedEvent.biblicalReferences.join(", ")}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-3 border-t border-[#D4AF37]/30">
+                  <button
+                    onClick={handleStartEdit}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#C5A028] text-[#121110] font-bold shadow text-xs"
+                  >
+                    <Edit3 size={13} />
+                    <span>{t.editEvent}</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -1,6 +1,23 @@
 import { useState } from "react";
 import AddEventModal from "../components/Event/AddEventModal";
-import type { BiblicalEvent, Person } from "../types/genealogy";
+import type { BiblicalEvent, Person, Language } from "../types/genealogy";
+import {
+  UI_TRANSLATIONS,
+  getEventDisplayTitle,
+  getEventDisplayDescription,
+  formatYearDisplay,
+  getPersonDisplayName,
+} from "../utils/i18n";
+import {
+  Search,
+  Plus,
+  BookOpen,
+  MapPin,
+  X,
+  Edit3,
+  Trash2,
+} from "lucide-react";
+import { CopticCross } from "../components/Coptic/CopticCross";
 
 type EventsProps = {
   events: BiblicalEvent[];
@@ -8,6 +25,7 @@ type EventsProps = {
   onAddEvent: (newEvent: BiblicalEvent) => void;
   onUpdateEvent?: (updatedEvent: BiblicalEvent) => void;
   onDeleteEvent?: (eventId: string) => void;
+  lang?: Language;
 };
 
 const OT_LOCATIONS = [
@@ -45,27 +63,37 @@ const OT_LOCATIONS = [
   "Ur of the Chaldees",
 ];
 
-function Events({
+export default function Events({
   events,
   people,
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
+  lang = "en",
 }: EventsProps) {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<BiblicalEvent | null>(null);
-  const [isCustomLocation, setIsCustomLocation] = useState(false);
 
-  const filteredEvents = events.filter((event) =>
-    event.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const t = UI_TRANSLATIONS[lang];
+
+  const filteredEvents = events.filter((event) => {
+    const term = search.toLowerCase();
+    const titleMatch = event.title.toLowerCase().includes(term);
+    const arTitleMatch = (event.arabicTitle || "").toLowerCase().includes(term);
+    const descMatch = (event.description || "").toLowerCase().includes(term);
+    const arDescMatch = (event.arabicDescription || "").toLowerCase().includes(term);
+    const locMatch = (event.location || "").toLowerCase().includes(term);
+    return titleMatch || arTitleMatch || descMatch || arDescMatch || locMatch;
+  });
 
   const getPersonName = (id?: string) => {
     if (!id) return null;
-    return people.find((p) => p.id === id)?.name || id;
+    const found = people.find((p) => p.id === id);
+    if (!found) return id;
+    return getPersonDisplayName(found, lang);
   };
 
   const handleOpenModal = (event: BiblicalEvent) => {
@@ -75,11 +103,7 @@ function Events({
 
   const handleStartEdit = () => {
     if (selectedEvent) {
-      const formCopy = JSON.parse(JSON.stringify(selectedEvent));
-      setEditForm(formCopy);
-      setIsCustomLocation(
-        Boolean(formCopy.location && !OT_LOCATIONS.includes(formCopy.location))
-      );
+      setEditForm(JSON.parse(JSON.stringify(selectedEvent)));
       setIsEditing(true);
     }
   };
@@ -99,8 +123,11 @@ function Events({
   const handleDelete = () => {
     if (!selectedEvent) return;
 
+    const dispTitle = getEventDisplayTitle(selectedEvent, lang);
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${selectedEvent.title}"?`
+      lang === "ar"
+        ? `هل أنت متأكد من حذف حدث "${dispTitle}"؟`
+        : `Are you sure you want to delete "${dispTitle}"?`
     );
 
     if (confirmed) {
@@ -111,225 +138,239 @@ function Events({
     }
   };
 
-  const togglePersonAssociation = (personId: string) => {
-    if (!editForm) return;
-    const currentPeople = editForm.personIds || [];
-    const updated = currentPeople.includes(personId)
-      ? currentPeople.filter((id) => id !== personId)
-      : [...currentPeople, personId];
-
-    setEditForm({ ...editForm, personIds: updated });
-  };
-
   return (
-    <div>
-      <div className="page-header">
+    <div className="space-y-6 animate-fadeIn" dir={lang === "ar" ? "rtl" : "ltr"}>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
         <div>
-          <h2>Events</h2>
-          <p>Manage events and their chronological positions.</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+            {t.eventsTitle}
+          </h2>
+          <p className="text-xs sm:text-sm text-[#6B5E4E] dark:text-[#A99F8D] mt-1">
+            {t.eventsSubtitle}
+          </p>
         </div>
 
         <button
-          className="primary-button"
           onClick={() => setIsAddModalOpen(true)}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#800020] to-[#A01128] text-white font-bold text-sm shadow-md hover:brightness-110 transition-all hover:scale-105"
         >
-          + Add Event
+          <Plus size={16} />
+          <span>{t.addEvent}</span>
         </button>
       </div>
 
-      <input
-        className="search-input"
-        type="search"
-        placeholder="Search events..."
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
+      {/* Bilingual Search */}
+      <div className="relative">
+        <div className={`absolute top-1/2 -translate-y-1/2 ${lang === "ar" ? "right-4" : "left-4"} text-[#D4AF37]`}>
+          <Search size={18} />
+        </div>
+        <input
+          type="search"
+          placeholder={lang === "ar" ? "ابحث عن الأحداث الكتابية بالعربية أو الإنجليزية..." : "Search events by title, description, or location..."}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className={`w-full py-3.5 rounded-xl border-2 border-[#D4AF37]/50 bg-white/80 dark:bg-[#1C1A17] shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all ${
+            lang === "ar" ? "pr-11 pl-4 font-amiri text-base" : "pl-11 pr-4"
+          }`}
+        />
+      </div>
 
-      <div className="events-grid">
+      {/* Events Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredEvents.map((event) => {
-          const evtAny = event as BiblicalEvent & {
-            anchorPersonId?: string;
-            anchorAge?: number;
-          };
+          const displayTitle = getEventDisplayTitle(event, lang);
+          const displayDesc = getEventDisplayDescription(event, lang);
+          const formattedYear = formatYearDisplay(event.date?.year, lang);
+          const secondaryTitle = lang === "ar" ? event.title : event.arabicTitle;
 
           return (
             <div
-              className="event-card"
               key={event.id}
               onClick={() => handleOpenModal(event)}
-              style={{ cursor: "pointer" }}
+              className="cursor-pointer relative flex flex-col justify-between p-5 rounded-2xl border-2 border-[#D4AF37]/50 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-lg hover:border-[#D4AF37] transition-all transform hover:-translate-y-0.5"
             >
-              <h3>{event.title}</h3>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2 pb-2 border-b border-[#D4AF37]/30">
+                  <div>
+                    <h3 className="text-lg font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+                      {displayTitle}
+                    </h3>
+                    {secondaryTitle && (
+                      <p className="text-xs text-[#7A6E5E] dark:text-[#A99F8D] mt-0.5">
+                        {secondaryTitle}
+                      </p>
+                    )}
+                  </div>
 
-              {event.date?.year !== undefined ? (
-                <strong>
-                  {Math.abs(event.date.year)}{" "}
-                  {event.date.year < 0 ? "BC" : "AD"}
-                </strong>
-              ) : evtAny.anchorPersonId ? (
-                <strong>
-                  Anchor: {getPersonName(evtAny.anchorPersonId)} (Age {evtAny.anchorAge})
-                </strong>
-              ) : null}
+                  {event.date?.year !== undefined ? (
+                    <span className="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
+                      {formattedYear}
+                    </span>
+                  ) : event.anchorPersonId ? (
+                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#1A365D]/40 bg-[#1A365D]/10 text-[#1A365D] dark:text-[#90CDF4]">
+                      {getPersonName(event.anchorPersonId)} ({event.anchorAge} {t.years})
+                    </span>
+                  ) : null}
+                </div>
 
-              {event.location && <p>Location: {event.location}</p>}
-              {event.description && <p>{event.description}</p>}
+                {event.location && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#6B5E4E] dark:text-[#A99F8D]">
+                    <MapPin size={13} className="text-[#800020] dark:text-[#D4AF37]" />
+                    <span>{event.location}</span>
+                  </div>
+                )}
+
+                {displayDesc && (
+                  <p className="text-xs text-[#4A3E31] dark:text-[#C5BBAE] leading-relaxed line-clamp-3">
+                    {displayDesc}
+                  </p>
+                )}
+              </div>
+
               {event.biblicalReferences && event.biblicalReferences.length > 0 && (
-                <small>{event.biblicalReferences.join(", ")}</small>
+                <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center gap-1.5 text-[11px] text-[#8C6F12] dark:text-[#F3E5AB] font-semibold">
+                  <BookOpen size={12} />
+                  <span>{event.biblicalReferences.join(", ")}</span>
+                </div>
               )}
             </div>
           );
         })}
       </div>
 
+      {/* Add Event Modal */}
       {isAddModalOpen && (
         <AddEventModal
           existingPeople={people}
           onAddEvent={onAddEvent}
           onClose={() => setIsAddModalOpen(false)}
+          lang={lang}
         />
       )}
 
+      {/* View / Edit Event Modal */}
       {selectedEvent && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "12px",
-              padding: "24px",
-              maxWidth: "520px",
-              width: "90%",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
-            }}
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-[#FBF8EF] dark:bg-[#1C1A17] text-[#2D2721] dark:text-[#E6E0D4] border-2 border-[#D4AF37] shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
+            dir={lang === "ar" ? "rtl" : "ltr"}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
-                {isEditing ? "Edit Event" : selectedEvent.title}
-              </h3>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-[#D4AF37]/40 bg-gradient-to-r from-[#800020]/15 via-[#D4AF37]/15 to-[#1A365D]/10">
+              <div className="flex items-center gap-3">
+                <CopticCross size={28} />
+                <h3 className="text-xl font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+                  {isEditing ? t.editEvent : getEventDisplayTitle(selectedEvent, lang)}
+                </h3>
+              </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "1.25rem",
-                  cursor: "pointer",
-                  color: "#64748b",
-                }}
+                className="p-1.5 rounded-lg text-[#6B5E4E] dark:text-[#A99F8D] hover:bg-[#D4AF37]/20 transition-colors"
               >
-                ✕
+                <X size={20} />
               </button>
             </div>
 
+            {/* Modal Body */}
             {isEditing && editForm ? (
-              <form
-                onSubmit={handleSaveEdit}
-                style={{ display: "flex", flexDirection: "column", gap: "14px" }}
-              >
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    required
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Year (Use negative number for BC, e.g. -2000)
-                  </label>
-                  <input
-                    type="number"
-                    value={editForm.date?.year ?? ""}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        date: {
-                          ...editForm.date,
-                          year: parseInt(e.target.value) || 0,
-                        },
-                      })
-                    }
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                  />
-                </div>
-
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <label style={{ fontSize: "0.8rem", fontWeight: "bold" }}>Location</label>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomLocation(!isCustomLocation)}
-                      style={{ background: "none", border: "none", color: "#2563eb", fontSize: "0.75rem", cursor: "pointer", textDecoration: "underline" }}
-                    >
-                      {isCustomLocation ? "Select from list" : "Type custom location"}
-                    </button>
-                  </div>
-
-                  {isCustomLocation ? (
+              <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      {t.eventTitleEn} *
+                    </label>
                     <input
                       type="text"
-                      placeholder="Type custom location..."
-                      value={editForm.location || ""}
-                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                      required
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
                     />
-                  ) : (
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      {t.eventTitleAr}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.arabicTitle || ""}
+                      onChange={(e) => setEditForm({ ...editForm, arabicTitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm font-amiri"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      {t.year} (e.g. -2000 for 2000 BC)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.date?.year ?? ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          date: e.target.value !== "" ? { year: Number(e.target.value), precision: "exact" } : undefined,
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      {t.location}
+                    </label>
                     <select
                       value={editForm.location || ""}
                       onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#ffffff" }}
+                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
                     >
-                      <option value="">-- Select Location --</option>
+                      <option value="">-- {lang === "ar" ? "اختر الموقع" : "Select Location"} --</option>
                       {OT_LOCATIONS.map((loc) => (
                         <option key={loc} value={loc}>
                           {loc}
                         </option>
                       ))}
                     </select>
-                  )}
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Description
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={editForm.description || ""}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      {t.eventDescEn}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editForm.description || ""}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      {t.eventDescAr}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editForm.arabicDescription || ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, arabicDescription: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm font-amiri"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Scripture References (comma-separated)
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                    {t.references}
                   </label>
                   <input
                     type="text"
@@ -337,108 +378,71 @@ function Events({
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
-                        biblicalReferences: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
+                        biblicalReferences: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
                       })
                     }
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "6px" }}>
-                    Associated People
-                  </label>
-                  <div style={{ maxHeight: "120px", overflowY: "auto", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {people.map((p) => {
-                      const checked = (editForm.personIds || []).includes(p.id);
-                      return (
-                        <label key={p.id} style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                          <input type="checkbox" checked={checked} onChange={() => togglePersonAssociation(p.id)} />
-                          {p.name}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "10px" }}>
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#D4AF37]/30">
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    style={{ padding: "8px 16px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer" }}
+                    className="px-4 py-2 rounded-xl border border-[#D4AF37]/50 text-sm font-semibold hover:bg-[#D4AF37]/15"
                   >
-                    Cancel
+                    {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    style={{ padding: "8px 16px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}
+                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#800020] to-[#A01128] text-white font-bold text-sm shadow-md hover:brightness-110"
                   >
-                    Save Changes
+                    {t.save}
                   </button>
                 </div>
               </form>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#334155" }}>
-                {selectedEvent.date?.year !== undefined && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Date:</strong> {Math.abs(selectedEvent.date.year)}{" "}
-                    {selectedEvent.date.year < 0 ? "BC" : "AD"}
-                  </p>
-                )}
-                {selectedEvent.location && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Location:</strong> {selectedEvent.location}
-                  </p>
-                )}
-                {selectedEvent.description && (
-                  <p style={{ margin: 0, lineHeight: "1.5" }}>{selectedEvent.description}</p>
-                )}
-                {(selectedEvent.personIds || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Associated People:</strong>{" "}
-                    {(selectedEvent.personIds || [])
-                      .map((id) => people.find((p) => p.id === id)?.name || id)
-                      .join(", ")}
-                  </p>
-                )}
-                {(selectedEvent.biblicalReferences || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>References:</strong>{" "}
-                    {(selectedEvent.biblicalReferences || []).join(", ")}
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
+                    {formatYearDisplay(selectedEvent.date?.year, lang)}
+                  </span>
+                  {selectedEvent.location && (
+                    <span className="flex items-center gap-1 text-xs text-[#6B5E4E] dark:text-[#A99F8D]">
+                      <MapPin size={14} className="text-[#800020] dark:text-[#D4AF37]" />
+                      {selectedEvent.location}
+                    </span>
+                  )}
+                </div>
+
+                {getEventDisplayDescription(selectedEvent, lang) && (
+                  <p className="text-sm leading-relaxed text-[#4A3E31] dark:text-[#C5BBAE] bg-[#D4AF37]/10 p-4 rounded-xl border border-[#D4AF37]/25">
+                    {getEventDisplayDescription(selectedEvent, lang)}
                   </p>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px" }}>
+                {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#8C6F12] dark:text-[#F3E5AB]">
+                    <BookOpen size={14} />
+                    <span>{selectedEvent.biblicalReferences.join(", ")}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-4 border-t border-[#D4AF37]/30">
                   <button
                     onClick={handleDelete}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#ef4444",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold"
                   >
-                    Delete Event
+                    <Trash2 size={14} />
+                    <span>{lang === "ar" ? "حذف الحدث" : "Delete Event"}</span>
                   </button>
+
                   <button
                     onClick={handleStartEdit}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C5A028] text-[#121110] text-xs font-bold shadow"
                   >
-                    Edit Event
+                    <Edit3 size={14} />
+                    <span>{t.editEvent}</span>
                   </button>
                 </div>
               </div>
@@ -449,5 +453,3 @@ function Events({
     </div>
   );
 }
-
-export default Events;

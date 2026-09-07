@@ -1,0 +1,8 @@
+{
+  "name": "Biblical Timeline",
+  "description": "An interactive Old Testament family tree, chronology timeline, and biblical events explorer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

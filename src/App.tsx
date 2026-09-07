@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "./App.css";
 
-import bibleData from "./data/bible-data.json";
-
+import fallbackData from "./data/bible-data.json";
 import Dashboard from "./pages/Dashboard";
 import People from "./pages/People";
 import FamilyTree from "./pages/FamilyTree";
@@ -10,76 +9,163 @@ import TimelinePage from "./pages/TimelinePage";
 import Timeline from "./pages/Timeline";
 import Events from "./pages/Events";
 import OldTestamentMapPage from "./pages/OldTestamentMapPage";
-import type { GenealogyData, Person, BiblicalEvent } from "./types/genealogy";
 
-type Page =
-  | "dashboard"
-  | "people"
-  | "family-tree"
-  | "family-timeline"
-  | "timeline"
-  | "events"
-  | "map";
+import { CopticHeader } from "./components/Coptic/CopticHeader";
+import { CopticSidebar, type Page } from "./components/Coptic/CopticSidebar";
+import { GistSyncModal } from "./components/Coptic/GistSyncModal";
+import {
+  fetchFromGist,
+  saveToGist,
+  cacheLocalData,
+  getCachedLocalData,
+} from "./services/gistService";
+import type {
+  GenealogyData,
+  Person,
+  BiblicalEvent,
+  Language,
+  ThemeMode,
+} from "./types/genealogy";
 
-const data = bibleData as GenealogyData;
-
-function App() {
+export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
+  const [isGistModalOpen, setIsGistModalOpen] = useState(false);
+  const [isGistLive, setIsGistLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  const [people, setPeople] = useState<Person[]>(() => {
-    const savedPeople = localStorage.getItem("biblical_people");
-    return savedPeople ? JSON.parse(savedPeople) : data.people;
+  // Language state (English / Arabic)
+  const [lang, setLang] = useState<Language>(() => {
+    return (localStorage.getItem("biblical_lang") as Language) || "en";
   });
 
-  const [events, setEvents] = useState<BiblicalEvent[]>(() => {
-    const savedEvents = localStorage.getItem("biblical_events");
-    return savedEvents ? JSON.parse(savedEvents) : data.events;
+  // Theme mode (Light Parchment / Dark Crypt)
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    return (localStorage.getItem("biblical_theme") as ThemeMode) || "light";
   });
 
-  const savePeople = (newPeople: Person[]) => {
-    setPeople(newPeople);
-    localStorage.setItem("biblical_people", JSON.stringify(newPeople));
+  // Central data state
+  const [data, setData] = useState<GenealogyData>(() => {
+    const cached = getCachedLocalData();
+    return cached || (fallbackData as GenealogyData);
+  });
+
+  const people = data.people;
+  const events = data.events;
+
+  // Synchronize language and document direction
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    localStorage.setItem("biblical_lang", lang);
+  }, [lang]);
+
+  // Synchronize theme class on document element
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("biblical_theme", theme);
+  }, [theme]);
+
+  // Initial fetch from remote GitHub Gist
+  const loadGistData = useCallback(async () => {
+    try {
+      const res = await fetchFromGist();
+      setData(res.data);
+      setIsGistLive(res.isLive);
+      setLastUpdated(res.updatedAt);
+    } catch (e) {
+      console.warn("Could not load from Gist, using cached:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchFromGist()
+      .then((res) => {
+        if (isMounted) {
+          setData(res.data);
+          setIsGistLive(res.isLive);
+          setLastUpdated(res.updatedAt);
+        }
+      })
+      .catch((e) => console.warn("Could not load from Gist on mount:", e));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const toggleLang = () => {
+    setLang((prev) => (prev === "en" ? "ar" : "en"));
   };
 
-  const saveEvents = (newEvents: BiblicalEvent[]) => {
-    setEvents(newEvents);
-    localStorage.setItem("biblical_events", JSON.stringify(newEvents));
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
+
+  // State Mutators with Local Cache and Gist Push
+  const updateEntireData = useCallback(
+    async (newData: GenealogyData) => {
+      setData(newData);
+      cacheLocalData(newData);
+
+      // Attempt background push if token is available
+      saveToGist(newData)
+        .then((res) => {
+          if (res.syncedToGist) {
+            setIsGistLive(true);
+            setLastUpdated(new Date().toISOString());
+          }
+        })
+        .catch((e) => console.warn("Background Gist sync notification:", e));
+    },
+    []
+  );
 
   const handleAddPerson = (newPerson: Person) => {
-    savePeople([...people, newPerson]);
+    const updatedPeople = [...people, newPerson];
+    updateEntireData({ ...data, people: updatedPeople });
   };
 
   const handleUpdatePerson = (updatedPerson: Person) => {
-    const updated = people.map((p) =>
+    const updatedPeople = people.map((p) =>
       p.id === updatedPerson.id ? updatedPerson : p
     );
-    savePeople(updated);
+    updateEntireData({ ...data, people: updatedPeople });
   };
 
   const handleDeletePerson = (personId: string) => {
-    const filtered = people.filter((p) => p.id !== personId);
-    savePeople(filtered);
+    const updatedPeople = people.filter((p) => p.id !== personId);
+    updateEntireData({ ...data, people: updatedPeople });
   };
 
   const handleAddEvent = (newEvent: BiblicalEvent) => {
-    saveEvents([...events, newEvent]);
+    const updatedEvents = [...events, newEvent];
+    updateEntireData({ ...data, events: updatedEvents });
   };
 
   const handleUpdateEvent = (updatedEvent: BiblicalEvent) => {
-    const updated = events.map((e) =>
+    const updatedEvents = events.map((e) =>
       e.id === updatedEvent.id ? updatedEvent : e
     );
-    saveEvents(updated);
+    updateEntireData({ ...data, events: updatedEvents });
   };
 
   const handleDeleteEvent = (eventId: string) => {
-    const filtered = events.filter((e) => e.id !== eventId);
-    saveEvents(filtered);
+    const updatedEvents = events.filter((e) => e.id !== eventId);
+    updateEntireData({ ...data, events: updatedEvents });
   };
 
   const handleExportData = () => {
-    const exportObject = { people, events };
+    const exportObject = {
+      version: data.version || 1,
+      creationYearBC: data.creationYearBC || 4000,
+      people,
+      events,
+    };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(exportObject, null, 2)
     )}`;
@@ -92,15 +178,14 @@ function App() {
   };
 
   const handleResetData = () => {
-    if (
-      window.confirm(
-        "Reset to default data? Any unsaved local edits will be cleared."
-      )
-    ) {
-      localStorage.removeItem("biblical_people");
-      localStorage.removeItem("biblical_events");
-      setPeople(data.people);
-      setEvents(data.events);
+    const confirmMsg =
+      lang === "ar"
+        ? "هل أنت متأكد من إعادة ضبط البيانات إلى القيم الأصلية؟ سيتم مسح أي تعديلات محلية غير محفوظة."
+        : "Reset to initial bundled biblical data? Any unsaved local changes will be cleared.";
+
+    if (window.confirm(confirmMsg)) {
+      const resetState = fallbackData as GenealogyData;
+      updateEntireData(resetState);
     }
   };
 
@@ -113,17 +198,25 @@ function App() {
             onAddPerson={handleAddPerson}
             onUpdatePerson={handleUpdatePerson}
             onDeletePerson={handleDeletePerson}
+            lang={lang}
           />
         );
 
       case "family-tree":
-        return <FamilyTree people={people} />;
+        return <FamilyTree people={people} lang={lang} />;
 
       case "family-timeline":
-        return <TimelinePage people={people} events={events} />;
+        return <TimelinePage people={people} events={events} lang={lang} />;
 
       case "timeline":
-        return <Timeline people={people} events={events} />;
+        return (
+          <Timeline
+            people={people}
+            events={events}
+            onUpdateEvent={handleUpdateEvent}
+            lang={lang}
+          />
+        );
 
       case "events":
         return (
@@ -133,6 +226,7 @@ function App() {
             onAddEvent={handleAddEvent}
             onUpdateEvent={handleUpdateEvent}
             onDeleteEvent={handleDeleteEvent}
+            lang={lang}
           />
         );
 
@@ -141,132 +235,77 @@ function App() {
           <OldTestamentMapPage
             events={events}
             people={people}
+            lang={lang}
           />
         );
 
       case "dashboard":
       default:
-        return <Dashboard data={{ ...data, people, events }} />;
+        return (
+          <Dashboard
+            data={data}
+            lang={lang}
+            onNavigate={(p) => setCurrentPage(p as Page)}
+            onOpenGistModal={() => setIsGistModalOpen(true)}
+            isGistLive={isGistLive}
+          />
+        );
     }
   }
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <h1>Biblical Timeline</h1>
-          <span>Old Testament Family Tree</span>
-        </div>
+    <div
+      className="min-h-screen flex flex-col bg-[#FBF8EF] dark:bg-[#121110] text-[#2D2721] dark:text-[#E6E0D4] font-body transition-colors duration-200"
+      dir={lang === "ar" ? "rtl" : "ltr"}
+    >
+      {/* Coptic Heritage Header */}
+      <CopticHeader
+        lang={lang}
+        onToggleLang={toggleLang}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        isGistLive={isGistLive}
+        onOpenGistModal={() => setIsGistModalOpen(true)}
+        onExportJson={handleExportData}
+        onResetData={handleResetData}
+      />
 
-        <div className="topbar-actions" style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="btn-secondary"
-            onClick={handleExportData}
-            title="Download JSON to update repository source code"
-          >
-            💾 Export JSON
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={handleResetData}
-            title="Reset to initial bible-data.json values"
-          >
-            🔄 Reset
-          </button>
-        </div>
-      </header>
+      {/* Main Container with Sidebar & Content */}
+      <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
+        <CopticSidebar
+          currentPage={currentPage}
+          onSelectPage={setCurrentPage}
+          lang={lang}
+        />
 
-      <div className="app-body">
-        <aside className="sidebar">
-          <nav>
-            <button
-              className={`nav-item ${
-                currentPage === "dashboard" ? "active" : ""
-              }`}
-              onClick={() => setCurrentPage("dashboard")}
-            >
-              Dashboard
-            </button>
-
-            <button
-              className={`nav-item ${
-                currentPage === "people" ? "active" : ""
-              }`}
-              onClick={() => setCurrentPage("people")}
-            >
-              People
-            </button>
-
-            <button
-              className={`nav-item ${
-                currentPage === "family-tree" ? "active" : ""
-              }`}
-              onClick={() => setCurrentPage("family-tree")}
-            >
-              Family Tree
-            </button>
-
-            <button
-              className={`nav-item ${
-                currentPage === "family-timeline" ? "active" : ""
-              }`}
-              onClick={() => setCurrentPage("family-timeline")}
-            >
-              Lifespans & Events
-            </button>
-
-            <button
-              className={`nav-item ${
-                currentPage === "timeline" ? "active" : ""
-              }`}
-              onClick={() => setCurrentPage("timeline")}
-            >
-              Timeline
-            </button>
-
-            <button
-              className={`nav-item ${
-                currentPage === "events" ? "active" : ""
-              }`}
-              onClick={() => setCurrentPage("events")}
-            >
-              Events
-            </button>
-
-            <button
-              className={`nav-item ${currentPage === "map" ? "active" : ""}`}
-              onClick={() => setCurrentPage("map")}
-            >
-              Map Explorer
-            </button>
-          </nav>
-        </aside>
-
-        <main className="main-content">{renderPage()}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+          {renderPage()}
+        </main>
       </div>
 
-      {/* Watermark Overlay */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "12px",
-          right: "16px",
-          zIndex: 9999,
-          pointerEvents: "none",
-          color: "#ffffff",
-          opacity: 0.5,
-          fontSize: "0.85rem",
-          fontWeight: "bold",
-          fontFamily: "sans-serif",
-          letterSpacing: "1px",
-          textTransform: "uppercase",
-          textShadow: "1px 1px 3px rgba(0,0,0,0.8)",
-        }}
-      >
-        Created by Jonathan Ghaly
-      </div>
+      {/* Attribution & Coptic Footer Motif */}
+      <footer className="w-full border-t border-[#D4AF37]/30 py-4 px-6 text-center text-xs text-[#7A6E5E] dark:text-[#887C6C] flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
+        <div className="flex items-center gap-2">
+          <span className="font-cinzel font-bold text-[#800020] dark:text-[#D4AF37]">
+            ✝ Coptic Heritage Biblical Chronology
+          </span>
+        </div>
+        <div className="font-mono text-[11px] tracking-wide text-[#8C6F12] dark:text-[#A99F8D]">
+          Created by Jonathan Ghaly
+        </div>
+      </footer>
+
+      {/* Gist Sync & Database Settings Modal */}
+      <GistSyncModal
+        isOpen={isGistModalOpen}
+        onClose={() => setIsGistModalOpen(false)}
+        data={data}
+        isLive={isGistLive}
+        lastUpdated={lastUpdated}
+        onRefreshGist={loadGistData}
+        onDataSaved={updateEntireData}
+        lang={lang}
+      />
     </div>
   );
 }
-
-export default App;

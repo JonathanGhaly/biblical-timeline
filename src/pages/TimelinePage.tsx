@@ -1,9 +1,19 @@
 import { useState, useMemo } from "react";
-import type { Person, BiblicalEvent } from "../types/genealogy";
+import type { Person, BiblicalEvent, Language } from "../types/genealogy";
+import {
+  UI_TRANSLATIONS,
+  getPersonDisplayName,
+  getEventDisplayTitle,
+  getEventDisplayDescription,
+  formatYearDisplay,
+} from "../utils/i18n";
+import { Clock, Calendar, Sparkles, X, BookOpen } from "lucide-react";
+import { CopticCross } from "../components/Coptic/CopticCross";
 
 type TimelinePageProps = {
   people: Person[];
   events: BiblicalEvent[];
+  lang?: Language;
 };
 
 type MarriageItem = {
@@ -22,39 +32,40 @@ type SelectedItem =
   | { type: "event"; data: BiblicalEvent }
   | { type: "marriage"; data: MarriageItem };
 
-export default function TimelinePage({ people, events }: TimelinePageProps) {
+const getBirthYear = (
+  person: Person,
+  peopleList: Person[],
+  visited = new Set<string>()
+): number => {
+  const pAny = person as any;
+
+  if (person.birth?.year !== undefined) return person.birth.year;
+  if (typeof person.birth === "number") return person.birth;
+  if (pAny.birthYear !== undefined) return pAny.birthYear;
+  if (pAny.birth_year !== undefined) return pAny.birth_year;
+  if (pAny.dateOfBirth?.year !== undefined) return pAny.dateOfBirth.year;
+
+  if (visited.has(person.id)) return -4000;
+  visited.add(person.id);
+
+  const anchorId = person.anchorPersonId || person.fatherId || pAny.parentId;
+  const ageAtBirth =
+    person.anchorPersonAgeAtBirth ?? person.fatherAgeAtBirth ?? pAny.ageAtBirth;
+
+  if (anchorId && ageAtBirth !== undefined) {
+    const anchor = peopleList.find((p) => p.id === anchorId);
+    if (anchor) {
+      return getBirthYear(anchor, peopleList, visited) + Number(ageAtBirth);
+    }
+  }
+
+  return -4000;
+};
+
+export default function TimelinePage({ people, events, lang = "en" }: TimelinePageProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const getBirthYear = (
-    person: Person,
-    peopleList: Person[],
-    visited = new Set<string>()
-  ): number => {
-    const pAny = person as any;
-
-    if (person.birth?.year !== undefined) return person.birth.year;
-    if (typeof person.birth === "number") return person.birth;
-    if (pAny.birthYear !== undefined) return pAny.birthYear;
-    if (pAny.birth_year !== undefined) return pAny.birth_year;
-    if (pAny.dateOfBirth?.year !== undefined) return pAny.dateOfBirth.year;
-
-    if (visited.has(person.id)) return -4000;
-    visited.add(person.id);
-
-    const anchorId = person.anchorPersonId || person.fatherId || pAny.parentId;
-    const ageAtBirth =
-      person.anchorPersonAgeAtBirth ?? person.fatherAgeAtBirth ?? pAny.ageAtBirth;
-
-    if (anchorId && ageAtBirth !== undefined) {
-      const anchor = peopleList.find((p) => p.id === anchorId);
-      if (anchor) {
-        return getBirthYear(anchor, peopleList, visited) + Number(ageAtBirth);
-      }
-    }
-
-    return -4000;
-  };
+  const t = UI_TRANSLATIONS[lang];
 
   const peopleWithLifespans = useMemo(() => {
     const list = people.map((person) => {
@@ -63,9 +74,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
       const duration =
         person.yearsLived ||
         pAny.lifespan ||
-        (person.death?.year !== undefined
-          ? person.death.year - birthYear
-          : 70);
+        (person.death?.year !== undefined ? person.death.year - birthYear : 70);
       const deathYear = birthYear + duration;
 
       return {
@@ -141,38 +150,27 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     [events]
   );
 
-  // Search Filter Logic
+  // Filter Logic
   const term = searchTerm.trim().toLowerCase();
 
   const filteredPeople = useMemo(() => {
     if (!term) return peopleWithLifespans;
-    return peopleWithLifespans.filter(({ person }) =>
-      person.name.toLowerCase().includes(term) ||
-      (person.notes && person.notes.toLowerCase().includes(term)) ||
-      (person.biblicalReferences || []).some((r) => r.toLowerCase().includes(term))
-    );
+    return peopleWithLifespans.filter(({ person }) => {
+      const nameMatch = person.name.toLowerCase().includes(term);
+      const arMatch = (person.arabicName || "").toLowerCase().includes(term);
+      const notesMatch = (person.notes || "").toLowerCase().includes(term);
+      return nameMatch || arMatch || notesMatch;
+    });
   }, [peopleWithLifespans, term]);
-
-  const filteredMarriages = useMemo(() => {
-    if (!term) return derivedMarriages;
-    return derivedMarriages.filter(
-      (m) =>
-        m.title.toLowerCase().includes(term) ||
-        m.husbandName.toLowerCase().includes(term) ||
-        m.wifeName.toLowerCase().includes(term) ||
-        (m.references || []).some((r) => r.toLowerCase().includes(term))
-    );
-  }, [derivedMarriages, term]);
 
   const filteredEvents = useMemo(() => {
     if (!term) return validEvents;
-    return validEvents.filter(
-      (e) =>
-        e.title.toLowerCase().includes(term) ||
-        (e.description && e.description.toLowerCase().includes(term)) ||
-        (e.location && e.location.toLowerCase().includes(term)) ||
-        (e.biblicalReferences || []).some((r) => r.toLowerCase().includes(term))
-    );
+    return validEvents.filter((e) => {
+      const titleMatch = e.title.toLowerCase().includes(term);
+      const arMatch = (e.arabicTitle || "").toLowerCase().includes(term);
+      const descMatch = (e.description || "").toLowerCase().includes(term);
+      return titleMatch || arMatch || descMatch;
+    });
   }, [validEvents, term]);
 
   const { minYear, maxYear, ticks } = useMemo(() => {
@@ -197,342 +195,245 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     return { minYear: min, maxYear: max, ticks: generatedTicks };
   }, [peopleWithLifespans, validEvents, derivedMarriages]);
 
+  const isRTL = lang === "ar";
   const totalYears = maxYear - minYear || 1;
   const timelineWidth = 2600;
 
-  const getLeftPx = (year: number) => {
+  const getPosPx = (year: number) => {
     const ratio = (year - minYear) / totalYears;
     return Math.max(0, Math.min(timelineWidth, ratio * timelineWidth));
   };
 
   const getWidthPx = (duration: number) => {
-    return (duration / totalYears) * timelineWidth;
-  };
-
-  const formatYearLabel = (year: number) => {
-    return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
+    return Math.max(12, (duration / totalYears) * timelineWidth);
   };
 
   return (
-    <div className="timeline-page-container" style={{ padding: "20px" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "20px",
-          gap: "16px",
-          flexWrap: "wrap",
-        }}
-      >
+    <div className="space-y-6 animate-fadeIn" dir={isRTL ? "rtl" : "ltr"}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
         <div>
-          <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0 0 4px 0", color: "#0f172a" }}>
-            Integrated Biblical Timeline
-          </h2>
-          <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
-            Scroll horizontally to explore overlapping lifespans, marriages, and historical events.
+          <div className="flex items-center gap-2">
+            <CopticCross size={26} />
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+              {t.navLifespans}
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-[#6B5E4E] dark:text-[#A99F8D] mt-1">
+            {isRTL
+              ? "استكشف تداخل أعمار الآباء والأحداث التاريخية عبر الخط الزمني الأفقي (من اليمين إلى اليسار)."
+              : "Horizontal chart visualizing overlapping patriarch lifespans, marriages, and biblical epochs."}
           </p>
         </div>
 
-        <input
-          type="text"
-          placeholder="Search timeline (e.g. Abraham, Genesis, Ur)..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: "8px 14px",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            width: "300px",
-            fontSize: "0.9rem",
-            outline: "none",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          overflowX: "auto",
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-          padding: "24px 20px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-        }}
-      >
-        <div style={{ position: "relative", width: `${timelineWidth + 180}px` }}>
-          {/* Header Axis */}
-          <div
-            style={{
-              display: "flex",
-              marginLeft: "150px",
-              position: "relative",
-              height: "36px",
-              borderBottom: "2px solid #cbd5e1",
-              marginBottom: "20px",
-            }}
-          >
-            {ticks.map((yr) => (
-              <div
-                key={yr}
-                style={{
-                  position: "absolute",
-                  left: `${getLeftPx(yr)}px`,
-                  transform: "translateX(-50%)",
-                  fontSize: "0.75rem",
-                  fontWeight: "700",
-                  color: "#475569",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {formatYearLabel(yr)}
-              </div>
-            ))}
-          </div>
-
-          {/* Guidelines */}
-          <div
-            style={{
-              position: "absolute",
-              top: "36px",
-              bottom: 0,
-              left: "150px",
-              width: `${timelineWidth}px`,
-              pointerEvents: "none",
-              zIndex: 0,
-            }}
-          >
-            {ticks.map((yr) => (
-              <div
-                key={yr}
-                style={{
-                  position: "absolute",
-                  left: `${getLeftPx(yr)}px`,
-                  top: 0,
-                  bottom: 0,
-                  borderLeft: "1px dashed #e2e8f0",
-                }}
-              />
-            ))}
-          </div>
-
-          {/* MAJOR EVENTS */}
-          {filteredEvents.length > 0 && (
-            <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: "800", color: "#334155", letterSpacing: "0.05em", marginBottom: "16px" }}>
-                MAJOR EVENTS ({filteredEvents.length})
-              </div>
-              <div style={{ position: "relative", marginLeft: "150px", width: `${timelineWidth}px`, height: "60px" }}>
-                {filteredEvents.map((evt, idx) => {
-                  const year = evt.date!.year!;
-                  const left = getLeftPx(year);
-                  const topOffset = (idx % 2) * 32;
-
-                  return (
-                    <div
-                      key={evt.id}
-                      onClick={() => setSelectedItem({ type: "event", data: evt })}
-                      style={{
-                        position: "absolute",
-                        left: `${left}px`,
-                        top: `${topOffset}px`,
-                        transform: "translateX(-50%)",
-                        background: "#ffffff",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: "10px",
-                        padding: "4px 10px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      <span style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: "50%", width: "18px", height: "18px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>
-                        📍
-                      </span>
-                      <div>
-                        <div style={{ fontWeight: "700", color: "#1e293b", lineHeight: "1.2" }}>{evt.title}</div>
-                        <div style={{ fontSize: "0.65rem", color: "#64748b" }}>{formatYearLabel(year)}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* MARRIAGES & UNIONS */}
-          {filteredMarriages.length > 0 && (
-            <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: "800", color: "#334155", letterSpacing: "0.05em", marginBottom: "16px" }}>
-                MARRIAGES & UNIONS ({filteredMarriages.length})
-              </div>
-              <div style={{ position: "relative", marginLeft: "150px", width: `${timelineWidth}px`, height: "60px" }}>
-                {filteredMarriages.map((marriage, idx) => {
-                  const left = getLeftPx(marriage.year);
-                  const topOffset = (idx % 2) * 32;
-
-                  return (
-                    <div
-                      key={marriage.id}
-                      onClick={() => setSelectedItem({ type: "marriage", data: marriage })}
-                      style={{
-                        position: "absolute",
-                        left: `${left}px`,
-                        top: `${topOffset}px`,
-                        transform: "translateX(-50%)",
-                        background: "#ffffff",
-                        border: "1px solid #fbcfe8",
-                        borderRadius: "10px",
-                        padding: "4px 10px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      <span style={{ background: "#fdf2f8", border: "1px solid #f472b6", borderRadius: "50%", width: "18px", height: "18px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>
-                        💍
-                      </span>
-                      <div>
-                        <div style={{ fontWeight: "700", color: "#831843", lineHeight: "1.2" }}>{marriage.title}</div>
-                        <div style={{ fontSize: "0.65rem", color: "#9d174d" }}>{formatYearLabel(marriage.year)}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* PATRIARCH LIFESPANS */}
-          {filteredPeople.length > 0 && (
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: "800", color: "#334155", letterSpacing: "0.05em", marginBottom: "16px" }}>
-                PATRIARCH LIFESPANS ({filteredPeople.length})
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
-                  const left = getLeftPx(birthYear);
-                  const width = Math.max(140, getWidthPx(duration));
-
-                  return (
-                    <div key={person.id} style={{ display: "flex", alignItems: "center", height: "30px" }}>
-                      <div style={{ width: "140px", flexShrink: 0, paddingRight: "10px", fontSize: "0.85rem", fontWeight: "700", color: "#1e293b", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {person.name}
-                      </div>
-                      <div style={{ position: "relative", width: `${timelineWidth}px`, flexShrink: 0, height: "100%" }}>
-                        <div
-                          onClick={() => setSelectedItem({ type: "person", data: person, birthYear, deathYear })}
-                          style={{
-                            position: "absolute",
-                            left: `${left}px`,
-                            width: `${width}px`,
-                            height: "28px",
-                            background: "#2563eb",
-                            color: "#ffffff",
-                            borderRadius: "14px",
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "0 12px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                          }}
-                        >
-                          {person.name} ({formatYearLabel(birthYear)} - {formatYearLabel(deathYear)} | {duration} yrs)
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        <div className="relative">
+          <input
+            type="search"
+            placeholder={t.searchPeoplePlaceholder}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-72 px-4 py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#121110] text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+          />
         </div>
       </div>
 
-      {/* Item Details Overlay */}
+      {/* Horizontal Chart Container */}
+      <div className="overflow-x-auto rounded-2xl border-2 border-[#D4AF37]/50 bg-white/70 dark:bg-[#1C1A17] p-5 shadow-inner">
+        <div className="relative" style={{ width: `${timelineWidth + 240}px` }}>
+          {/* Header Time Axis */}
+          <div className="relative h-10 border-b-2 border-[#D4AF37]/40 mb-6" style={{ marginInlineStart: "176px" }}>
+            {ticks.map((yr) => {
+              const pos = getPosPx(yr);
+              return (
+                <div
+                  key={yr}
+                  className={`absolute top-0 text-[11px] font-bold font-mono text-[#800020] dark:text-[#D4AF37] whitespace-nowrap ${
+                    isRTL ? "translate-x-1/2" : "-translate-x-1/2"
+                  }`}
+                  style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                >
+                  {formatYearDisplay(yr, lang)}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Vertical Grid Reference Lines */}
+          <div
+            className="absolute top-10 bottom-0 pointer-events-none"
+            style={{ [isRTL ? "right" : "left"]: "176px", width: `${timelineWidth}px` }}
+          >
+            {ticks.map((yr) => {
+              const pos = getPosPx(yr);
+              return (
+                <div
+                  key={`grid_${yr}`}
+                  className={`absolute top-0 bottom-0 w-px border-dashed border-[#D4AF37]/20 ${
+                    isRTL ? "border-r" : "border-l"
+                  }`}
+                  style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                />
+              );
+            })}
+          </div>
+
+          {/* 1. Biblical Figures Lifespan Bars */}
+          <div className="space-y-2 relative z-10 mb-8">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#800020] dark:text-[#D4AF37] mb-2 px-2 flex items-center gap-1.5">
+              <Clock size={14} />
+              <span>{t.totalPeople} ({filteredPeople.length})</span>
+            </h4>
+
+            {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
+              const displayName = getPersonDisplayName(person, lang);
+              const pos = getPosPx(birthYear);
+              const widthPx = getWidthPx(duration);
+
+              return (
+                <div
+                  key={person.id}
+                  className="flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer"
+                  onClick={() =>
+                    setSelectedItem({
+                      type: "person",
+                      data: person,
+                      birthYear,
+                      deathYear,
+                    })
+                  }
+                >
+                  {/* Name Label */}
+                  <div
+                    className="w-44 shrink-0 px-2 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel text-start"
+                    title={displayName}
+                  >
+                    {displayName}
+                  </div>
+
+                  {/* Track & Bar */}
+                  <div className="relative flex-1 h-full">
+                    <div
+                      className="absolute top-1 bottom-1 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-[#121110] px-2 flex items-center justify-between text-[10px] font-bold shadow-sm transition-transform hover:scale-y-110 border border-[#8C6F12]"
+                      style={{
+                        [isRTL ? "right" : "left"]: `${pos}px`,
+                        width: `${widthPx}px`,
+                      }}
+                    >
+                      <span className="truncate">{duration} {t.years}</span>
+                      <span className="hidden sm:inline text-[9px] opacity-80">
+                        {formatYearDisplay(birthYear, lang)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 2. Key Biblical Events Pins */}
+          <div className="space-y-2 relative z-10 pt-4 border-t border-[#D4AF37]/30">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#1A365D] dark:text-[#90CDF4] mb-2 px-2 flex items-center gap-1.5">
+              <Calendar size={14} />
+              <span>{t.totalEvents} ({filteredEvents.length})</span>
+            </h4>
+
+            {filteredEvents.map((event) => {
+              const displayTitle = getEventDisplayTitle(event, lang);
+              const eventYear = event.date!.year!;
+              const pos = getPosPx(eventYear);
+
+              return (
+                <div
+                  key={event.id}
+                  className="flex items-center h-7 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => setSelectedItem({ type: "event", data: event })}
+                >
+                  <div className="w-44 shrink-0 px-2 text-xs font-semibold truncate text-[#1A365D] dark:text-[#90CDF4] text-start">
+                    {displayTitle}
+                  </div>
+                  <div className="relative flex-1 h-full">
+                    <div
+                      className="absolute top-0.5 bottom-0.5 px-2.5 rounded-full bg-gradient-to-r from-[#800020] to-[#A01128] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm border border-[#D4AF37]"
+                      style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                    >
+                      <Sparkles size={10} className="text-[#D4AF37]" />
+                      <span>{displayTitle}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected Item Modal */}
       {selectedItem && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setSelectedItem(null)}
         >
           <div
-            style={{ background: "#ffffff", borderRadius: "12px", padding: "24px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}
+            className="relative w-full max-w-md p-6 rounded-2xl bg-[#FBF8EF] dark:bg-[#1C1A17] border-2 border-[#D4AF37] shadow-2xl text-[#2D2721] dark:text-[#E6E0D4] space-y-4"
             onClick={(e) => e.stopPropagation()}
+            dir={lang === "ar" ? "rtl" : "ltr"}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
-                {selectedItem.type === "person"
-                  ? selectedItem.data.name
-                  : selectedItem.type === "marriage"
-                  ? `Marriage: ${selectedItem.data.title}`
-                  : selectedItem.data.title}
-              </h3>
-              <button onClick={() => setSelectedItem(null)} style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#64748b" }}>
-                ✕
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/30 pb-3">
+              <div className="flex items-center gap-2">
+                <CopticCross size={24} />
+                <h3 className="text-xl font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+                  {selectedItem.type === "person"
+                    ? getPersonDisplayName(selectedItem.data, lang)
+                    : selectedItem.type === "event"
+                    ? getEventDisplayTitle(selectedItem.data, lang)
+                    : selectedItem.data.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="p-1 rounded-lg hover:bg-[#D4AF37]/20 text-[#6B5E4E]"
+              >
+                <X size={18} />
               </button>
             </div>
 
             {selectedItem.type === "person" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
-                <p style={{ margin: 0 }}><strong>Gender:</strong> {selectedItem.data.gender}</p>
-                <p style={{ margin: 0 }}><strong>Born:</strong> {formatYearLabel(selectedItem.birthYear)}</p>
-                <p style={{ margin: 0 }}><strong>Died:</strong> {formatYearLabel(selectedItem.deathYear)}</p>
-                {selectedItem.data.yearsLived && <p style={{ margin: 0 }}><strong>Lifespan:</strong> {selectedItem.data.yearsLived} years</p>}
-                {selectedItem.data.placeOfBirth && <p style={{ margin: 0 }}><strong>Birthplace:</strong> {selectedItem.data.placeOfBirth}</p>}
-                {selectedItem.data.notes && <p style={{ margin: 0 }}><strong>Notes:</strong> {selectedItem.data.notes}</p>}
-                {(selectedItem.data.biblicalReferences || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>References:</strong> {(selectedItem.data.biblicalReferences || []).join(", ")}
+              <div className="space-y-2 text-xs">
+                <p>
+                  <strong>{t.lifespan}:</strong> {selectedItem.data.yearsLived || 70} {t.years}
+                </p>
+                <p>
+                  <strong>{t.birth}:</strong> {formatYearDisplay(selectedItem.birthYear, lang)}
+                  {" — "}
+                  <strong>{t.death}:</strong> {formatYearDisplay(selectedItem.deathYear, lang)}
+                </p>
+                {selectedItem.data.notes && (
+                  <p className="italic bg-[#D4AF37]/10 p-3 rounded-xl border border-[#D4AF37]/20">
+                    {selectedItem.data.notes}
                   </p>
                 )}
-              </div>
-            )}
-
-            {selectedItem.type === "marriage" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
-                <p style={{ margin: 0 }}><strong>Date:</strong> {formatYearLabel(selectedItem.data.year)}</p>
-                <p style={{ margin: 0 }}><strong>Husband:</strong> {selectedItem.data.husbandName} {selectedItem.data.husbandAge !== undefined ? `(Age ${selectedItem.data.husbandAge})` : ""}</p>
-                <p style={{ margin: 0 }}><strong>Wife:</strong> {selectedItem.data.wifeName} {selectedItem.data.wifeAge !== undefined ? `(Age ${selectedItem.data.wifeAge})` : ""}</p>
-                {(selectedItem.data.references || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>References:</strong> {(selectedItem.data.references || []).join(", ")}
+                {selectedItem.data.biblicalReferences && selectedItem.data.biblicalReferences.length > 0 && (
+                  <p className="flex items-center gap-1 font-semibold text-[#800020] dark:text-[#D4AF37]">
+                    <BookOpen size={13} />
+                    <span>{selectedItem.data.biblicalReferences.join(", ")}</span>
                   </p>
                 )}
               </div>
             )}
 
             {selectedItem.type === "event" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
-                {selectedItem.data.date?.year !== undefined && (
-                  <p style={{ margin: 0 }}><strong>Date:</strong> {formatYearLabel(selectedItem.data.date.year)}</p>
-                )}
-                {selectedItem.data.location && <p style={{ margin: 0 }}><strong>Location:</strong> {selectedItem.data.location}</p>}
-                {selectedItem.data.description && <p style={{ margin: 0 }}>{selectedItem.data.description}</p>}
-                {(selectedItem.data.personIds || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>People:</strong>{" "}
-                    {(selectedItem.data.personIds || [])
-                      .map((id) => people.find((p) => p.id === id)?.name || id)
-                      .join(", ")}
+              <div className="space-y-2 text-xs">
+                <p>
+                  <strong>{t.year}:</strong> {formatYearDisplay(selectedItem.data.date?.year, lang)}
+                </p>
+                {selectedItem.data.location && (
+                  <p>
+                    <strong>{t.location}:</strong> {selectedItem.data.location}
                   </p>
                 )}
-                {(selectedItem.data.biblicalReferences || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>References:</strong> {(selectedItem.data.biblicalReferences || []).join(", ")}
+                {getEventDisplayDescription(selectedItem.data, lang) && (
+                  <p className="italic bg-[#D4AF37]/10 p-3 rounded-xl border border-[#D4AF37]/20">
+                    {getEventDisplayDescription(selectedItem.data, lang)}
                   </p>
                 )}
               </div>
