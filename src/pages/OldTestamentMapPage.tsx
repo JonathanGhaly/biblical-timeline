@@ -14,15 +14,8 @@ type City = {
   name: string;
   arabicName: string;
   region: CityRegion;
-
-  /**
-   * Real-world geographic coordinates.
-   * Latitude:  north/south position
-   * Longitude: east/west position
-   */
   lat: number;
   lon: number;
-
   aliases: string[];
 };
 
@@ -32,31 +25,6 @@ type OldTestamentMapPageProps = {
   mapSrc?: string;
 };
 
-/*
- * ============================================================
- * MAP CONFIGURATION
- * ============================================================
- *
- * The map uses a simple geographic projection:
- *
- * longitude -> X
- * latitude  -> Y
- *
- * This is much more reliable than manually assigning x/y
- * percentages to every city.
- *
- * The bounds cover the main Old Testament world:
- *
- * Egypt
- * Sinai
- * Canaan
- * Syria
- * Mesopotamia
- * Babylonia
- * Arabia
- * Media
- * Persia
- */
 const MAP_WIDTH = 1800;
 const MAP_HEIGHT = 950;
 
@@ -67,14 +35,6 @@ const MAP_BOUNDS = {
   maxLat: 40,
 };
 
-/**
- * Convert latitude / longitude into SVG/map pixel coordinates.
- *
- * This uses an equirectangular projection.
- *
- * It is not suitable for global maps, but works well for this
- * relatively compact Ancient Near East map.
- */
 function geoToPixel(lat: number, lon: number) {
   const clampedLon = Math.max(
     MAP_BOUNDS.minLon,
@@ -99,24 +59,7 @@ function geoToPixel(lat: number, lon: number) {
   return { x, y };
 }
 
-/*
- * ============================================================
- * OLD TESTAMENT LOCATIONS
- * ============================================================
- *
- * Coordinates are geographic latitude / longitude rather than
- * arbitrary canvas positions.
- *
- * NOTE:
- * Some biblical locations are archaeological identifications
- * rather than absolutely certain coordinates. Therefore the
- * coordinates should be understood as representative locations.
- */
 const OT_CITIES: City[] = [
-  // ==========================================================
-  // EGYPT & SINAI
-  // ==========================================================
-
   {
     id: "thebes",
     name: "Thebes (No-Amon)",
@@ -126,7 +69,6 @@ const OT_CITIES: City[] = [
     lon: 32.6396,
     aliases: ["Thebes", "No-Amon", "No", "طيبة"],
   },
-
   {
     id: "memphis",
     name: "Memphis (Noph)",
@@ -136,7 +78,6 @@ const OT_CITIES: City[] = [
     lon: 31.2508,
     aliases: ["Memphis", "Noph", "منف"],
   },
-
   {
     id: "rameses",
     name: "Rameses (Goshen)",
@@ -146,7 +87,6 @@ const OT_CITIES: City[] = [
     lon: 32.05,
     aliases: ["Rameses", "Ramesses", "Goshen", "جاسان", "رعمسيس"],
   },
-
   {
     id: "sinai",
     name: "Mt. Sinai (Horeb)",
@@ -156,7 +96,6 @@ const OT_CITIES: City[] = [
     lon: 33.975,
     aliases: ["Sinai", "Horeb", "سيناء", "حوريب"],
   },
-
   {
     id: "eziongeber",
     name: "Ezion-Geber",
@@ -166,11 +105,6 @@ const OT_CITIES: City[] = [
     lon: 34.95,
     aliases: ["Ezion-geber", "Ezion geber", "عصيون جابر"],
   },
-
-  // ==========================================================
-  // CANAAN & LEVANT
-  // ==========================================================
-
   {
     id: "gaza",
     name: "Gaza",
@@ -180,7 +114,6 @@ const OT_CITIES: City[] = [
     lon: 34.4668,
     aliases: ["Gaza", "غزة"],
   },
-
   {
     id: "beersheba",
     name: "Beersheba",
@@ -188,9 +121,8 @@ const OT_CITIES: City[] = [
     region: "Canaan & Levant",
     lat: 31.2529,
     lon: 34.7915,
-    aliases: ["Beersheba", "Beersheba", "באר שבע", "بئر سبع"],
+    aliases: ["Beersheba", "באר שבע", "بئر سبع"],
   },
-
   {
     id: "kirhareseth",
     name: "Kir-hareseth (Moab)",
@@ -200,7 +132,6 @@ const OT_CITIES: City[] = [
     lon: 35.705,
     aliases: ["Moab", "Kir-hareseth", "Kir", "قير حارسة"],
   },
-
   {
     id: "hebron",
     name: "Hebron",
@@ -210,7 +141,6 @@ const OT_CITIES: City[] = [
     lon: 35.0998,
     aliases: ["Hebron", "حبرون"],
   },
-
   {
     id: "jerusalem",
     name: "Jerusalem",
@@ -220,7 +150,6 @@ const OT_CITIES: City[] = [
     lon: 35.2342,
     aliases: ["Jerusalem", "Zion", "أورشليم", "Jebus"],
   },
-
   {
     id: "jericho",
     name: "Jericho",
@@ -230,7 +159,6 @@ const OT_CITIES: City[] = [
     lon: 35.4446,
     aliases: ["Jericho", "أريحا"],
   },
-
   {
     id: "rabbah",
     name: "Rabbah (Ammon)",
@@ -240,17 +168,15 @@ const OT_CITIES: City[] = [
     lon: 35.9106,
     aliases: ["Rabbah", "Ammon", "Rabbath", "ربة"],
   },
-
   {
     id: "joppa",
     name: "Joppa",
     arabicName: "يافا",
     region: "Canaan & Levant",
-    lat: 32.050,
-    lon: 34.750,
+    lat: 32.05,
+    lon: 34.75,
     aliases: ["Joppa", "Jaffa", "يافا"],
   },
-
   {
     id: "shechem",
     name: "Shechem",
@@ -260,7 +186,6 @@ const OT_CITIES: City[] = [
     lon: 35.282,
     aliases: ["Shechem", "شكيم"],
   },
-
   {
     id: "samaria",
     name: "Samaria",
@@ -270,7 +195,6 @@ const OT_CITIES: City[] = [
     lon: 35.198,
     aliases: ["Samaria", "السامرة"],
   },
-
   {
     id: "dan",
     name: "Dan",
@@ -280,7 +204,6 @@ const OT_CITIES: City[] = [
     lon: 35.652,
     aliases: ["Dan", "Laish", "دان"],
   },
-
   {
     id: "tyre",
     name: "Tyre",
@@ -290,7 +213,6 @@ const OT_CITIES: City[] = [
     lon: 35.203,
     aliases: ["Tyre", "صور"],
   },
-
   {
     id: "sidon",
     name: "Sidon",
@@ -300,7 +222,6 @@ const OT_CITIES: City[] = [
     lon: 35.375,
     aliases: ["Sidon", "صيدون"],
   },
-
   {
     id: "damascus",
     name: "Damascus",
@@ -310,11 +231,6 @@ const OT_CITIES: City[] = [
     lon: 36.292,
     aliases: ["Damascus", "دمشق", "Aram"],
   },
-
-  // ==========================================================
-  // MESOPOTAMIA & ASSYRIA
-  // ==========================================================
-
   {
     id: "carchemish",
     name: "Carchemish",
@@ -324,7 +240,6 @@ const OT_CITIES: City[] = [
     lon: 37.93,
     aliases: ["Carchemish", "كركميش"],
   },
-
   {
     id: "haran",
     name: "Haran",
@@ -334,7 +249,6 @@ const OT_CITIES: City[] = [
     lon: 39.031,
     aliases: ["Haran", "حاران", "Paddan-aram"],
   },
-
   {
     id: "asshur",
     name: "Asshur",
@@ -344,7 +258,6 @@ const OT_CITIES: City[] = [
     lon: 43.256,
     aliases: ["Asshur", "Ashur", "آشور"],
   },
-
   {
     id: "nineveh",
     name: "Nineveh",
@@ -354,7 +267,6 @@ const OT_CITIES: City[] = [
     lon: 43.15,
     aliases: ["Nineveh", "نينوى"],
   },
-
   {
     id: "calah",
     name: "Calah (Nimrud)",
@@ -364,11 +276,6 @@ const OT_CITIES: City[] = [
     lon: 43.332,
     aliases: ["Calah", "Nimrud", "كالح"],
   },
-
-  // ==========================================================
-  // BABYLONIA
-  // ==========================================================
-
   {
     id: "babylon",
     name: "Babylon",
@@ -378,7 +285,6 @@ const OT_CITIES: City[] = [
     lon: 44.4241,
     aliases: ["Babylon", "Babel", "بابل", "Chaldea"],
   },
-
   {
     id: "erech",
     name: "Erech (Uruk)",
@@ -388,7 +294,6 @@ const OT_CITIES: City[] = [
     lon: 45.6374,
     aliases: ["Erech", "Uruk", "أروك"],
   },
-
   {
     id: "ur",
     name: "Ur of the Chaldees",
@@ -398,11 +303,6 @@ const OT_CITIES: City[] = [
     lon: 46.1044,
     aliases: ["Ur", "Ur of the Chaldees", "أور"],
   },
-
-  // ==========================================================
-  // ARABIA
-  // ==========================================================
-
   {
     id: "dedan",
     name: "Dedan",
@@ -412,7 +312,6 @@ const OT_CITIES: City[] = [
     lon: 37.923,
     aliases: ["Dedan", "ديدان"],
   },
-
   {
     id: "tema",
     name: "Tema",
@@ -422,11 +321,6 @@ const OT_CITIES: City[] = [
     lon: 38.543,
     aliases: ["Tema", "تيماء"],
   },
-
-  // ==========================================================
-  // PERSIA & MEDIA
-  // ==========================================================
-
   {
     id: "ecbatana",
     name: "Ecbatana",
@@ -436,7 +330,6 @@ const OT_CITIES: City[] = [
     lon: 48.5146,
     aliases: ["Ecbatana", "Achmetha", "أحمتا", "أكتبانا"],
   },
-
   {
     id: "susa",
     name: "Susa (Shushan)",
@@ -446,7 +339,6 @@ const OT_CITIES: City[] = [
     lon: 48.257,
     aliases: ["Susa", "Shushan", "شوشان", "Elam"],
   },
-
   {
     id: "persepolis",
     name: "Persepolis",
@@ -463,11 +355,8 @@ export default function OldTestamentMapPage({
   people = [],
 }: OldTestamentMapPageProps) {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
-  const [selectedEvent, setSelectedEvent] =
-    useState<BiblicalEvent | null>(null);
-
-  const [selectedRegion, setSelectedRegion] =
-    useState<string>("All");
+  const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<string>("All");
 
   const regions = [
     "All",
@@ -479,53 +368,18 @@ export default function OldTestamentMapPage({
     "Persia & Media",
   ];
 
-  /*
-   * ==========================================================
-   * EVENT -> CITY MATCHING
-   * ==========================================================
-   *
-   * We still support location strings from your existing data.
-   *
-   * However, we deliberately removed broad aliases such as
-   * "Egypt" from Memphis because:
-   *
-   *   location = "Egypt"
-   *
-   * does NOT mean:
-   *
-   *   location = "Memphis"
-   *
-   * Otherwise one tiny string match can create geographical
-   * nonsense.
-   */
   const eventsByCity = useMemo(() => {
     const map = new Map<string, BiblicalEvent[]>();
 
     OT_CITIES.forEach((city) => {
       const matching = events.filter((event) => {
-        if (!event.location) {
-          return false;
-        }
-
+        if (!event.location) return false;
         const location = event.location.trim().toLowerCase();
 
         return city.aliases.some((alias) => {
           const normalizedAlias = alias.trim().toLowerCase();
+          if (!normalizedAlias) return false;
 
-          if (!normalizedAlias) {
-            return false;
-          }
-
-          /*
-           * Match whole words where possible.
-           *
-           * This avoids cases such as:
-           *
-           * "Ur"
-           *
-           * matching unrelated words that happen to contain
-           * the letters "ur".
-           */
           const escapedAlias = normalizedAlias.replace(
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
@@ -546,38 +400,18 @@ export default function OldTestamentMapPage({
     return map;
   }, [events]);
 
-  /*
-   * ==========================================================
-   * FILTERED CITIES
-   * ==========================================================
-   */
   const filteredCities = useMemo(() => {
-    if (selectedRegion === "All") {
-      return OT_CITIES;
-    }
-
-    return OT_CITIES.filter(
-      (city) => city.region === selectedRegion
-    );
+    if (selectedRegion === "All") return OT_CITIES;
+    return OT_CITIES.filter((city) => city.region === selectedRegion);
   }, [selectedRegion]);
 
   const activeCityEvents = selectedCity
     ? eventsByCity.get(selectedCity.id) || []
     : [];
 
-  /*
-   * ==========================================================
-   * DATE FORMATTING
-   * ==========================================================
-   */
   const formatYearLabel = (year?: number) => {
-    if (year === undefined) {
-      return "";
-    }
-
-    return year < 0
-      ? `${Math.abs(year)} BC`
-      : `${year} AD`;
+    if (year === undefined) return "";
+    return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
   };
 
   return (
@@ -589,10 +423,6 @@ export default function OldTestamentMapPage({
         fontFamily: "Georgia, serif",
       }}
     >
-      {/* ======================================================
-          HEADER
-          ====================================================== */}
-
       <div
         style={{
           display: "flex",
@@ -614,7 +444,6 @@ export default function OldTestamentMapPage({
           >
             The Old Testament World
           </h2>
-
           <p
             style={{
               color: "#78716c",
@@ -627,10 +456,6 @@ export default function OldTestamentMapPage({
             latitude/longitude-based biblical locations.
           </p>
         </div>
-
-        {/* ====================================================
-            REGION FILTERS
-            ==================================================== */}
 
         <div
           style={{
@@ -649,22 +474,13 @@ export default function OldTestamentMapPage({
                 borderRadius: "6px",
                 border:
                   "1px solid " +
-                  (selectedRegion === region
-                    ? "#854d0e"
-                    : "#d6d3d1"),
-                background:
-                  selectedRegion === region
-                    ? "#854d0e"
-                    : "#fef3c7",
-                color:
-                  selectedRegion === region
-                    ? "#ffffff"
-                    : "#451a03",
+                  (selectedRegion === region ? "#854d0e" : "#d6d3d1"),
+                background: selectedRegion === region ? "#854d0e" : "#fef3c7",
+                color: selectedRegion === region ? "#ffffff" : "#451a03",
                 fontSize: "0.8rem",
                 fontWeight: "600",
                 cursor: "pointer",
-                boxShadow:
-                  "0 1px 2px rgba(0,0,0,0.05)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
               }}
             >
               {region}
@@ -673,18 +489,13 @@ export default function OldTestamentMapPage({
         </div>
       </div>
 
-      {/* ======================================================
-          MAP
-          ====================================================== */}
-
       <div
         style={{
           width: "100%",
           overflowX: "auto",
           borderRadius: "12px",
           border: "3px solid #78350f",
-          boxShadow:
-            "0 12px 30px rgba(0, 0, 0, 0.25)",
+          boxShadow: "0 12px 30px rgba(0, 0, 0, 0.25)",
           background: "#1c1917",
         }}
       >
@@ -696,10 +507,6 @@ export default function OldTestamentMapPage({
             background: "#ebdcb9",
           }}
         >
-          {/* ==================================================
-              SVG GEOGRAPHIC BACKGROUND
-              ================================================== */}
-
           <svg
             viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
             style={{
@@ -710,92 +517,25 @@ export default function OldTestamentMapPage({
             }}
           >
             <defs>
-              {/* Ocean */}
-
-              <linearGradient
-                id="oceanGrad"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="100%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="#2b5368"
-                />
-
-                <stop
-                  offset="100%"
-                  stopColor="#1a3644"
-                />
+              <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#2b5368" />
+                <stop offset="100%" stopColor="#1a3644" />
               </linearGradient>
 
-              {/* Fertile Crescent */}
-
-              <linearGradient
-                id="fertileArc"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="#ebdcb9"
-                />
-
-                <stop
-                  offset="35%"
-                  stopColor="#c5d8a4"
-                  stopOpacity="0.6"
-                />
-
-                <stop
-                  offset="70%"
-                  stopColor="#a3ccab"
-                  stopOpacity="0.6"
-                />
-
-                <stop
-                  offset="100%"
-                  stopColor="#ebdcb9"
-                />
+              <linearGradient id="fertileArc" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#ebdcb9" />
+                <stop offset="35%" stopColor="#c5d8a4" stopOpacity="0.6" />
+                <stop offset="70%" stopColor="#a3ccab" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#ebdcb9" />
               </linearGradient>
 
-              {/* Land */}
-
-              <linearGradient
-                id="landGrad"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="100%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="#f5e8ca"
-                />
-
-                <stop
-                  offset="50%"
-                  stopColor="#ebdcb9"
-                />
-
-                <stop
-                  offset="100%"
-                  stopColor="#d2bc8a"
-                />
+              <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f5e8ca" />
+                <stop offset="50%" stopColor="#ebdcb9" />
+                <stop offset="100%" stopColor="#d2bc8a" />
               </linearGradient>
 
-              {/* Label shadow */}
-
-              <filter
-                id="labelShadow"
-                x="-20%"
-                y="-20%"
-                width="140%"
-                height="140%"
-              >
+              <filter id="labelShadow" x="-20%" y="-20%" width="140%" height="140%">
                 <feDropShadow
                   dx="1"
                   dy="1"
@@ -806,48 +546,43 @@ export default function OldTestamentMapPage({
               </filter>
             </defs>
 
-            {/* =================================================
-                BASE LAND
-                ================================================= */}
+            {/* BASE LAND */}
+            <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#landGrad)" />
 
-            <rect
-              width={MAP_WIDTH}
-              height={MAP_HEIGHT}
-              fill="url(#landGrad)"
-            />
-
-            {/* =================================================
-                FERTILE CRESCENT
-                ================================================= */}
-
+            {/* FERTILE CRESCENT ARC */}
             <path
               d="
-                M 230,660
-                Q 300,560 450,450
-                Q 620,180 800,180
-                Q 1000,180 1250,680
-                Q 1150,750 900,450
-                Q 650,300 450,550
-                Q 300,650 230,660
+                M 330,500
+                Q 420,440 580,450
+                Q 630,320 750,200
+                Q 900,120 1100,180
+                Q 1280,320 1350,520
+                Q 1200,520 1100,430
+                Q 900,280 780,240
+                Q 680,300 620,460
+                Q 480,560 330,500
                 Z
               "
               fill="url(#fertileArc)"
             />
 
-            {/* =================================================
-                MEDITERRANEAN SEA
-                ================================================= */}
-
+            {/* MEDITERRANEAN SEA */}
             <path
               d="
                 M 0,0
-                L 560,0
-                C 530,120 510,180 460,200
-                C 450,240 442,280 438,320
-                C 432,360 422,410 410,450
-                C 400,490 385,540 365,580
-                C 330,570 280,560 220,560
-                L 0,560
+                L 0,448
+                L 332,464
+                L 467,464
+                L 534,464
+                L 589,448
+                L 605,420
+                L 630,355
+                L 640,340
+                L 669,200
+                L 613,164
+                L 365,185
+                L 225,185
+                L 0,169
                 Z
               "
               fill="url(#oceanGrad)"
@@ -855,15 +590,13 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* =================================================
-                CYPRUS
-                ================================================= */}
-
+            {/* CYPRUS */}
             <path
               d="
-                M 330,300
-                C 360,290 390,295 415,305
-                C 390,315 350,325 320,315
+                M 467,258
+                L 596,227
+                L 551,274
+                L 472,280
                 Z
               "
               fill="url(#landGrad)"
@@ -871,51 +604,47 @@ export default function OldTestamentMapPage({
               strokeWidth="1.5"
             />
 
-            {/* =================================================
-                BLACK SEA
-                ================================================= */}
-
+            {/* BLACK SEA */}
             <path
               d="
-                M 520,0
-                C 580,70 700,90 850,50
-                C 900,20 950,0 950,0
+                M 225,0
+                C 400,60 700,60 956,0
                 Z
               "
               fill="url(#oceanGrad)"
               stroke="#1a3644"
             />
 
-            {/* =================================================
-                CASPIAN SEA
-                ================================================= */}
-
+            {/* CASPIAN SEA */}
             <path
               d="
-                M 1450,0
-                C 1500,80 1520,160 1500,240
-                C 1470,300 1420,260 1390,160
-                C 1370,80 1370,0 1370,0
+                M 1451,0
+                C 1430,70 1434,132 1480,180
+                C 1580,200 1650,150 1688,0
                 Z
               "
               fill="url(#oceanGrad)"
               stroke="#1a3644"
             />
 
-            {/* =================================================
-                RED SEA / GULFS
-                ================================================= */}
-
+            {/* RED SEA & GULFS (SUEZ & AQABA) */}
             <path
               d="
-                M 320,630
-                L 230,950
-                L 380,950
-                L 400,860
-                L 440,710
-                L 420,710
-                L 360,830
-                L 330,630
+                M 481,533
+                L 506,607
+                L 540,660
+                L 579,739
+                L 647,844
+                L 731,950
+                L 816,950
+                L 759,844
+                L 703,739
+                L 647,633
+                L 616,553
+                L 596,607
+                L 577,649
+                L 523,591
+                L 481,533
                 Z
               "
               fill="url(#oceanGrad)"
@@ -923,16 +652,21 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* =================================================
-                PERSIAN GULF
-                ================================================= */}
-
+            {/* PERSIAN GULF */}
             <path
               d="
-                M 1220,950
-                C 1230,750 1300,700 1420,670
-                C 1580,640 1700,650 1800,690
+                M 1350,528
+                L 1378,581
+                L 1463,686
+                L 1547,765
+                L 1631,844
+                L 1744,950
                 L 1800,950
+                L 1800,739
+                L 1828,686
+                L 1519,633
+                L 1434,581
+                L 1350,528
                 Z
               "
               fill="url(#oceanGrad)"
@@ -940,93 +674,33 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* =================================================
-                NILE RIVER
-                ================================================= */}
-
-            <g
-              stroke="#1e4e6d"
-              fill="none"
-              strokeLinecap="round"
-            >
+            {/* NILE RIVER */}
+            <g stroke="#1e4e6d" fill="none" strokeLinecap="round">
               <path
-                d="
-                  M 180,950
-                  Q 210,850 230,660
-                  L 250,600
-                "
+                d="M 422,950 L 501,844 L 486,756 L 405,676 L 408,536"
                 strokeWidth="5"
               />
-
-              <path
-                d="
-                  M 250,600
-                  Q 200,570 170,560
-                "
-                strokeWidth="2.5"
-              />
-
-              <path
-                d="
-                  M 250,600
-                  Q 240,570 230,560
-                "
-                strokeWidth="2"
-              />
-
-              <path
-                d="
-                  M 250,600
-                  Q 280,570 300,560
-                "
-                strokeWidth="2.5"
-              />
+              <path d="M 408,536 L 332,464" strokeWidth="2.5" />
+              <path d="M 408,536 L 467,464" strokeWidth="2.5" />
             </g>
 
-            {/* =================================================
-                JORDAN RIVER SYSTEM
-                ================================================= */}
-
-            <g
-              stroke="#1e4e6d"
-              fill="none"
-            >
-              <ellipse
-                cx="475"
-                cy="410"
-                rx="8"
-                ry="12"
-                fill="#2b5368"
-                stroke="none"
-              />
-
-              <ellipse
-                cx="475"
-                cy="560"
-                rx="12"
-                ry="30"
-                fill="#2b5368"
-                stroke="none"
-              />
-
-              <path
-                d="M 475,422 L 475,530"
-                strokeWidth="2.5"
-              />
+            {/* JORDAN RIVER SYSTEM */}
+            <g stroke="#1e4e6d" fill="none">
+              <ellipse cx="652" cy="378" rx="8" ry="12" fill="#2b5368" stroke="none" />
+              <ellipse cx="646" cy="455" rx="14" ry="32" fill="#2b5368" stroke="none" />
+              <path d="M 652,390 L 646,423" strokeWidth="2.5" />
             </g>
 
-            {/* =================================================
-                EUPHRATES
-                ================================================= */}
-
+            {/* EUPHRATES RIVER */}
             <path
               d="
-                M 780,100
-                Q 680,180 620,210
-                Q 750,310 900,420
-                Q 1020,480 1080,520
-                Q 1140,580 1210,680
-                L 1230,720
+                M 984,11
+                Q 872,53 788,132
+                Q 780,160 784,167
+                Q 844,216 906,248
+                Q 951,296 1086,348
+                Q 1149,395 1217,458
+                Q 1243,477 1350,528
               "
               fill="none"
               stroke="#1e4e6d"
@@ -1034,16 +708,15 @@ export default function OldTestamentMapPage({
               strokeLinecap="round"
             />
 
-            {/* =================================================
-                TIGRIS
-                ================================================= */}
-
+            {/* TIGRIS RIVER */}
             <path
               d="
-                M 900,100
-                Q 940,250 955,280
-                Q 930,330 1050,470
-                Q 1150,570 1230,720
+                M 855,84
+                Q 911,111 1024,158
+                Q 1077,192 1087,206
+                Q 1083,240 1086,306
+                Q 1148,354 1226,422
+                Q 1316,475 1350,528
               "
               fill="none"
               stroke="#1e4e6d"
@@ -1051,10 +724,7 @@ export default function OldTestamentMapPage({
               strokeLinecap="round"
             />
 
-            {/* =================================================
-                MOUNTAIN RANGES
-                ================================================= */}
-
+            {/* MOUNTAIN RANGES */}
             <g
               stroke="#78350f"
               fill="none"
@@ -1062,41 +732,13 @@ export default function OldTestamentMapPage({
               strokeDasharray="4,4"
               opacity="0.45"
             >
-              {/* Taurus */}
-
-              <path
-                d="M 460,160 Q 560,190 660,150"
-              />
-
-              {/* Lebanon */}
-
-              <path
-                d="M 450,280 L 445,380"
-              />
-
-              {/* Ararat */}
-
-              <path
-                d="
-                  M 880,90
-                  Q 1020,70 1150,110
-                "
-              />
-
-              {/* Zagros */}
-
-              <path
-                d="
-                  M 1180,220
-                  Q 1380,380 1620,600
-                "
-              />
+              <path d="M 360,185 Q 500,170 650,160 Q 720,150 780,165" />
+              <path d="M 645,300 L 640,370" />
+              <path d="M 980,30 Q 1100,20 1200,60" />
+              <path d="M 1150,120 Q 1300,280 1650,580" />
             </g>
 
-            {/* =================================================
-                REGIONAL LABELS
-                ================================================= */}
-
+            {/* REGIONAL LABELS */}
             <g
               fill="#451a03"
               fontFamily="Georgia, serif"
@@ -1104,310 +746,61 @@ export default function OldTestamentMapPage({
               textAnchor="middle"
               filter="url(#labelShadow)"
             >
-              <text
-                x="170"
-                y="780"
-                fontSize="26"
-              >
-                EGYPT
-              </text>
-
-              <text
-                x="375"
-                y="790"
-                fontSize="16"
-              >
-                SINAI
-              </text>
-
-              <text
-                x="430"
-                y="140"
-                fontSize="22"
-              >
-                ASIA MINOR
-              </text>
-
-              <text
-                x="320"
-                y="470"
-                fontSize="20"
-                transform="rotate(-75 320 470)"
-              >
-                CANAAN
-              </text>
-
-              <text
-                x="520"
-                y="280"
-                fontSize="22"
-              >
-                SYRIA (ARAM)
-              </text>
-
-              <text
-                x="820"
-                y="260"
-                fontSize="26"
-              >
-                MESOPOTAMIA
-              </text>
-
-              <text
-                x="830"
-                y="290"
-                fontSize="14"
-                fontStyle="italic"
-              >
-                Paddan-aram
-              </text>
-
-              <text
-                x="1010"
-                y="220"
-                fontSize="24"
-              >
-                ASSYRIA
-              </text>
-
-              <text
-                x="1000"
-                y="80"
-                fontSize="20"
-              >
-                ARMENIA
-              </text>
-
-              <text
-                x="1100"
-                y="600"
-                fontSize="24"
-              >
-                BABYLONIA
-              </text>
-
-              <text
-                x="1170"
-                y="630"
-                fontSize="16"
-                fontStyle="italic"
-              >
-                Chaldea
-              </text>
-
-              <text
-                x="1310"
-                y="260"
-                fontSize="24"
-              >
-                MEDIA
-              </text>
-
-              <text
-                x="1390"
-                y="520"
-                fontSize="24"
-              >
-                ELAM
-              </text>
-
-              <text
-                x="1560"
-                y="580"
-                fontSize="26"
-              >
-                PERSIA
-              </text>
-
-              <text
-                x="800"
-                y="720"
-                fontSize="28"
-                fill="#78350f"
-                opacity="0.6"
-              >
-                ARABIAN DESERT
-              </text>
+              <text x="370" y="680" fontSize="26">EGYPT</text>
+              <text x="550" y="580" fontSize="16">SINAI</text>
+              <text x="390" y="100" fontSize="22">ASIA MINOR</text>
+              <text x="680" y="420" fontSize="20" transform="rotate(-75 680 420)">CANAAN</text>
+              <text x="730" y="260" fontSize="22">SYRIA (ARAM)</text>
+              <text x="930" y="210" fontSize="26">MESOPOTAMIA</text>
+              <text x="930" y="235" fontSize="14" fontStyle="italic">Paddan-aram</text>
+              <text x="1100" y="210" fontSize="24">ASSYRIA</text>
+              <text x="1040" y="50" fontSize="20">ARMENIA</text>
+              <text x="1180" y="420" fontSize="24">BABYLONIA</text>
+              <text x="1180" y="445" fontSize="16" fontStyle="italic">Chaldea</text>
+              <text x="1380" y="210" fontSize="24">MEDIA</text>
+              <text x="1400" y="420" fontSize="24">ELAM</text>
+              <text x="1630" y="580" fontSize="26">PERSIA</text>
+              <text x="900" y="738" fontSize="28" fill="#78350f" opacity="0.6">ARABIAN DESERT</text>
             </g>
 
-            {/* =================================================
-                RIVER LABELS
-                ================================================= */}
-
-            <g
-              fill="#1e4e6d"
-              fontSize="12"
-              fontStyle="italic"
-              fontWeight="600"
-            >
-              <text
-                x="110"
-                y="820"
-                transform="rotate(-72 110 820)"
-              >
-                Nile River
-              </text>
-
-              <text
-                x="790"
-                y="320"
-                transform="rotate(28 790 320)"
-              >
-                Euphrates River
-              </text>
-
-              <text
-                x="1030"
-                y="340"
-                transform="rotate(48 1030 340)"
-              >
-                Tigris River
-              </text>
+            {/* RIVER LABELS */}
+            <g fill="#1e4e6d" fontSize="12" fontStyle="italic" fontWeight="600">
+              <text x="440" y="750" transform="rotate(-78 440 750)">Nile River</text>
+              <text x="920" y="270" transform="rotate(28 920 270)">Euphrates River</text>
+              <text x="1110" y="280" transform="rotate(52 1110 280)">Tigris River</text>
             </g>
 
-            {/* =================================================
-                WATER LABELS
-                ================================================= */}
-
-            <g
-              fill="#ffffff"
-              fontFamily="sans-serif"
-              fontWeight="bold"
-              opacity="0.85"
-              textAnchor="middle"
-            >
-              <text
-                x="220"
-                y="280"
-                fontSize="18"
-              >
-                Mediterranean Sea
-              </text>
-
-              <text
-                x="680"
-                y="40"
-                fontSize="14"
-              >
-                Black Sea
-              </text>
-
-              <text
-                x="1460"
-                y="120"
-                fontSize="15"
-              >
-                Caspian Sea
-              </text>
-
-              <text
-                x="1600"
-                y="780"
-                fontSize="18"
-              >
-                Persian Gulf
-              </text>
-
-              <text
-                x="290"
-                y="880"
-                fontSize="15"
-                transform="rotate(-68 290 880)"
-              >
-                Red Sea
-              </text>
+            {/* WATER LABELS */}
+            <g fill="#ffffff" fontFamily="sans-serif" fontWeight="bold" opacity="0.85" textAnchor="middle">
+              <text x="300" y="320" fontSize="18">Mediterranean Sea</text>
+              <text x="600" y="30" fontSize="14">Black Sea</text>
+              <text x="1530" y="80" fontSize="15">Caspian Sea</text>
+              <text x="1550" y="720" fontSize="18">Persian Gulf</text>
+              <text x="670" y="750" fontSize="15" transform="rotate(-60 670 750)">Red Sea</text>
             </g>
 
-            {/* =================================================
-                LEGEND
-                ================================================= */}
-
-            <g
-              transform="translate(1420, 800)"
-            >
-              <rect
-                width="320"
-                height="110"
-                rx="8"
-                fill="#fef3c7"
-                stroke="#78350f"
-                strokeWidth="2"
-                opacity="0.92"
-              />
-
-              <text
-                x="160"
-                y="35"
-                textAnchor="middle"
-                fill="#451a03"
-                fontFamily="Georgia, serif"
-                fontSize="18"
-                fontWeight="bold"
-              >
+            {/* LEGEND */}
+            <g transform="translate(1420, 800)">
+              <rect width="320" height="110" rx="8" fill="#fef3c7" stroke="#78350f" strokeWidth="2" opacity="0.92" />
+              <text x="160" y="35" textAnchor="middle" fill="#451a03" fontFamily="Georgia, serif" fontSize="18" fontWeight="bold">
                 THE OLD TESTAMENT WORLD
               </text>
-
-              <text
-                x="160"
-                y="60"
-                textAnchor="middle"
-                fill="#78350f"
-                fontFamily="sans-serif"
-                fontSize="12"
-              >
+              <text x="160" y="60" textAnchor="middle" fill="#78350f" fontFamily="sans-serif" fontSize="12">
                 Ancient Near East Geographic Map
               </text>
-
-              <line
-                x1="30"
-                y1="75"
-                x2="290"
-                y2="75"
-                stroke="#78350f"
-                strokeWidth="1"
-                opacity="0.5"
-              />
-
-              <circle
-                cx="50"
-                cy="90"
-                r="5"
-                fill="#b91c1c"
-              />
-
-              <text
-                x="65"
-                y="94"
-                fill="#451a03"
-                fontFamily="sans-serif"
-                fontSize="11"
-              >
+              <line x1="30" y1="75" x2="290" y2="75" stroke="#78350f" strokeWidth="1" opacity="0.5" />
+              <circle cx="50" cy="90" r="5" fill="#b91c1c" />
+              <text x="65" y="94" fill="#451a03" fontFamily="sans-serif" fontSize="11">
                 Biblical Location Marker
               </text>
             </g>
           </svg>
 
-          {/* ====================================================
-              CITY MARKERS
-              ==================================================== */}
-
+          {/* CITY MARKERS */}
           {filteredCities.map((city) => {
-            const cityEvents =
-              eventsByCity.get(city.id) || [];
-
-            const hasEvents =
-              cityEvents.length > 0;
-
-            /*
-             * IMPORTANT:
-             *
-             * City position is calculated from its actual
-             * geographic coordinates.
-             */
-            const { x, y } = geoToPixel(
-              city.lat,
-              city.lon
-            );
+            const cityEvents = eventsByCity.get(city.id) || [];
+            const hasEvents = cityEvents.length > 0;
+            const { x, y } = geoToPixel(city.lat, city.lon);
 
             return (
               <div
@@ -1416,15 +809,12 @@ export default function OldTestamentMapPage({
                   setSelectedCity(city);
                   setSelectedEvent(null);
                 }}
-                title={`${city.name} • ${city.lat.toFixed(
-                  4
-                )}°, ${city.lon.toFixed(4)}°`}
+                title={`${city.name} • ${city.lat.toFixed(4)}°, ${city.lon.toFixed(4)}°`}
                 style={{
                   position: "absolute",
                   left: `${x}px`,
                   top: `${y}px`,
-                  transform:
-                    "translate(-50%, -50%)",
+                  transform: "translate(-50%, -50%)",
                   cursor: "pointer",
                   zIndex: 30,
                   display: "flex",
@@ -1432,26 +822,14 @@ export default function OldTestamentMapPage({
                   alignItems: "center",
                 }}
               >
-                {/* =================================================
-                    CITY POINT
-                    ================================================= */}
-
                 <div
                   style={{
-                    width: hasEvents
-                      ? "18px"
-                      : "12px",
-                    height: hasEvents
-                      ? "18px"
-                      : "12px",
+                    width: hasEvents ? "18px" : "12px",
+                    height: hasEvents ? "18px" : "12px",
                     borderRadius: "50%",
-                    backgroundColor: hasEvents
-                      ? "#b91c1c"
-                      : "#0284c7",
-                    border:
-                      "2px solid #ffffff",
-                    boxShadow:
-                      "0 2px 5px rgba(0,0,0,0.4)",
+                    backgroundColor: hasEvents ? "#b91c1c" : "#0284c7",
+                    border: "2px solid #ffffff",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1460,30 +838,21 @@ export default function OldTestamentMapPage({
                     fontWeight: "bold",
                   }}
                 >
-                  {hasEvents
-                    ? cityEvents.length
-                    : ""}
+                  {hasEvents ? cityEvents.length : ""}
                 </div>
-
-                {/* =================================================
-                    CITY LABEL
-                    ================================================= */}
 
                 <div
                   style={{
                     marginTop: "2px",
-                    background:
-                      "rgba(28, 25, 23, 0.9)",
+                    background: "rgba(28, 25, 23, 0.9)",
                     color: "#fef3c7",
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontSize: "0.7rem",
                     fontWeight: "600",
                     whiteSpace: "nowrap",
-                    boxShadow:
-                      "0 1px 4px rgba(0,0,0,0.3)",
-                    border:
-                      "1px solid rgba(217, 119, 6, 0.3)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(217, 119, 6, 0.3)",
                     fontFamily: "sans-serif",
                   }}
                 >
@@ -1495,26 +864,20 @@ export default function OldTestamentMapPage({
         </div>
       </div>
 
-      {/* ======================================================
-          CITY EVENT MODAL
-          ====================================================== */}
-
+      {/* CITY EVENT MODAL */}
       {selectedCity && !selectedEvent && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background:
-              "rgba(15, 23, 42, 0.7)",
+            background: "rgba(15, 23, 42, 0.7)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={() => {
-            setSelectedCity(null);
-          }}
+          onClick={() => setSelectedCity(null)}
         >
           <div
             style={{
@@ -1525,23 +888,15 @@ export default function OldTestamentMapPage({
               width: "90%",
               maxHeight: "80vh",
               overflowY: "auto",
-              boxShadow:
-                "0 20px 25px -5px rgba(0,0,0,0.3)",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.3)",
               border: "2px solid #78350f",
             }}
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
+            onClick={(event) => event.stopPropagation()}
           >
-            {/* =================================================
-                CITY HEADER
-                ================================================= */}
-
             <div
               style={{
                 display: "flex",
-                justifyContent:
-                  "space-between",
+                justifyContent: "space-between",
                 alignItems: "flex-start",
                 marginBottom: "16px",
               }}
@@ -1552,13 +907,11 @@ export default function OldTestamentMapPage({
                     margin: 0,
                     fontSize: "1.4rem",
                     color: "#291e13",
-                    fontFamily:
-                      "Georgia, serif",
+                    fontFamily: "Georgia, serif",
                   }}
                 >
                   {selectedCity.name}
                 </h3>
-
                 <p
                   style={{
                     margin: "2px 0 0 0",
@@ -1568,11 +921,8 @@ export default function OldTestamentMapPage({
                     fontFamily: "sans-serif",
                   }}
                 >
-                  {selectedCity.arabicName}
-                  {" • "}
-                  Region: {selectedCity.region}
+                  {selectedCity.arabicName} • Region: {selectedCity.region}
                 </p>
-
                 <p
                   style={{
                     margin: "5px 0 0 0",
@@ -1581,17 +931,12 @@ export default function OldTestamentMapPage({
                     fontFamily: "sans-serif",
                   }}
                 >
-                  {selectedCity.lat.toFixed(4)}°
-                  {" N, "}
-                  {selectedCity.lon.toFixed(4)}°
-                  {" E"}
+                  {selectedCity.lat.toFixed(4)}° N, {selectedCity.lon.toFixed(4)}° E
                 </p>
               </div>
 
               <button
-                onClick={() =>
-                  setSelectedCity(null)
-                }
+                onClick={() => setSelectedCity(null)}
                 style={{
                   background: "none",
                   border: "none",
@@ -1604,142 +949,61 @@ export default function OldTestamentMapPage({
               </button>
             </div>
 
-            {/* =================================================
-                EVENTS
-                ================================================= */}
-
             {activeCityEvents.length === 0 ? (
-              <p
-                style={{
-                  color: "#786c5e",
-                  fontSize: "0.9rem",
-                  fontFamily: "sans-serif",
-                }}
-              >
-                No biblical events currently tagged
-                with this location in your dataset.
+              <p style={{ color: "#786c5e", fontSize: "0.9rem", fontFamily: "sans-serif" }}>
+                No biblical events currently tagged with this location in your dataset.
               </p>
             ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  fontFamily: "sans-serif",
-                }}
-              >
-                {activeCityEvents.map(
-                  (event) => (
-                    <div
-                      key={event.id}
-                      onClick={() =>
-                        setSelectedEvent(event)
-                      }
-                      style={{
-                        padding: "12px",
-                        borderRadius: "8px",
-                        border:
-                          "1px solid #d6d3d1",
-                        background:
-                          "#ffffff",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent:
-                            "space-between",
-                          alignItems:
-                            "baseline",
-                          gap: "10px",
-                        }}
-                      >
-                        <h4
-                          style={{
-                            margin:
-                              "0 0 4px 0",
-                            color: "#1c1917",
-                            fontSize:
-                              "0.95rem",
-                          }}
-                        >
-                          {event.title}
-                        </h4>
-
-                        {event.date?.year !==
-                          undefined && (
-                          <span
-                            style={{
-                              fontSize:
-                                "0.78rem",
-                              color:
-                                "#b91c1c",
-                              fontWeight:
-                                "bold",
-                              whiteSpace:
-                                "nowrap",
-                            }}
-                          >
-                            {formatYearLabel(
-                              event.date.year
-                            )}
-                          </span>
-                        )}
-                      </div>
-
-                      {event.description && (
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize:
-                              "0.85rem",
-                            color:
-                              "#57534e",
-                            overflow:
-                              "hidden",
-                            textOverflow:
-                              "ellipsis",
-                            display:
-                              "-webkit-box",
-                            WebkitLineClamp:
-                              2,
-                            WebkitBoxOrient:
-                              "vertical",
-                          }}
-                        >
-                          {event.description}
-                        </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontFamily: "sans-serif" }}>
+                {activeCityEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={() => setSelectedEvent(event)}
+                    style={{
+                      padding: "12px",
+                      borderRadius: "8px",
+                      border: "1px solid #d6d3d1",
+                      background: "#ffffff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px" }}>
+                      <h4 style={{ margin: "0 0 4px 0", color: "#1c1917", fontSize: "0.95rem" }}>
+                        {event.title}
+                      </h4>
+                      {event.date?.year !== undefined && (
+                        <span style={{ fontSize: "0.78rem", color: "#b91c1c", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                          {formatYearLabel(event.date.year)}
+                        </span>
                       )}
                     </div>
-                  )
-                )}
+                    {event.description && (
+                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#57534e", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                        {event.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* ======================================================
-          EVENT DETAILS MODAL
-          ====================================================== */}
-
+      {/* EVENT DETAILS MODAL */}
       {selectedEvent && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background:
-              "rgba(15, 23, 42, 0.7)",
+            background: "rgba(15, 23, 42, 0.7)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1100,
           }}
-          onClick={() =>
-            setSelectedEvent(null)
-          }
+          onClick={() => setSelectedEvent(null)}
         >
           <div
             style={{
@@ -1750,155 +1014,64 @@ export default function OldTestamentMapPage({
               width: "90%",
               maxHeight: "85vh",
               overflowY: "auto",
-              boxShadow:
-                "0 20px 25px -5px rgba(0,0,0,0.3)",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.3)",
               border: "2px solid #78350f",
               fontFamily: "sans-serif",
             }}
-            onClick={(event) =>
-              event.stopPropagation()
-            }
+            onClick={(event) => event.stopPropagation()}
           >
-            {/* =================================================
-                EVENT HEADER
-                ================================================= */}
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems: "flex-start",
-                marginBottom: "16px",
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: "1.3rem",
-                  color: "#1c1917",
-                  fontFamily:
-                    "Georgia, serif",
-                }}
-              >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "1.3rem", color: "#1c1917", fontFamily: "Georgia, serif" }}>
                 {selectedEvent.title}
               </h3>
-
               <button
-                onClick={() =>
-                  setSelectedEvent(null)
-                }
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "1.4rem",
-                  cursor: "pointer",
-                  color: "#786c5e",
-                }}
+                onClick={() => setSelectedEvent(null)}
+                style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", color: "#786c5e" }}
               >
                 ✕
               </button>
             </div>
 
-            {/* =================================================
-                EVENT INFORMATION
-                ================================================= */}
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                fontSize: "0.9rem",
-                color: "#44403c",
-              }}
-            >
-              {selectedEvent.date?.year !==
-                undefined && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#44403c" }}>
+              {selectedEvent.date?.year !== undefined && (
                 <p style={{ margin: 0 }}>
-                  <strong>Date:</strong>{" "}
-                  {formatYearLabel(
-                    selectedEvent.date.year
-                  )}
+                  <strong>Date:</strong> {formatYearLabel(selectedEvent.date.year)}
                 </p>
               )}
-
               {selectedEvent.location && (
                 <p style={{ margin: 0 }}>
-                  <strong>
-                    Location:
-                  </strong>{" "}
-                  {selectedEvent.location}
+                  <strong>Location:</strong> {selectedEvent.location}
                 </p>
               )}
-
               {selectedEvent.description && (
-                <p
-                  style={{
-                    margin: 0,
-                    lineHeight: "1.5",
-                  }}
-                >
-                  {selectedEvent.description}
-                </p>
+                <p style={{ margin: 0, lineHeight: "1.5" }}>{selectedEvent.description}</p>
               )}
-
-              {(selectedEvent.personIds ||
-                []).length > 0 && (
+              {(selectedEvent.personIds || []).length > 0 && (
                 <p style={{ margin: 0 }}>
-                  <strong>
-                    Key Figures:
-                  </strong>{" "}
-                  {(
-                    selectedEvent.personIds ||
-                    []
-                  )
-                    .map(
-                      (id) =>
-                        people.find(
-                          (person) =>
-                            person.id === id
-                        )?.name || id
-                    )
+                  <strong>Key Figures:</strong>{" "}
+                  {(selectedEvent.personIds || [])
+                    .map((id) => people.find((person) => person.id === id)?.name || id)
                     .join(", ")}
                 </p>
               )}
-
-              {(
-                selectedEvent.biblicalReferences ||
-                []
-              ).length > 0 && (
+              {(selectedEvent.biblicalReferences || []).length > 0 && (
                 <p style={{ margin: 0 }}>
-                  <strong>
-                    Scripture:
-                  </strong>{" "}
-                  {(
-                    selectedEvent.biblicalReferences ||
-                    []
-                  ).join(", ")}
+                  <strong>Scripture:</strong> {(selectedEvent.biblicalReferences || []).join(", ")}
                 </p>
               )}
 
-              {/* =================================================
-                  BACK BUTTON
-                  ================================================= */}
-
               <button
-                onClick={() =>
-                  setSelectedEvent(null)
-                }
+                onClick={() => setSelectedEvent(null)}
                 style={{
                   marginTop: "12px",
                   padding: "8px 14px",
                   borderRadius: "6px",
                   background: "#e7e5e4",
-                  border:
-                    "1px solid #d6d3d1",
+                  border: "1px solid #d6d3d1",
                   color: "#292524",
                   fontWeight: "bold",
                   cursor: "pointer",
-                  alignSelf:
-                    "flex-start",
+                  alignSelf: "flex-start",
                 }}
               >
                 ← Back to City Events
