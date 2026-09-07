@@ -68,6 +68,17 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
           )}
           {selectedItem.location && <p><strong>Location:</strong> {selectedItem.location}</p>}
           {selectedItem.description && <p>{selectedItem.description}</p>}
+          {(selectedItem.personIds || []).length > 0 && (
+            <p>
+              <strong>People: </strong>
+              {(selectedItem.personIds || [])
+                .map((personId: string) => {
+                  const p = people.find((person) => person.id === personId);
+                  return p ? p.name : personId;
+                })
+                .join(", ")}
+            </p>
+          )}
           {(selectedItem.biblicalReferences || []).length > 0 && (
             <p>
               <strong>References:</strong> {(selectedItem.biblicalReferences || []).join(", ")}
