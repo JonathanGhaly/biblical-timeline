@@ -7,12 +7,14 @@ type PeopleProps = {
   people: Person[];
   onAddPerson: (newPerson: Person) => void;
   onUpdatePerson: (updatedPerson: Person) => void;
+  onDeletePerson?: (personId: string) => void;
 };
 
 export default function People({
   people,
   onAddPerson,
   onUpdatePerson,
+  onDeletePerson,
 }: PeopleProps) {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -21,6 +23,16 @@ export default function People({
   const filteredPeople = people.filter((person) =>
     person.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleDelete = (person: Person) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${person.name}?`
+    );
+
+    if (confirmed && onDeletePerson) {
+      onDeletePerson(person.id);
+    }
+  };
 
   return (
     <div>
@@ -57,12 +69,29 @@ export default function People({
               }}
             >
               <h3>{person.name}</h3>
-              <button
-                className="btn-secondary"
-                onClick={() => setEditingPerson(person)}
-              >
-                Edit
-              </button>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setEditingPerson(person)}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(person)}
+                  style={{
+                    padding: "4px 10px",
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontWeight: "bold",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
 
             <p>Gender: {person.gender}</p>

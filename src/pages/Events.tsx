@@ -7,6 +7,7 @@ type EventsProps = {
   people: Person[];
   onAddEvent: (newEvent: BiblicalEvent) => void;
   onUpdateEvent?: (updatedEvent: BiblicalEvent) => void;
+  onDeleteEvent?: (eventId: string) => void;
 };
 
 const OT_LOCATIONS = [
@@ -44,7 +45,13 @@ const OT_LOCATIONS = [
   "Ur of the Chaldees",
 ];
 
-function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
+function Events({
+  events,
+  people,
+  onAddEvent,
+  onUpdateEvent,
+  onDeleteEvent,
+}: EventsProps) {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
@@ -87,6 +94,21 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
 
     setSelectedEvent(editForm);
     setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    if (!selectedEvent) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${selectedEvent.title}"?`
+    );
+
+    if (confirmed) {
+      if (onDeleteEvent) {
+        onDeleteEvent(selectedEvent.id);
+      }
+      setSelectedEvent(null);
+    }
   };
 
   const togglePersonAssociation = (personId: string) => {
@@ -389,10 +411,32 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                   </p>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px" }}>
+                  <button
+                    onClick={handleDelete}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#ef4444",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete Event
+                  </button>
                   <button
                     onClick={handleStartEdit}
-                    style={{ padding: "8px 16px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                    }}
                   >
                     Edit Event
                   </button>
