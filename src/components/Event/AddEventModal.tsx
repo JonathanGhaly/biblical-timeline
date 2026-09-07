@@ -10,40 +10,53 @@ type AddEventModalProps = {
   onClose: () => void;
   lang?: Language;
 };
+type CityRegion =
+  | "Egypt & Sinai"
+  | "Canaan & Levant"
+  | "Mesopotamia & Assyria"
+  | "Babylonia"
+  | "Arabia"
+  | "Persia & Media";
 
-const OT_LOCATIONS = [
-  "Asshur",
-  "Babylon",
-  "Beersheba",
-  "Calah (Nimrud)",
-  "Carchemish",
-  "Damascus",
-  "Dan",
-  "Dedan",
-  "Ecbatana",
-  "Erech (Uruk)",
-  "Ezion-Geber",
-  "Gaza",
-  "Haran",
-  "Hebron",
-  "Jericho",
-  "Jerusalem",
-  "Joppa",
-  "Kir-hareseth (Moab)",
-  "Memphis (Noph)",
-  "Mt. Sinai (Horeb)",
-  "Nineveh",
-  "Persepolis",
-  "Rabbah (Ammon)",
-  "Rameses (Goshen)",
-  "Samaria",
-  "Shechem",
-  "Sidon",
-  "Susa (Shushan)",
-  "Tema",
-  "Thebes (No-Amon)",
-  "Tyre",
-  "Ur of the Chaldees",
+type CityOption = {
+  id: string;
+  name: string;
+  region: CityRegion;
+};
+
+const OT_LOCATIONS: CityOption[] = [
+  { id: "thebes", name: "Thebes (No-Amon)", region: "Egypt & Sinai" },
+  { id: "memphis", name: "Memphis (Noph)", region: "Egypt & Sinai" },
+  { id: "rameses", name: "Rameses (Goshen)", region: "Egypt & Sinai" },
+  { id: "sinai", name: "Mt. Sinai (Horeb)", region: "Egypt & Sinai" },
+  { id: "eziongeber", name: "Ezion-Geber", region: "Egypt & Sinai" },
+  { id: "gaza", name: "Gaza", region: "Canaan & Levant" },
+  { id: "beersheba", name: "Beersheba", region: "Canaan & Levant" },
+  { id: "kirhareseth", name: "Kir-hareseth (Moab)", region: "Canaan & Levant" },
+  { id: "hebron", name: "Hebron", region: "Canaan & Levant" },
+  { id: "jerusalem", name: "Jerusalem", region: "Canaan & Levant" },
+  { id: "jericho", name: "Jericho", region: "Canaan & Levant" },
+  { id: "rabbah", name: "Rabbah (Ammon)", region: "Canaan & Levant" },
+  { id: "joppa", name: "Joppa", region: "Canaan & Levant" },
+  { id: "shechem", name: "Shechem", region: "Canaan & Levant" },
+  { id: "samaria", name: "Samaria", region: "Canaan & Levant" },
+  { id: "dan", name: "Dan", region: "Canaan & Levant" },
+  { id: "tyre", name: "Tyre", region: "Canaan & Levant" },
+  { id: "sidon", name: "Sidon", region: "Canaan & Levant" },
+  { id: "damascus", name: "Damascus", region: "Canaan & Levant" },
+  { id: "carchemish", name: "Carchemish", region: "Mesopotamia & Assyria" },
+  { id: "haran", name: "Haran", region: "Mesopotamia & Assyria" },
+  { id: "asshur", name: "Asshur", region: "Mesopotamia & Assyria" },
+  { id: "nineveh", name: "Nineveh", region: "Mesopotamia & Assyria" },
+  { id: "calah", name: "Calah (Nimrud)", region: "Mesopotamia & Assyria" },
+  { id: "babylon", name: "Babylon", region: "Babylonia" },
+  { id: "erech", name: "Erech (Uruk)", region: "Babylonia" },
+  { id: "ur", name: "Ur of the Chaldees", region: "Babylonia" },
+  { id: "dedan", name: "Dedan", region: "Arabia" },
+  { id: "tema", name: "Tema", region: "Arabia" },
+  { id: "ecbatana", name: "Ecbatana", region: "Persia & Media" },
+  { id: "susa", name: "Susa (Shushan)", region: "Persia & Media" },
+  { id: "persepolis", name: "Persepolis", region: "Persia & Media" },
 ];
 
 export default function AddEventModal({
@@ -102,7 +115,7 @@ export default function AddEventModal({
     onAddEvent(newEvent);
     onClose();
   };
-
+const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
@@ -258,10 +271,14 @@ export default function AddEventModal({
                 className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               >
                 <option value="">-- {lang === "ar" ? "اختر الموقع الجغرافي" : "Select Location"} --</option>
-                {OT_LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
+                {regions.map((region) => (
+                  <optgroup key={region} label={region}>
+                    {OT_LOCATIONS.filter((loc) => loc.region === region).map((loc) => (
+                      <option key={loc.id} value={loc.name}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
