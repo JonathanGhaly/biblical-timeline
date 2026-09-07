@@ -22,226 +22,289 @@ export default function AddPersonModal({
 }: AddPersonModalProps) {
   const personList = existingPeople || people || [];
 
-  const [formData, setFormData] = useState<Partial<Person>>({
+  const [formData, setFormData] = useState({
     name: "",
-    gender: "female",
+    gender: "male" as "male" | "female",
+    placeOfBirth: "",
+    fatherId: "",
+    motherId: "",
+    anchorPersonId: "",
+    anchorAgeAtBirth: 0,
     husbandId: "",
     wifeId: "",
-    husbandMarriageAge: undefined,
-    wifeMarriageAge: undefined,
-    fatherId: "",
-    fatherAgeAtBirth: undefined,
-    yearsLived: undefined,
+    husbandMarriageAge: "" as string | number,
+    wifeMarriageAge: "" as string | number,
+    yearsLived: 0,
+    biblicalReferences: "",
     notes: "",
   });
 
   if (!isOpen) return null;
 
-  const malePeople = personList.filter((p) => p.gender === "male");
-  const femalePeople = personList.filter((p) => p.gender === "female");
+  const males = personList.filter((p) => p.gender === "male");
+  const females = personList.filter((p) => p.gender === "female");
   const hasSpouse = Boolean(formData.husbandId || formData.wifeId);
+
+  // Automatically select Father as anchor when Father changes (if Anchor hasn't been set manually)
+  const handleFatherChange = (fatherId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      fatherId,
+      anchorPersonId: prev.anchorPersonId ? prev.anchorPersonId : fatherId,
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const selectedAnchor = formData.anchorPersonId || formData.fatherId;
+    const spouseId = formData.gender === "female" ? formData.husbandId : formData.wifeId;
+
     const newPerson: Person = {
-      id: formData.id || `person_${Date.now()}`,
-      name: formData.name || "Unknown",
-      gender: formData.gender || "female",
-      ...formData,
+      id: formData.name.toLowerCase().replace(/\s+/g, "-") || `person_${Date.now()}`,
+      name: formData.name,
+      gender: formData.gender,
+      placeOfBirth: formData.placeOfBirth || undefined,
+      fatherId: formData.fatherId || undefined,
+      motherId: formData.motherId || undefined,
+      anchorPersonId: selectedAnchor || undefined,
+      anchorPersonAgeAtBirth: Number(formData.anchorAgeAtBirth) || undefined,
+      fatherAgeAtBirth: Number(formData.anchorAgeAtBirth) || undefined,
+      husbandId: formData.husbandId || undefined,
+      wifeId: formData.wifeId || undefined,
+      husbandMarriageAge:
+        formData.husbandMarriageAge !== "" ? Number(formData.husbandMarriageAge) : undefined,
+      wifeMarriageAge:
+        formData.wifeMarriageAge !== "" ? Number(formData.wifeMarriageAge) : undefined,
+      yearsLived: Number(formData.yearsLived) || undefined,
+      spouseIds: spouseId ? [spouseId] : [],
+      biblicalReferences: formData.biblicalReferences
+        ? formData.biblicalReferences.split(",").map((r) => r.trim()).filter(Boolean)
+        : [],
+      notes: formData.notes || undefined,
     };
 
     if (onAddPerson) onAddPerson(newPerson);
     if (onSavePerson) onSavePerson(newPerson);
-    if (onSave) onSave(formData);
+    if (onSave) onSave(newPerson);
     onClose();
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(15, 23, 42, 0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "12px",
-          padding: "24px",
-          maxWidth: "520px",
-          width: "90%",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-          <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>Add Person</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.2rem" }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Add New Person</h3>
+          <button className="btn-close" onClick={onClose}>
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-              Name
-            </label>
+        <form onSubmit={handleSubmit} className="add-person-form">
+          <div className="form-group">
+            <label>Name *</label>
             <input
               type="text"
               required
-              value={formData.name || ""}
+              value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
             />
           </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-              Gender
-            </label>
-            <select
-              value={formData.gender}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  gender: e.target.value as "male" | "female",
-                  husbandId: "",
-                  wifeId: "",
-                })
-              }
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-            >
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Gender</label>
+              <select
+                value={formData.gender}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    gender: e.target.value as "male" | "female",
+                    husbandId: "",
+                    wifeId: "",
+                  })
+                }
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Place of Birth (Optional)</label>
+              <input
+                type="text"
+                value={formData.placeOfBirth}
+                onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
+              />
+            </div>
           </div>
 
-          {formData.gender === "female" ? (
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                Husband / Spouse
-              </label>
+          {/* Lineage Details */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Father</label>
               <select
-                value={formData.husbandId || ""}
-                onChange={(e) => setFormData({ ...formData, husbandId: e.target.value || undefined })}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                value={formData.fatherId}
+                onChange={(e) => handleFatherChange(e.target.value)}
               >
-                <option value="">None / Unknown</option>
-                {malePeople.map((p) => (
+                <option value="">-- Select Father --</option>
+                {males.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Mother (Optional)</label>
+              <select
+                value={formData.motherId}
+                onChange={(e) => setFormData({ ...formData, motherId: e.target.value })}
+              >
+                <option value="">-- Select Mother --</option>
+                {females.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Anchor Person Section */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Anchor Person (Timeline Reference)</label>
+              <select
+                value={formData.anchorPersonId}
+                onChange={(e) => setFormData({ ...formData, anchorPersonId: e.target.value })}
+              >
+                <option value="">-- Choose Any Person --</option>
+                {personList.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {p.name} ({p.gender})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Age of Anchor Person at Birth</label>
+              <input
+                type="number"
+                min="0"
+                value={formData.anchorAgeAtBirth}
+                onChange={(e) =>
+                  setFormData({ ...formData, anchorAgeAtBirth: Number(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Lifespan (Years Lived)</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.yearsLived}
+              onChange={(e) =>
+                setFormData({ ...formData, yearsLived: Number(e.target.value) })
+              }
+            />
+          </div>
+
+          {/* Spouse Selection */}
+          {formData.gender === "female" ? (
+            <div className="form-group">
+              <label>Husband / Spouse (Optional)</label>
+              <select
+                value={formData.husbandId}
+                onChange={(e) => setFormData({ ...formData, husbandId: e.target.value })}
+              >
+                <option value="">-- Select Husband --</option>
+                {males.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
                   </option>
                 ))}
               </select>
             </div>
           ) : (
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                Wife / Spouse
-              </label>
+            <div className="form-group">
+              <label>Wife / Spouse (Optional)</label>
               <select
-                value={formData.wifeId || ""}
-                onChange={(e) => setFormData({ ...formData, wifeId: e.target.value || undefined })}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                value={formData.wifeId}
+                onChange={(e) => setFormData({ ...formData, wifeId: e.target.value })}
               >
-                <option value="">None / Unknown</option>
-                {femalePeople.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
+                <option value="">-- Select Wife --</option>
+                {females.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
                   </option>
                 ))}
               </select>
             </div>
           )}
 
+          {/* Marriage Ages (Visible when a Spouse is selected) */}
           {hasSpouse && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
-                background: "#f8fafc",
-                padding: "12px",
-                borderRadius: "8px",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <div>
-                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "bold", marginBottom: "4px" }}>
-                  Husband's Age at Marriage
-                </label>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Husband's Age at Marriage</label>
                 <input
                   type="number"
                   placeholder="e.g. 40"
-                  value={formData.husbandMarriageAge ?? ""}
+                  min="0"
+                  value={formData.husbandMarriageAge}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      husbandMarriageAge: e.target.value ? parseInt(e.target.value) : undefined,
-                    })
+                    setFormData({ ...formData, husbandMarriageAge: e.target.value })
                   }
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "bold", marginBottom: "4px" }}>
-                  Wife's Age at Marriage
-                </label>
+              <div className="form-group">
+                <label>Wife's Age at Marriage</label>
                 <input
                   type="number"
                   placeholder="e.g. 20"
-                  value={formData.wifeMarriageAge ?? ""}
+                  min="0"
+                  value={formData.wifeMarriageAge}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      wifeMarriageAge: e.target.value ? parseInt(e.target.value) : undefined,
-                    })
+                    setFormData({ ...formData, wifeMarriageAge: e.target.value })
                   }
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                 />
               </div>
             </div>
           )}
 
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-              Lifespan (Years Lived)
-            </label>
+          <div className="form-group">
+            <label>Scripture Reference (Comma separated)</label>
             <input
-              type="number"
-              placeholder="e.g. 127"
-              value={formData.yearsLived ?? ""}
+              type="text"
+              placeholder="e.g. Genesis 5:3, Genesis 11:10"
+              value={formData.biblicalReferences}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  yearsLived: e.target.value ? parseInt(e.target.value) : undefined,
-                })
+                setFormData({ ...formData, biblicalReferences: e.target.value })
               }
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
             />
           </div>
 
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "12px" }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ padding: "8px 16px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px" }}
-            >
+          <div className="form-group">
+            <label>Notes / Details</label>
+            <textarea
+              rows={3}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button
-              type="submit"
-              style={{ padding: "8px 16px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "6px", fontWeight: "bold" }}
-            >
+            <button type="submit" className="btn-primary">
               Save Person
             </button>
           </div>
