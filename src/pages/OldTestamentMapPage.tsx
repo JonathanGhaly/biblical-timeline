@@ -365,6 +365,7 @@ export default function OldTestamentMapPage({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const mapViewportRef = useRef<HTMLDivElement>(null);
+  const touchDistanceRef = useRef<number | null>(null);
 
   const regions = [
     "All",
@@ -422,7 +423,7 @@ export default function OldTestamentMapPage({
     return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
   };
 
-  // Zoom & Pan Handlers
+  // Zoom & Pan Handlers for Mouse
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
@@ -459,6 +460,63 @@ export default function OldTestamentMapPage({
 
   const handleMouseUp = () => setIsDragging(false);
 
+  // Touch Gesture Handlers (Single-finger pan & Pinch-to-zoom)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - pan.x,
+        y: e.touches[0].clientY - pan.y,
+      });
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchDistanceRef.current = dist;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      setPan({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2 && touchDistanceRef.current !== null) {
+      const newDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = newDist / touchDistanceRef.current;
+      touchDistanceRef.current = newDist;
+
+      if (mapViewportRef.current) {
+        const rect = mapViewportRef.current.getBoundingClientRect();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
+        const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
+
+        setZoom((prevZoom) => {
+          const nextZoom = Math.min(Math.max(prevZoom * factor, 1), 6);
+          const zoomRatio = nextZoom / prevZoom;
+          setPan((prevPan) => ({
+            x: centerX - (centerX - prevPan.x) * zoomRatio,
+            y: centerY - (centerY - prevPan.y) * zoomRatio,
+          }));
+          return nextZoom;
+        });
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchDistanceRef.current = null;
+  };
+
   const zoomIn = () => {
     setZoom((prev) => Math.min(prev * 1.25, 6));
   };
@@ -479,18 +537,17 @@ export default function OldTestamentMapPage({
   return (
     <div
       style={{
-        padding: "20px",
+        padding: "12px",
         maxWidth: "1400px",
         margin: "0 auto",
         fontFamily: "Georgia, serif",
+        boxSizing: "border-box",
       }}
     >
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          flexWrap: "wrap",
+          flexDirection: "column",
           gap: "12px",
           marginBottom: "16px",
         }}
@@ -498,7 +555,7 @@ export default function OldTestamentMapPage({
         <div>
           <h2
             style={{
-              fontSize: "1.8rem",
+              fontSize: "clamp(1.4rem, 4vw, 1.8rem)",
               fontWeight: "bold",
               margin: "0 0 4px 0",
               color: "#1c1917",
@@ -510,19 +567,23 @@ export default function OldTestamentMapPage({
             style={{
               color: "#78716c",
               margin: 0,
-              fontSize: "0.92rem",
+              fontSize: "0.88rem",
               fontFamily: "sans-serif",
             }}
           >
-            Interactive map. Scroll to zoom, click and drag to move.
+            Interactive map. Pinch/scroll to zoom, drag to explore locations.
           </p>
         </div>
 
+        {/* Scrollable Region Filter Bar */}
         <div
           style={{
             display: "flex",
-            gap: "6px",
-            flexWrap: "wrap",
+            gap: "8px",
+            overflowX: "auto",
+            paddingBottom: "4px",
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
             fontFamily: "sans-serif",
           }}
         >
@@ -531,17 +592,19 @@ export default function OldTestamentMapPage({
               key={region}
               onClick={() => setSelectedRegion(region)}
               style={{
-                padding: "6px 12px",
+                padding: "8px 14px",
                 borderRadius: "6px",
                 border:
                   "1px solid " +
                   (selectedRegion === region ? "#854d0e" : "#d6d3d1"),
                 background: selectedRegion === region ? "#854d0e" : "#fef3c7",
                 color: selectedRegion === region ? "#ffffff" : "#451a03",
-                fontSize: "0.8rem",
+                fontSize: "0.82rem",
                 fontWeight: "600",
                 cursor: "pointer",
                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {region}
@@ -557,9 +620,12 @@ export default function OldTestamentMapPage({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
           width: "100%",
-          height: "650px",
+          height: "clamp(380px, 65vh, 650px)",
           overflow: "hidden",
           position: "relative",
           borderRadius: "12px",
@@ -575,13 +641,13 @@ export default function OldTestamentMapPage({
         <div
           style={{
             position: "absolute",
-            top: "16px",
-            right: "16px",
+            top: "12px",
+            right: "12px",
             zIndex: 100,
             display: "flex",
             flexDirection: "column",
             gap: "6px",
-            background: "rgba(255, 255, 255, 0.9)",
+            background: "rgba(255, 255, 255, 0.92)",
             padding: "6px",
             borderRadius: "8px",
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
@@ -592,14 +658,17 @@ export default function OldTestamentMapPage({
             onClick={zoomIn}
             title="Zoom In"
             style={{
-              width: "32px",
-              height: "32px",
-              fontSize: "1.2rem",
+              width: "40px",
+              height: "40px",
+              fontSize: "1.3rem",
               fontWeight: "bold",
               border: "1px solid #d6d3d1",
-              borderRadius: "4px",
+              borderRadius: "6px",
               background: "#ffffff",
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             +
@@ -608,14 +677,17 @@ export default function OldTestamentMapPage({
             onClick={zoomOut}
             title="Zoom Out"
             style={{
-              width: "32px",
-              height: "32px",
-              fontSize: "1.2rem",
+              width: "40px",
+              height: "40px",
+              fontSize: "1.3rem",
               fontWeight: "bold",
               border: "1px solid #d6d3d1",
-              borderRadius: "4px",
+              borderRadius: "6px",
               background: "#ffffff",
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             −
@@ -624,13 +696,17 @@ export default function OldTestamentMapPage({
             onClick={resetView}
             title="Reset Map View"
             style={{
-              padding: "4px 8px",
-              fontSize: "0.7rem",
+              width: "40px",
+              height: "32px",
+              fontSize: "0.72rem",
               fontWeight: "bold",
               border: "1px solid #d6d3d1",
-              borderRadius: "4px",
+              borderRadius: "6px",
               background: "#f5f5f4",
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             Reset
@@ -928,9 +1004,9 @@ export default function OldTestamentMapPage({
             const hasEvents = cityEvents.length > 0;
             const { x, y } = geoToPixel(city.lat, city.lon);
 
-            // Counter-scale dimensions dynamically based on zoom
-            const markerSize = (hasEvents ? 18 : 12) / Math.pow(zoom, 0.4);
-            const labelFontSize = 0.7 / Math.pow(zoom, 0.7);
+            // Counter-scale dimensions dynamically based on zoom for mobile touch visibility
+            const markerSize = (hasEvents ? 22 : 16) / Math.pow(zoom, 0.4);
+            const labelFontSize = 0.75 / Math.pow(zoom, 0.65);
             const paddingY = 2 / zoom;
             const paddingX = 6 / zoom;
             const borderRadius = 4 / zoom;
@@ -954,6 +1030,7 @@ export default function OldTestamentMapPage({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  touchAction: "manipulation",
                 }}
               >
                 <div
@@ -962,13 +1039,13 @@ export default function OldTestamentMapPage({
                     height: `${markerSize}px`,
                     borderRadius: "50%",
                     backgroundColor: hasEvents ? "#b91c1c" : "#0284c7",
-                    border: `${1.5 / zoom}px solid #ffffff`,
+                    border: `${2 / zoom}px solid #ffffff`,
                     boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#ffffff",
-                    fontSize: `${0.68 / zoom}rem`,
+                    fontSize: `${0.72 / zoom}rem`,
                     fontWeight: "bold",
                   }}
                 >
@@ -1004,12 +1081,14 @@ export default function OldTestamentMapPage({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 23, 42, 0.7)",
+            background: "rgba(15, 23, 42, 0.75)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
+            padding: "16px",
+            boxSizing: "border-box",
           }}
           onClick={() => setSelectedCity(null)}
         >
@@ -1017,13 +1096,14 @@ export default function OldTestamentMapPage({
             style={{
               background: "#fdfbf7",
               borderRadius: "12px",
-              padding: "24px",
+              padding: "20px",
               maxWidth: "520px",
-              width: "90%",
+              width: "100%",
               maxHeight: "80vh",
               overflowY: "auto",
               boxShadow: "0 20px 25px -5px rgba(0,0,0,0.3)",
               border: "2px solid #78350f",
+              boxSizing: "border-box",
             }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -1039,7 +1119,7 @@ export default function OldTestamentMapPage({
                 <h3
                   style={{
                     margin: 0,
-                    fontSize: "1.4rem",
+                    fontSize: "1.3rem",
                     color: "#291e13",
                     fontFamily: "Georgia, serif",
                   }}
@@ -1049,7 +1129,7 @@ export default function OldTestamentMapPage({
                 <p
                   style={{
                     margin: "2px 0 0 0",
-                    fontSize: "0.88rem",
+                    fontSize: "0.85rem",
                     color: "#78350f",
                     fontWeight: "600",
                     fontFamily: "sans-serif",
@@ -1059,8 +1139,8 @@ export default function OldTestamentMapPage({
                 </p>
                 <p
                   style={{
-                    margin: "5px 0 0 0",
-                    fontSize: "0.78rem",
+                    margin: "4px 0 0 0",
+                    fontSize: "0.75rem",
                     color: "#78716c",
                     fontFamily: "sans-serif",
                   }}
@@ -1074,9 +1154,10 @@ export default function OldTestamentMapPage({
                 style={{
                   background: "none",
                   border: "none",
-                  fontSize: "1.4rem",
+                  fontSize: "1.5rem",
                   cursor: "pointer",
                   color: "#786c5e",
+                  padding: "4px",
                 }}
               >
                 ✕
@@ -1130,12 +1211,14 @@ export default function OldTestamentMapPage({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 23, 42, 0.7)",
+            background: "rgba(15, 23, 42, 0.75)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1100,
+            padding: "16px",
+            boxSizing: "border-box",
           }}
           onClick={() => setSelectedEvent(null)}
         >
@@ -1143,24 +1226,25 @@ export default function OldTestamentMapPage({
             style={{
               background: "#fdfbf7",
               borderRadius: "12px",
-              padding: "24px",
+              padding: "20px",
               maxWidth: "520px",
-              width: "90%",
+              width: "100%",
               maxHeight: "85vh",
               overflowY: "auto",
               boxShadow: "0 20px 25px -5px rgba(0,0,0,0.3)",
               border: "2px solid #78350f",
               fontFamily: "sans-serif",
+              boxSizing: "border-box",
             }}
             onClick={(event) => event.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "1.3rem", color: "#1c1917", fontFamily: "Georgia, serif" }}>
+              <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#1c1917", fontFamily: "Georgia, serif" }}>
                 {selectedEvent.title}
               </h3>
               <button
                 onClick={() => setSelectedEvent(null)}
-                style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", color: "#786c5e" }}
+                style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#786c5e", padding: "4px" }}
               >
                 ✕
               </button>
@@ -1198,7 +1282,7 @@ export default function OldTestamentMapPage({
                 onClick={() => setSelectedEvent(null)}
                 style={{
                   marginTop: "12px",
-                  padding: "8px 14px",
+                  padding: "10px 16px",
                   borderRadius: "6px",
                   background: "#e7e5e4",
                   border: "1px solid #d6d3d1",
