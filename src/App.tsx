@@ -26,7 +26,6 @@ const data = bibleData as GenealogyData;
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
 
-  // Load initial data from localStorage if available, otherwise fall back to bible-data.json
   const [people, setPeople] = useState<Person[]>(() => {
     const savedPeople = localStorage.getItem("biblical_people");
     return savedPeople ? JSON.parse(savedPeople) : data.people;
@@ -37,7 +36,6 @@ function App() {
     return savedEvents ? JSON.parse(savedEvents) : data.events;
   });
 
-  // Save updates to browser LocalStorage
   const savePeople = (newPeople: Person[]) => {
     setPeople(newPeople);
     localStorage.setItem("biblical_people", JSON.stringify(newPeople));
@@ -63,7 +61,14 @@ function App() {
     saveEvents([...events, newEvent]);
   };
 
-  // Download updated JSON file to replace src/data/bible-data.json in git
+  // ADDED: Handler to update existing events in state & localStorage
+  const handleUpdateEvent = (updatedEvent: BiblicalEvent) => {
+    const updated = events.map((e) =>
+      e.id === updatedEvent.id ? updatedEvent : e
+    );
+    saveEvents(updated);
+  };
+
   const handleExportData = () => {
     const exportObject = { people, events };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
@@ -77,7 +82,6 @@ function App() {
     downloadAnchor.remove();
   };
 
-  // Optional: Reset back to JSON defaults
   const handleResetData = () => {
     if (
       window.confirm(
@@ -117,6 +121,7 @@ function App() {
             events={events}
             people={people}
             onAddEvent={handleAddEvent}
+            onUpdateEvent={handleUpdateEvent} // ADDED: Passing event update handler
           />
         );
 
@@ -125,7 +130,6 @@ function App() {
           <OldTestamentMapPage
             events={events}
             people={people}
-            // mapSrc="/map.png" // Ensure map.png is placed in public/map.png
           />
         );
 

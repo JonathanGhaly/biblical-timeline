@@ -47,11 +47,10 @@ const OT_LOCATIONS = [
 function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // View / Edit Modal States (from Timeline)
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<BiblicalEvent | null>(null);
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
 
   const filteredEvents = events.filter((event) =>
     event.title.toLowerCase().includes(search.toLowerCase())
@@ -69,7 +68,11 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
 
   const handleStartEdit = () => {
     if (selectedEvent) {
-      setEditForm(JSON.parse(JSON.stringify(selectedEvent)));
+      const formCopy = JSON.parse(JSON.stringify(selectedEvent));
+      setEditForm(formCopy);
+      setIsCustomLocation(
+        Boolean(formCopy.location && !OT_LOCATIONS.includes(formCopy.location))
+      );
       setIsEditing(true);
     }
   };
@@ -148,9 +151,7 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
               ) : null}
 
               {event.location && <p>Location: {event.location}</p>}
-
               {event.description && <p>{event.description}</p>}
-
               {event.biblicalReferences && event.biblicalReferences.length > 0 && (
                 <small>{event.biblicalReferences.join(", ")}</small>
               )}
@@ -159,7 +160,6 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
         })}
       </div>
 
-      {/* Add Event Modal */}
       {isAddModalOpen && (
         <AddEventModal
           existingPeople={people}
@@ -168,7 +168,6 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
         />
       )}
 
-      {/* View / Edit Event Modal */}
       {selectedEvent && (
         <div
           style={{
@@ -226,41 +225,20 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                 style={{ display: "flex", flexDirection: "column", gap: "14px" }}
               >
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.8rem",
-                      fontWeight: "bold",
-                      marginBottom: "4px",
-                    }}
-                  >
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
                     Title
                   </label>
                   <input
                     type="text"
                     value={editForm.title}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, title: e.target.value })
-                    }
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e1",
-                    }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
 
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.8rem",
-                      fontWeight: "bold",
-                      marginBottom: "4px",
-                    }}
-                  >
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
                     Year (Use negative number for BC, e.g. -2000)
                   </label>
                   <input
@@ -275,89 +253,60 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                         },
                       })
                     }
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e1",
-                    }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
 
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.8rem",
-                      fontWeight: "bold",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Location
-                  </label>
-                  <select
-                    value={editForm.location || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, location: e.target.value })
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e1",
-                      background: "#ffffff",
-                    }}
-                  >
-                    <option value="">-- Select Location --</option>
-                    {OT_LOCATIONS.map((loc) => (
-                      <option key={loc} value={loc}>
-                        {loc}
-                      </option>
-                    ))}
-                    {editForm.location &&
-                      !OT_LOCATIONS.includes(editForm.location) && (
-                        <option value={editForm.location}>
-                          {editForm.location}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.8rem", fontWeight: "bold" }}>Location</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomLocation(!isCustomLocation)}
+                      style={{ background: "none", border: "none", color: "#2563eb", fontSize: "0.75rem", cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      {isCustomLocation ? "Select from list" : "Type custom location"}
+                    </button>
+                  </div>
+
+                  {isCustomLocation ? (
+                    <input
+                      type="text"
+                      placeholder="Type custom location..."
+                      value={editForm.location || ""}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    />
+                  ) : (
+                    <select
+                      value={editForm.location || ""}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#ffffff" }}
+                    >
+                      <option value="">-- Select Location --</option>
+                      {OT_LOCATIONS.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
                         </option>
-                      )}
-                  </select>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.8rem",
-                      fontWeight: "bold",
-                      marginBottom: "4px",
-                    }}
-                  >
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
                     Description
                   </label>
                   <textarea
                     rows={3}
                     value={editForm.description || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, description: e.target.value })
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e1",
-                    }}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
 
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.8rem",
-                      fontWeight: "bold",
-                      marginBottom: "4px",
-                    }}
-                  >
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
                     Scripture References (comma-separated)
                   </label>
                   <input
@@ -372,56 +321,20 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                           .filter(Boolean),
                       })
                     }
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e1",
-                    }}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
 
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.8rem",
-                      fontWeight: "bold",
-                      marginBottom: "6px",
-                    }}
-                  >
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "6px" }}>
                     Associated People
                   </label>
-                  <div
-                    style={{
-                      maxHeight: "120px",
-                      overflowY: "auto",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "6px",
-                      padding: "8px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                    }}
-                  >
+                  <div style={{ maxHeight: "120px", overflowY: "auto", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
                     {people.map((p) => {
                       const checked = (editForm.personIds || []).includes(p.id);
                       return (
-                        <label
-                          key={p.id}
-                          style={{
-                            fontSize: "0.85rem",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => togglePersonAssociation(p.id)}
-                          />
+                        <label key={p.id} style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                          <input type="checkbox" checked={checked} onChange={() => togglePersonAssociation(p.id)} />
                           {p.name}
                         </label>
                       );
@@ -429,53 +342,24 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "8px",
-                    justifyContent: "flex-end",
-                    marginTop: "10px",
-                  }}
-                >
+                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "10px" }}>
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#f1f5f9",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                    }}
+                    style={{ padding: "8px 16px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer" }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    style={{
-                      padding: "8px 16px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
+                    style={{ padding: "8px 16px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}
                   >
                     Save Changes
                   </button>
                 </div>
               </form>
             ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  fontSize: "0.9rem",
-                  color: "#334155",
-                }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#334155" }}>
                 {selectedEvent.date?.year !== undefined && (
                   <p style={{ margin: 0 }}>
                     <strong>Date:</strong> {Math.abs(selectedEvent.date.year)}{" "}
@@ -488,9 +372,7 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                   </p>
                 )}
                 {selectedEvent.description && (
-                  <p style={{ margin: 0, lineHeight: "1.5" }}>
-                    {selectedEvent.description}
-                  </p>
+                  <p style={{ margin: 0, lineHeight: "1.5" }}>{selectedEvent.description}</p>
                 )}
                 {(selectedEvent.personIds || []).length > 0 && (
                   <p style={{ margin: 0 }}>
@@ -507,24 +389,10 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                   </p>
                 )}
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    marginTop: "16px",
-                  }}
-                >
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
                   <button
                     onClick={handleStartEdit}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
+                    style={{ padding: "8px 16px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}
                   >
                     Edit Event
                   </button>
