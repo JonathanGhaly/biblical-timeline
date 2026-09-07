@@ -11,51 +11,51 @@ type City = {
   aliases: string[];
 };
 
-// Comprehensive biblical cities across the Ancient Near East
+// Geographically accurate coordinates on 1800x950 canvas
 const OT_CITIES: City[] = [
   // --- Egypt & Sinai ---
-  { id: "thebes", name: "Thebes (No-Amon)", arabicName: "طيبة / نوس آمن", region: "Egypt & Sinai", x: 8.5, y: 88, aliases: ["Thebes", "No-Amon", "No", "طيبة"] },
-  { id: "memphis", name: "Memphis (Noph)", arabicName: "منف", region: "Egypt & Sinai", x: 11.5, y: 72, aliases: ["Memphis", "Noph", "منف", "Egypt"] },
-  { id: "rameses", name: "Rameses (Goshen)", arabicName: "رعمسيس / جاسان", region: "Egypt & Sinai", x: 15, y: 60, aliases: ["Rameses", "Goshen", "جاسان", "رعمسيس"] },
-  { id: "sinai", name: "Mt. Sinai (Horeb)", arabicName: "جبل سيناء", region: "Egypt & Sinai", x: 23, y: 82, aliases: ["Sinai", "Horeb", "سيناء", "حوريب"] },
-  { id: "eziongeber", name: "Ezion-Geber", arabicName: "عصيون جابر", region: "Egypt & Sinai", x: 27.5, y: 75, aliases: ["Ezion-geber", "Ezion geber", "عصيون جابر"] },
+  { id: "thebes", name: "Thebes (No-Amon)", arabicName: "طيبة / نوس آمن", region: "Egypt & Sinai", x: 10.0, y: 92.6, aliases: ["Thebes", "No-Amon", "No", "طيبة"] },
+  { id: "memphis", name: "Memphis (Noph)", arabicName: "منف", region: "Egypt & Sinai", x: 12.8, y: 69.5, aliases: ["Memphis", "Noph", "منف", "Egypt"] },
+  { id: "rameses", name: "Rameses (Goshen)", arabicName: "رعمسيس / جاسان", region: "Egypt & Sinai", x: 15.0, y: 62.1, aliases: ["Rameses", "Goshen", "جاسان", "رعمسيس"] },
+  { id: "sinai", name: "Mt. Sinai (Horeb)", arabicName: "جبل سيناء", region: "Egypt & Sinai", x: 20.6, y: 86.3, aliases: ["Sinai", "Horeb", "سيناء", "حوريب"] },
+  { id: "eziongeber", name: "Ezion-Geber", arabicName: "عصيون جابر", region: "Egypt & Sinai", x: 23.9, y: 74.7, aliases: ["Ezion-geber", "Ezion geber", "عصيون جابر"] },
 
   // --- Canaan, Philistia & Transjordan ---
-  { id: "gaza", name: "Gaza", arabicName: "غزة", region: "Canaan & Levant", x: 28.5, y: 63, aliases: ["Gaza", "غزة"] },
-  { id: "beersheba", name: "Beersheba", arabicName: "بئر سبع", region: "Canaan & Levant", x: 31, y: 65, aliases: ["Beersheba", "بئر سبع"] },
-  { id: "kirhareseth", name: "Kir-hareseth (Moab)", arabicName: "قير حارسة", region: "Canaan & Levant", x: 36, y: 67, aliases: ["Moab", "Kir-hareseth", "Kir", "قير حارسة"] },
-  { id: "hebron", name: "Hebron", arabicName: "حبرون", region: "Canaan & Levant", x: 33.2, y: 60, aliases: ["Hebron", "حبرون"] },
-  { id: "jerusalem", name: "Jerusalem", arabicName: "أورشليم", region: "Canaan & Levant", x: 34, y: 56, aliases: ["Jerusalem", "Zion", "أورشليم", "Jebus"] },
-  { id: "jericho", name: "Jericho", arabicName: "أريحا", region: "Canaan & Levant", x: 35.5, y: 55, aliases: ["Jericho", "أريحا"] },
-  { id: "rabbah", name: "Rabbah (Ammon)", arabicName: "ربة عمون", region: "Canaan & Levant", x: 38, y: 56, aliases: ["Rabbah", "Ammon", "ربة"] },
-  { id: "joppa", name: "Joppa", arabicName: "يافا", region: "Canaan & Levant", x: 31.8, y: 52, aliases: ["Joppa", "Jaffa", "يافا"] },
-  { id: "shechem", name: "Shechem", arabicName: "شكيم", region: "Canaan & Levant", x: 35, y: 49, aliases: ["Shechem", "شكيم"] },
-  { id: "samaria", name: "Samaria", arabicName: "السامرة", region: "Canaan & Levant", x: 34.5, y: 47, aliases: ["Samaria", "السامرة"] },
-  { id: "dan", name: "Dan", arabicName: "دان", region: "Canaan & Levant", x: 37, y: 40, aliases: ["Dan", "Laish", "دان"] },
-  { id: "tyre", name: "Tyre", arabicName: "صور", region: "Canaan & Levant", x: 35.5, y: 38, aliases: ["Tyre", "صور"] },
-  { id: "sidon", name: "Sidon", arabicName: "صيدون", region: "Canaan & Levant", x: 36, y: 34, aliases: ["Sidon", "صيدون"] },
-  { id: "damascus", name: "Damascus", arabicName: "دمشق", region: "Canaan & Levant", x: 41, y: 36, aliases: ["Damascus", "دمشق", "Aram"] },
+  { id: "gaza", name: "Gaza", arabicName: "غزة", region: "Canaan & Levant", x: 21.1, y: 62.1, aliases: ["Gaza", "غزة"] },
+  { id: "beersheba", name: "Beersheba", arabicName: "بئر سبع", region: "Canaan & Levant", x: 22.8, y: 65.3, aliases: ["Beersheba", "بئر سبع"] },
+  { id: "kirhareseth", name: "Kir-hareseth (Moab)", arabicName: "قير حارسة", region: "Canaan & Levant", x: 26.9, y: 66.3, aliases: ["Moab", "Kir-hareseth", "Kir", "قير حارسة"] },
+  { id: "hebron", name: "Hebron", arabicName: "حبرون", region: "Canaan & Levant", x: 24.4, y: 60.0, aliases: ["Hebron", "حبرون"] },
+  { id: "jerusalem", name: "Jerusalem", arabicName: "أورشليم", region: "Canaan & Levant", x: 24.7, y: 56.3, aliases: ["Jerusalem", "Zion", "أورشليم", "Jebus"] },
+  { id: "jericho", name: "Jericho", arabicName: "أريحا", region: "Canaan & Levant", x: 26.1, y: 55.3, aliases: ["Jericho", "أريحا"] },
+  { id: "rabbah", name: "Rabbah (Ammon)", arabicName: "ربة عمون", region: "Canaan & Levant", x: 28.1, y: 55.3, aliases: ["Rabbah", "Ammon", "ربة"] },
+  { id: "joppa", name: "Joppa", arabicName: "يافا", region: "Canaan & Levant", x: 22.8, y: 52.6, aliases: ["Joppa", "Jaffa", "يافا"] },
+  { id: "shechem", name: "Shechem", arabicName: "شكيم", region: "Canaan & Levant", x: 25.0, y: 50.0, aliases: ["Shechem", "شكيم"] },
+  { id: "samaria", name: "Samaria", arabicName: "السامرة", region: "Canaan & Levant", x: 24.7, y: 47.9, aliases: ["Samaria", "السامرة"] },
+  { id: "dan", name: "Dan", arabicName: "دان", region: "Canaan & Levant", x: 26.1, y: 41.0, aliases: ["Dan", "Laish", "دان"] },
+  { id: "tyre", name: "Tyre", arabicName: "صور", region: "Canaan & Levant", x: 24.4, y: 38.4, aliases: ["Tyre", "صور"] },
+  { id: "sidon", name: "Sidon", arabicName: "صيدون", region: "Canaan & Levant", x: 24.7, y: 34.7, aliases: ["Sidon", "صيدون"] },
+  { id: "damascus", name: "Damascus", arabicName: "دمشق", region: "Canaan & Levant", x: 28.6, y: 36.8, aliases: ["Damascus", "دمشق", "Aram"] },
 
   // --- Syria, Northern Levant & Upper Mesopotamia ---
-  { id: "carchemish", name: "Carchemish", arabicName: "كركميش", region: "Mesopotamia & Assyria", x: 47, y: 22, aliases: ["Carchemish", "كركميش"] },
-  { id: "haran", name: "Haran", arabicName: "حاران", region: "Mesopotamia & Assyria", x: 52, y: 20, aliases: ["Haran", "حاران", "Paddan-aram"] },
-  { id: "asshur", name: "Asshur", arabicName: "آشور", region: "Mesopotamia & Assyria", x: 64, y: 34, aliases: ["Asshur", "Ashur", "آشور"] },
-  { id: "nineveh", name: "Nineveh", arabicName: "نينوى", region: "Mesopotamia & Assyria", x: 65, y: 26, aliases: ["Nineveh", "Assyria", "نينوى"] },
-  { id: "calah", name: "Calah (Nimrud)", arabicName: "كالح", region: "Mesopotamia & Assyria", x: 66, y: 29, aliases: ["Calah", "Nimrud", "كالح"] },
+  { id: "carchemish", name: "Carchemish", arabicName: "كركميش", region: "Mesopotamia & Assyria", x: 34.4, y: 22.1, aliases: ["Carchemish", "كركميش"] },
+  { id: "haran", name: "Haran", arabicName: "حاران", region: "Mesopotamia & Assyria", x: 38.3, y: 20.0, aliases: ["Haran", "حاران", "Paddan-aram"] },
+  { id: "asshur", name: "Asshur", arabicName: "آشور", region: "Mesopotamia & Assyria", x: 51.7, y: 34.7, aliases: ["Asshur", "Ashur", "آشور"] },
+  { id: "nineveh", name: "Nineveh", arabicName: "نينوى", region: "Mesopotamia & Assyria", x: 52.2, y: 26.3, aliases: ["Nineveh", "Assyria", "نينوى"] },
+  { id: "calah", name: "Calah (Nimrud)", arabicName: "كالح", region: "Mesopotamia & Assyria", x: 53.1, y: 29.5, aliases: ["Calah", "Nimrud", "كالح"] },
 
   // --- Babylonia & Lower Mesopotamia ---
-  { id: "babylon", name: "Babylon", arabicName: "بابل", region: "Babylonia", x: 72, y: 54, aliases: ["Babylon", "Babel", "بابل", "Chaldea"] },
-  { id: "erech", name: "Erech (Uruk)", arabicName: "أروك", region: "Babylonia", x: 77, y: 64, aliases: ["Erech", "Uruk", "أروك"] },
-  { id: "ur", name: "Ur of the Chaldees", arabicName: "أور الكلدانيين", region: "Babylonia", x: 79, y: 70, aliases: ["Ur", "أور"] },
+  { id: "babylon", name: "Babylon", arabicName: "بابل", region: "Babylonia", x: 60.0, y: 54.7, aliases: ["Babylon", "Babel", "بابل", "Chaldea"] },
+  { id: "erech", name: "Erech (Uruk)", arabicName: "أروك", region: "Babylonia", x: 65.0, y: 65.3, aliases: ["Erech", "Uruk", "أروك"] },
+  { id: "ur", name: "Ur of the Chaldees", arabicName: "أور الكلدانيين", region: "Babylonia", x: 67.2, y: 71.6, aliases: ["Ur", "أور"] },
 
   // --- Arabia ---
-  { id: "dedan", name: "Dedan", arabicName: "ديدان", region: "Arabia", x: 42, y: 85, aliases: ["Dedan", "ديدان", "Arabia"] },
-  { id: "tema", name: "Tema", arabicName: "تيماء", region: "Arabia", x: 48, y: 82, aliases: ["Tema", "تيماء"] },
+  { id: "dedan", name: "Dedan", arabicName: "ديدان", region: "Arabia", x: 31.1, y: 87.4, aliases: ["Dedan", "ديدان", "Arabia"] },
+  { id: "tema", name: "Tema", arabicName: "تيماء", region: "Arabia", x: 36.1, y: 84.2, aliases: ["Tema", "تيماء"] },
 
   // --- Persia & Media ---
-  { id: "ecbatana", name: "Ecbatana", arabicName: "أحمتا / أكتبانا", region: "Persia & Media", x: 84, y: 32, aliases: ["Ecbatana", "Achmetha", "أحمتا"] },
-  { id: "susa", name: "Susa (Shushan)", arabicName: "شوشان", region: "Persia & Media", x: 86, y: 55, aliases: ["Susa", "Shushan", "شوشان", "Persia", "Elam"] },
-  { id: "persepolis", name: "Persepolis", arabicName: "تخت جمشيد", region: "Persia & Media", x: 94, y: 68, aliases: ["Persepolis", "Persia"] },
+  { id: "ecbatana", name: "Ecbatana", arabicName: "أحمتا / أكتبانا", region: "Persia & Media", x: 71.1, y: 31.6, aliases: ["Ecbatana", "Achmetha", "أحمتا"] },
+  { id: "susa", name: "Susa (Shushan)", arabicName: "شوشان", region: "Persia & Media", x: 73.3, y: 55.8, aliases: ["Susa", "Shushan", "شوشان", "Persia", "Elam"] },
+  { id: "persepolis", name: "Persepolis", arabicName: "تخت جمشيد", region: "Persia & Media", x: 86.1, y: 69.5, aliases: ["Persepolis", "Persia"] },
 ];
 
 type OldTestamentMapPageProps = {
@@ -101,33 +101,33 @@ export default function OldTestamentMapPage({
 
   return (
     <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto", fontFamily: "Georgia, serif" }}>
-      {/* Header Controls */}
+      {/* Header & Controls */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
         <div>
-          <h2 style={{ fontSize: "1.9rem", fontWeight: "bold", margin: "0 0 4px 0", color: "#1e1b18", fontFamily: "Georgia, serif" }}>
+          <h2 style={{ fontSize: "1.8rem", fontWeight: "bold", margin: "0 0 4px 0", color: "#1c1917" }}>
             The Old Testament World
           </h2>
-          <p style={{ color: "#786c5e", margin: 0, fontSize: "0.95rem", fontFamily: "sans-serif" }}>
-            High-detail historical relief map spanning Egypt, Canaan, Mesopotamia, Assyria, Arabia, Media, and Persia.
+          <p style={{ color: "#78716c", margin: 0, fontSize: "0.92rem", fontFamily: "sans-serif" }}>
+            High-precision historical vector map of the Ancient Near East. Scroll horizontally to explore regions.
           </p>
         </div>
 
-        {/* Filter Buttons */}
+        {/* Region Filter Buttons */}
         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", fontFamily: "sans-serif" }}>
           {regions.map((reg) => (
             <button
               key={reg}
               onClick={() => setSelectedRegion(reg)}
               style={{
-                padding: "6px 14px",
+                padding: "6px 12px",
                 borderRadius: "6px",
-                border: "1px solid " + (selectedRegion === reg ? "#8b4513" : "#d2c4b0"),
-                background: selectedRegion === reg ? "#8b4513" : "#fdfbf7",
-                color: selectedRegion === reg ? "#ffffff" : "#4a3e31",
-                fontSize: "0.82rem",
+                border: "1px solid " + (selectedRegion === reg ? "#854d0e" : "#d6d3d1"),
+                background: selectedRegion === reg ? "#854d0e" : "#fef3c7",
+                color: selectedRegion === reg ? "#ffffff" : "#451a03",
+                fontSize: "0.8rem",
                 fontWeight: "600",
                 cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
               }}
             >
               {reg}
@@ -136,14 +136,14 @@ export default function OldTestamentMapPage({
         </div>
       </div>
 
-      {/* Panoramic Map Container */}
+      {/* Map Pan Wrapper */}
       <div
         style={{
           width: "100%",
           overflowX: "auto",
           borderRadius: "12px",
-          border: "4px solid #5c4033",
-          boxShadow: "0 15px 35px rgba(0, 0, 0, 0.3)",
+          border: "3px solid #78350f",
+          boxShadow: "0 12px 30px rgba(0, 0, 0, 0.25)",
           background: "#1c1917",
         }}
       >
@@ -152,197 +152,191 @@ export default function OldTestamentMapPage({
             position: "relative",
             width: "1800px",
             height: "950px",
-            background: "#dfcb9f",
+            background: "#ebdcb9",
           }}
         >
-          {/* High Detail Vector Graphic SVG Map */}
+          {/* Geographically Accurate Vector Topography */}
           <svg
             viewBox="0 0 1800 950"
             style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
           >
             <defs>
-              {/* Ocean Blue Water Gradient */}
-              <linearGradient id="seaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#41728d" />
-                <stop offset="50%" stopColor="#315c74" />
-                <stop offset="100%" stopColor="#224254" />
+              <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#2b5368" />
+                <stop offset="100%" stopColor="#1a3644" />
               </linearGradient>
 
-              {/* Water Edge Coastal Glow */}
-              <linearGradient id="coastalGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#7cb0cf" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#41728d" stopOpacity="0" />
+              <linearGradient id="fertileArc" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#ebdcb9" />
+                <stop offset="35%" stopColor="#c5d8a4" stopOpacity="0.6" />
+                <stop offset="70%" stopColor="#a3ccab" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#ebdcb9" />
               </linearGradient>
 
-              {/* Topographical Land Gradient */}
-              <linearGradient id="landTopography" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ebd9b2" />
-                <stop offset="40%" stopColor="#dfca9b" />
-                <stop offset="70%" stopColor="#cca972" />
-                <stop offset="100%" stopColor="#bd965b" />
+              <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f5e8ca" />
+                <stop offset="50%" stopColor="#ebdcb9" />
+                <stop offset="100%" stopColor="#d2bc8a" />
               </linearGradient>
 
-              {/* Mountain Shading Pattern */}
-              <pattern id="mountainRidgePattern" width="60" height="30" patternUnits="userSpaceOnUse">
-                <path d="M 0,30 L 15,10 L 30,30 M 20,30 L 35,5 L 50,30 M 40,30 L 50,15 L 60,30" fill="none" stroke="#6e502c" strokeWidth="1.8" opacity="0.3" />
-                <path d="M 15,10 L 22,30 M 35,5 L 42,30 M 50,15 L 55,30" fill="none" stroke="#ffffff" strokeWidth="1" opacity="0.2" />
-              </pattern>
-
-              {/* Drop Shadow Filter for Map Titles */}
-              <filter id="mapTextShadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="2" dy="2" stdDeviation="2" floodColor="#ffffff" floodOpacity="0.8" />
+              {/* Text Shadow for High Readability */}
+              <filter id="labelShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodColor="#fef3c7" floodOpacity="0.95" />
               </filter>
             </defs>
 
-            {/* Base Landmass Background */}
-            <rect width="1800" height="950" fill="url(#landTopography)" />
+            {/* Base Landmass */}
+            <rect width="1800" height="950" fill="url(#landGrad)" />
 
-            {/* Mediterranean Sea Body */}
+            {/* Fertile Crescent Vegetative Shading */}
             <path
-              d="M 0,0 L 560,0 C 580,140 550,220 620,250 C 660,260 670,220 700,220 C 740,220 710,290 640,330 C 620,350 620,400 640,460 C 640,500 610,530 520,550 C 440,570 300,580 0,580 Z"
-              fill="url(#seaGradient)"
-              stroke="#224254"
+              d="M 230,660 Q 300,560 450,450 Q 620,180 800,180 Q 1000,180 1250,680 Q 1150,750 900,450 Q 650,300 450,550 Q 300,650 230,660 Z"
+              fill="url(#fertileArc)"
+            />
+
+            {/* Mediterranean Sea Coastline */}
+            <path
+              d="M 0,0 L 560,0 C 530,120 510,180 460,200 C 450,240 442,280 438,320 C 432,360 422,410 410,450 C 400,490 385,540 365,580 C 330,570 280,560 220,560 L 0,560 Z"
+              fill="url(#oceanGrad)"
+              stroke="#1a3644"
               strokeWidth="2"
             />
 
-            {/* Cyprus Island */}
+            {/* Cyprus */}
             <path
-              d="M 500,320 C 530,310 560,315 585,325 C 560,335 520,345 490,335 Z"
-              fill="url(#landTopography)"
-              stroke="#735738"
-              strokeWidth="2"
+              d="M 330,300 C 360,290 390,295 415,305 C 390,315 350,325 320,315 Z"
+              fill="url(#landGrad)"
+              stroke="#78350f"
+              strokeWidth="1.5"
             />
 
-            {/* Black Sea (North) */}
+            {/* Black Sea */}
             <path
-              d="M 520,0 C 600,60 700,80 840,40 C 900,10 920,0 920,0 Z"
-              fill="url(#seaGradient)"
-              stroke="#224254"
-              strokeWidth="2"
+              d="M 520,0 C 580,70 700,90 850,50 C 900,20 950,0 950,0 Z"
+              fill="url(#oceanGrad)"
+              stroke="#1a3644"
             />
 
-            {/* Caspian Sea (North East) */}
+            {/* Caspian Sea */}
             <path
-              d="M 1480,0 C 1530,60 1570,130 1560,210 C 1540,270 1470,230 1440,150 C 1420,90 1410,0 1410,0 Z"
-              fill="url(#seaGradient)"
-              stroke="#224254"
-              strokeWidth="2"
+              d="M 1450,0 C 1500,80 1520,160 1500,240 C 1470,300 1420,260 1390,160 C 1370,80 1370,0 1370,0 Z"
+              fill="url(#oceanGrad)"
+              stroke="#1a3644"
             />
 
-            {/* Gulf of Suez, Gulf of Aqaba & Red Sea */}
+            {/* Red Sea, Gulf of Suez & Gulf of Aqaba */}
             <path
-              d="M 210,950 L 300,720 C 310,680 330,680 340,710 L 340,770 L 370,720 C 380,680 400,690 410,720 L 480,740 L 510,730 L 380,950 Z"
-              fill="url(#seaGradient)"
-              stroke="#224254"
+              d="M 320,630 L 230,950 L 380,950 L 400,860 L 440,710 L 420,710 L 360,830 L 330,630 Z"
+              fill="url(#oceanGrad)"
+              stroke="#1a3644"
               strokeWidth="2"
             />
 
             {/* Persian Gulf */}
             <path
-              d="M 1350,950 C 1370,820 1410,750 1510,690 C 1600,640 1700,610 1800,630 L 1800,950 Z"
-              fill="url(#seaGradient)"
-              stroke="#224254"
+              d="M 1220,950 C 1230,750 1300,700 1420,670 C 1580,640 1700,650 1800,690 L 1800,950 Z"
+              fill="url(#oceanGrad)"
+              stroke="#1a3644"
               strokeWidth="2"
             />
 
-            {/* Major Mountain Relief Formations */}
-            {/* Taurus Mountains (Turkey) */}
-            <path d="M 450,180 Q 580,220 700,160 Q 600,140 450,180 Z" fill="url(#mountainRidgePattern)" />
-            <text x="560" y="195" fill="#52391b" fontSize="13" fontWeight="bold" fontStyle="italic">Taurus Mountains</text>
-
-            {/* Lebanon Mountains */}
-            <path d="M 630,300 Q 660,370 650,440 Q 630,370 630,300 Z" fill="url(#mountainRidgePattern)" />
-            <text x="605" y="380" fill="#52391b" fontSize="12" fontWeight="bold" transform="rotate(-75 605 380)">Lebanon Mountains</text>
-
-            {/* Armenia / Ararat Mountain Complex */}
-            <path d="M 850,80 Q 1050,60 1200,140 Q 1000,180 850,80 Z" fill="url(#mountainRidgePattern)" />
-            <text x="1010" y="115" fill="#52391b" fontSize="14" fontWeight="bold">Ararat Mountains</text>
-            <text x="1030" y="132" fill="#52391b" fontSize="11" fontStyle="italic">Mt. Ararat</text>
-
-            {/* Zagros Mountains (Media/Persia) */}
-            <path d="M 1150,220 Q 1400,380 1650,620 Q 1550,680 1250,380 Z" fill="url(#mountainRidgePattern)" />
-            <text x="1380" y="420" fill="#52391b" fontSize="16" fontWeight="bold" transform="rotate(38 1380 420)">Zagros Mountains</text>
-
-            {/* Caspian Mountains */}
-            <path d="M 1300,190 Q 1420,240 1520,230 Z" fill="url(#mountainRidgePattern)" />
-            <text x="1380" y="215" fill="#52391b" fontSize="12" fontWeight="bold">Caspian Mountains</text>
-
-            {/* Sinai Mountain Cluster */}
-            <path d="M 360,740 Q 420,800 400,850 Q 340,820 360,740 Z" fill="url(#mountainRidgePattern)" />
-            <text x="380" y="810" fill="#52391b" fontSize="12" fontWeight="bold">Mt. Sinai</text>
-
-            {/* Rivers & Watercourses */}
-            {/* Nile River System */}
-            <g stroke="#2b5f7e" fill="none" strokeLinecap="round">
-              <path d="M 150,950 Q 180,850 210,780 L 250,710 L 250,600" strokeWidth="5" />
-              {/* Nile Delta Branches */}
-              <path d="M 250,600 Q 200,570 170,555" strokeWidth="3" />
-              <path d="M 250,600 Q 230,560 220,550" strokeWidth="2.5" />
-              <path d="M 250,600 Q 270,560 280,550" strokeWidth="2.5" />
-              <path d="M 250,600 Q 300,560 320,550" strokeWidth="3" />
+            {/* Major Rivers */}
+            {/* Nile River & Delta */}
+            <g stroke="#1e4e6d" fill="none" strokeLinecap="round">
+              <path d="M 180,950 Q 210,850 230,660 L 250,600" strokeWidth="5" />
+              <path d="M 250,600 Q 200,570 170,560" strokeWidth="2.5" />
+              <path d="M 250,600 Q 240,570 230,560" strokeWidth="2" />
+              <path d="M 250,600 Q 280,570 300,560" strokeWidth="2.5" />
             </g>
-            <text x="130" y="850" fill="#1e445b" fontSize="13" fontStyle="italic" transform="rotate(-70 130 850)">Nile River</text>
 
-            {/* Jordan River, Sea of Galilee, Dead Sea */}
-            <g stroke="#2b5f7e" fill="none">
-              <ellipse cx="640" cy="400" rx="9" ry="14" fill="#315c74" stroke="none" />
-              <ellipse cx="630" cy="560" rx="14" ry="32" fill="#315c74" stroke="none" />
-              <path d="M 640,414 L 638,470 L 632,528" strokeWidth="3" />
+            {/* Jordan River System */}
+            <g stroke="#1e4e6d" fill="none">
+              <ellipse cx="475" cy="410" rx="8" ry="12" fill="#2b5368" stroke="none" />
+              <ellipse cx="475" cy="560" rx="12" ry="30" fill="#2b5368" stroke="none" />
+              <path d="M 475,422 L 475,530" strokeWidth="2.5" />
             </g>
 
             {/* Euphrates River */}
             <path
-              d="M 800,160 Q 920,200 1000,280 Q 1120,400 1280,540 Q 1380,630 1430,710"
+              d="M 780,100 Q 680,180 620,210 Q 750,310 900,420 Q 1020,480 1080,520 Q 1140,580 1210,680 L 1230,720"
               fill="none"
-              stroke="#2b5f7e"
-              strokeWidth="5"
-              strokeLinecap="round"
-            />
-            <text x="960" y="325" fill="#1e445b" fontSize="13" fontStyle="italic" transform="rotate(32 960 325)">Euphrates River</text>
-
-            {/* Tigris River */}
-            <path
-              d="M 1060,140 Q 1160,260 1240,360 Q 1340,500 1430,710"
-              fill="none"
-              stroke="#2b5f7e"
+              stroke="#1e4e6d"
               strokeWidth="4.5"
               strokeLinecap="round"
             />
-            <text x="1190" y="310" fill="#1e445b" fontSize="13" fontStyle="italic" transform="rotate(50 1190 310)">Tigris River</text>
 
-            {/* Araxes River */}
-            <path d="M 1200,120 Q 1320,100 1420,120" fill="none" stroke="#2b5f7e" strokeWidth="2.5" />
-            <text x="1310" y="105" fill="#1e445b" fontSize="11" fontStyle="italic">Araxes River</text>
+            {/* Tigris River */}
+            <path
+              d="M 900,100 Q 940,250 955,280 Q 930,330 1050,470 Q 1150,570 1230,720"
+              fill="none"
+              stroke="#1e4e6d"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
 
-            {/* Major Ancient Near East Region Titles */}
-            <g fill="#3a2712" fontFamily="Georgia, serif" fontWeight="bold" textAnchor="middle" filter="url(#mapTextShadow)">
-              <text x="750" y="440" fontSize="38" letterSpacing="4">THE OLD TESTAMENT WORLD</text>
-              <text x="180" y="780" fontSize="28">EGYPT</text>
-              <text x="500" y="140" fontSize="26">Asia Minor</text>
-              <text x="610" y="480" fontSize="22" transform="rotate(-80 610 480)">Canaan</text>
-              <text x="710" y="340" fontSize="26">Syria</text>
-              <text x="1030" y="240" fontSize="28">Mesopotamia</text>
-              <text x="1040" y="270" fontSize="15" fontStyle="italic">Paddan Aram</text>
-              <text x="1180" y="220" fontSize="26">Assyria</text>
-              <text x="1050" y="100" fontSize="22">Armenia</text>
-              <text x="1270" y="520" fontSize="22" transform="rotate(-35 1270 520)">Chaldea</text>
-              <text x="1370" y="320" fontSize="26">Media</text>
-              <text x="1420" y="500" fontSize="26">Elam</text>
-              <text x="1620" y="450" fontSize="28">Persia</text>
-              <text x="820" y="660" fontSize="28" fill="#573e21">Arabian Desert</text>
+            {/* Mountain Ridge Outlines */}
+            <g stroke="#78350f" fill="none" strokeWidth="2" strokeDasharray="4,4" opacity="0.45">
+              {/* Taurus Range */}
+              <path d="M 460,160 Q 560,190 660,150" />
+              {/* Lebanon Range */}
+              <path d="M 450,280 L 445,380" />
+              {/* Ararat Range */}
+              <path d="M 880,90 Q 1020,70 1150,110" />
+              {/* Zagros Range */}
+              <path d="M 1180,220 Q 1380,380 1620,600" />
             </g>
 
-            {/* Ocean Body Labels */}
+            {/* Region / Geographic Labels */}
+            <g fill="#451a03" fontFamily="Georgia, serif" fontWeight="bold" textAnchor="middle" filter="url(#labelShadow)">
+              <text x="170" y="780" fontSize="26">EGYPT</text>
+              <text x="375" y="790" fontSize="16">SINAI</text>
+              <text x="430" y="140" fontSize="22">ASIA MINOR</text>
+              <text x="320" y="470" fontSize="20" transform="rotate(-75 320 470)">CANAAN</text>
+              <text x="520" y="280" fontSize="22">SYRIA (ARAM)</text>
+              <text x="820" y="260" fontSize="26">MESOPOTAMIA</text>
+              <text x="830" y="290" fontSize="14" fontStyle="italic">Paddan-aram</text>
+              <text x="1010" y="220" fontSize="24">ASSYRIA</text>
+              <text x="1000" y="80" fontSize="20">ARMENIA</text>
+              <text x="1100" y="600" fontSize="24">BABYLONIA</text>
+              <text x="1170" y="630" fontSize="16" fontStyle="italic">Chaldea</text>
+              <text x="1310" y="260" fontSize="24">MEDIA</text>
+              <text x="1390" y="520" fontSize="24">ELAM</text>
+              <text x="1560" y="580" fontSize="26">PERSIA</text>
+              <text x="800" y="720" fontSize="28" fill="#78350f" opacity="0.6">ARABIAN DESERT</text>
+            </g>
+
+            {/* River Labels */}
+            <g fill="#1e4e6d" fontSize="12" fontStyle="italic" fontWeight="600">
+              <text x="110" y="820" transform="rotate(-72 110 820)">Nile River</text>
+              <text x="790" y="320" transform="rotate(28 790 320)">Euphrates River</text>
+              <text x="1030" y="340" transform="rotate(48 1030 340)">Tigris River</text>
+            </g>
+
+            {/* Bodies of Water Labels */}
             <g fill="#ffffff" fontFamily="sans-serif" fontWeight="bold" opacity="0.85" textAnchor="middle">
-              <text x="280" y="270" fontSize="20">Mediterranean Sea</text>
-              <text x="700" y="40" fontSize="15">Black Sea</text>
-              <text x="1500" y="120" fontSize="16">Caspian Sea</text>
-              <text x="1620" y="780" fontSize="18">Persian Gulf</text>
-              <text x="290" y="880" fontSize="16" transform="rotate(-65 290 880)">Red Sea</text>
+              <text x="220" y="280" fontSize="18">Mediterranean Sea</text>
+              <text x="680" y="40" fontSize="14">Black Sea</text>
+              <text x="1460" y="120" fontSize="15">Caspian Sea</text>
+              <text x="1600" y="780" fontSize="18">Persian Gulf</text>
+              <text x="290" y="880" fontSize="15" transform="rotate(-68 290 880)">Red Sea</text>
+            </g>
+
+            {/* Map Legend / Title Block */}
+            <g transform="translate(1420, 800)">
+              <rect width="320" height="110" rx="8" fill="#fef3c7" stroke="#78350f" strokeWidth="2" opacity="0.92" />
+              <text x="160" y="35" textAnchor="middle" fill="#451a03" fontFamily="Georgia, serif" fontSize="18" fontWeight="bold">
+                THE OLD TESTAMENT WORLD
+              </text>
+              <text x="160" y="60" textAnchor="middle" fill="#78350f" fontFamily="sans-serif" fontSize="12">
+                Ancient Near East Topographical Map
+              </text>
+              <line x1="30" y1="75" x2="290" y2="75" stroke="#78350f" strokeWidth="1" opacity="0.5" />
+              <circle cx="50" cy="90" r="5" fill="#b91c1c" />
+              <text x="65" y="94" fill="#451a03" fontFamily="sans-serif" fontSize="11">Biblical Location Marker</text>
             </g>
           </svg>
 
-          {/* City Interactive Pins */}
+          {/* City Interactive Pin Markers */}
           {filteredCities.map((city) => {
             const cityEvents = eventsByCity.get(city.id) || [];
             const hasEvents = cityEvents.length > 0;
@@ -363,39 +357,39 @@ export default function OldTestamentMapPage({
                   alignItems: "center",
                 }}
               >
-                {/* City Marker Pin */}
+                {/* Pin Point */}
                 <div
                   style={{
-                    width: hasEvents ? "22px" : "14px",
-                    height: hasEvents ? "22px" : "14px",
+                    width: hasEvents ? "18px" : "12px",
+                    height: hasEvents ? "18px" : "12px",
                     borderRadius: "50%",
-                    backgroundColor: hasEvents ? "#b91c1c" : "#1e3a8a",
+                    backgroundColor: hasEvents ? "#b91c1c" : "#0284c7",
                     border: "2px solid #ffffff",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#ffffff",
-                    fontSize: "0.7rem",
+                    fontSize: "0.68rem",
                     fontWeight: "bold",
                   }}
                 >
                   {hasEvents ? cityEvents.length : ""}
                 </div>
 
-                {/* City Title Overlay */}
+                {/* Compact Label */}
                 <div
                   style={{
-                    marginTop: "3px",
-                    background: "rgba(28, 25, 23, 0.92)",
+                    marginTop: "2px",
+                    background: "rgba(28, 25, 23, 0.9)",
                     color: "#fef3c7",
-                    padding: "2px 7px",
+                    padding: "2px 6px",
                     borderRadius: "4px",
-                    fontSize: "0.72rem",
+                    fontSize: "0.7rem",
                     fontWeight: "600",
                     whiteSpace: "nowrap",
-                    boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
-                    border: "1px solid rgba(217, 119, 6, 0.4)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(217, 119, 6, 0.3)",
                     fontFamily: "sans-serif",
                   }}
                 >
@@ -432,7 +426,7 @@ export default function OldTestamentMapPage({
               maxHeight: "80vh",
               overflowY: "auto",
               boxShadow: "0 20px 25px -5px rgba(0,0,0,0.3)",
-              border: "2px solid #8b4513",
+              border: "2px solid #78350f",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -441,8 +435,8 @@ export default function OldTestamentMapPage({
                 <h3 style={{ margin: 0, fontSize: "1.4rem", color: "#291e13", fontFamily: "Georgia, serif" }}>
                   {selectedCity.name}
                 </h3>
-                <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#8b4513", fontWeight: "600", fontFamily: "sans-serif" }}>
-                  {selectedCity.arabicName} • {selectedCity.region}
+                <p style={{ margin: "2px 0 0 0", fontSize: "0.88rem", color: "#78350f", fontWeight: "600", fontFamily: "sans-serif" }}>
+                  {selectedCity.arabicName} • Region: {selectedCity.region}
                 </p>
               </div>
               <button
@@ -455,7 +449,7 @@ export default function OldTestamentMapPage({
 
             {activeCityEvents.length === 0 ? (
               <p style={{ color: "#786c5e", fontSize: "0.9rem", fontFamily: "sans-serif" }}>
-                No events currently matched with this location in your dataset.
+                No biblical events currently tagged with this location in your dataset.
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontFamily: "sans-serif" }}>
@@ -466,7 +460,7 @@ export default function OldTestamentMapPage({
                     style={{
                       padding: "12px",
                       borderRadius: "8px",
-                      border: "1px solid #d2c4b0",
+                      border: "1px solid #d6d3d1",
                       background: "#ffffff",
                       cursor: "pointer",
                     }}
@@ -476,7 +470,7 @@ export default function OldTestamentMapPage({
                         {evt.title}
                       </h4>
                       {evt.date?.year !== undefined && (
-                        <span style={{ fontSize: "0.78rem", color: "#8b4513", fontWeight: "bold" }}>
+                        <span style={{ fontSize: "0.78rem", color: "#b91c1c", fontWeight: "bold" }}>
                           {formatYearLabel(evt.date.year)}
                         </span>
                       )}
@@ -519,7 +513,7 @@ export default function OldTestamentMapPage({
               maxHeight: "85vh",
               overflowY: "auto",
               boxShadow: "0 20px 25px -5px rgba(0,0,0,0.3)",
-              border: "2px solid #8b4513",
+              border: "2px solid #78350f",
               fontFamily: "sans-serif",
             }}
             onClick={(e) => e.stopPropagation()}
