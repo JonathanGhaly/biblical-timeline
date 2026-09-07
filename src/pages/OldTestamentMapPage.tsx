@@ -444,7 +444,7 @@ export default function OldTestamentMapPage({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Left mouse button only
+    if (e.button !== 0) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
@@ -637,7 +637,7 @@ export default function OldTestamentMapPage({
           </button>
         </div>
 
-        {/* TRANSFORMABLE CANVAS (SVG + MARKERS TOGETHER) */}
+        {/* TRANSFORMABLE CANVAS */}
         <div
           style={{
             position: "absolute",
@@ -928,6 +928,13 @@ export default function OldTestamentMapPage({
             const hasEvents = cityEvents.length > 0;
             const { x, y } = geoToPixel(city.lat, city.lon);
 
+            // Counter-scale dimensions dynamically based on zoom
+            const markerSize = (hasEvents ? 18 : 12) / Math.pow(zoom, 0.4);
+            const labelFontSize = 0.7 / Math.pow(zoom, 0.7);
+            const paddingY = 2 / zoom;
+            const paddingX = 6 / zoom;
+            const borderRadius = 4 / zoom;
+
             return (
               <div
                 key={city.id}
@@ -951,17 +958,17 @@ export default function OldTestamentMapPage({
               >
                 <div
                   style={{
-                    width: hasEvents ? "18px" : "12px",
-                    height: hasEvents ? "18px" : "12px",
+                    width: `${markerSize}px`,
+                    height: `${markerSize}px`,
                     borderRadius: "50%",
                     backgroundColor: hasEvents ? "#b91c1c" : "#0284c7",
-                    border: "2px solid #ffffff",
+                    border: `${1.5 / zoom}px solid #ffffff`,
                     boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#ffffff",
-                    fontSize: "0.68rem",
+                    fontSize: `${0.68 / zoom}rem`,
                     fontWeight: "bold",
                   }}
                 >
@@ -970,16 +977,16 @@ export default function OldTestamentMapPage({
 
                 <div
                   style={{
-                    marginTop: "2px",
+                    marginTop: `${2 / zoom}px`,
                     background: "rgba(28, 25, 23, 0.9)",
                     color: "#fef3c7",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                    fontSize: "0.7rem",
+                    padding: `${paddingY}px ${paddingX}px`,
+                    borderRadius: `${borderRadius}px`,
+                    fontSize: `${labelFontSize}rem`,
                     fontWeight: "600",
                     whiteSpace: "nowrap",
                     boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                    border: "1px solid rgba(217, 119, 6, 0.3)",
+                    border: `${1 / zoom}px solid rgba(217, 119, 6, 0.3)`,
                     fontFamily: "sans-serif",
                   }}
                 >
