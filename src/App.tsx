@@ -57,16 +57,27 @@ function App() {
     savePeople(updated);
   };
 
+  // ADDED: Handler to delete a person
+  const handleDeletePerson = (personId: string) => {
+    const filtered = people.filter((p) => p.id !== personId);
+    savePeople(filtered);
+  };
+
   const handleAddEvent = (newEvent: BiblicalEvent) => {
     saveEvents([...events, newEvent]);
   };
 
-  // ADDED: Handler to update existing events in state & localStorage
   const handleUpdateEvent = (updatedEvent: BiblicalEvent) => {
     const updated = events.map((e) =>
       e.id === updatedEvent.id ? updatedEvent : e
     );
     saveEvents(updated);
+  };
+
+  // ADDED: Handler to delete an event
+  const handleDeleteEvent = (eventId: string) => {
+    const filtered = events.filter((e) => e.id !== eventId);
+    saveEvents(filtered);
   };
 
   const handleExportData = () => {
@@ -103,6 +114,7 @@ function App() {
             people={people}
             onAddPerson={handleAddPerson}
             onUpdatePerson={handleUpdatePerson}
+            onDeletePerson={handleDeletePerson} // ADDED: Passing delete handler
           />
         );
 
@@ -121,7 +133,8 @@ function App() {
             events={events}
             people={people}
             onAddEvent={handleAddEvent}
-            onUpdateEvent={handleUpdateEvent} // ADDED: Passing event update handler
+            onUpdateEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent} // ADDED: Passing delete handler
           />
         );
 
