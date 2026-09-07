@@ -125,7 +125,7 @@ function App() {
           <OldTestamentMapPage
             events={events}
             people={people}
-            mapSrc="/map.png" // Ensure map.png is placed in public/map.png
+            // mapSrc="/map.png" // Ensure map.png is placed in public/map.png
           />
         );
 
