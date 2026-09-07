@@ -1,6 +1,56 @@
 import { useState } from "react";
 import type { Person } from "../../types/genealogy";
 
+// City regions and array corresponding to map coordinates
+type CityRegion =
+  | "Egypt & Sinai"
+  | "Canaan & Levant"
+  | "Mesopotamia & Assyria"
+  | "Babylonia"
+  | "Arabia"
+  | "Persia & Media";
+
+type CityOption = {
+  id: string;
+  name: string;
+  region: CityRegion;
+};
+
+const OT_CITIES: CityOption[] = [
+  { id: "thebes", name: "Thebes (No-Amon)", region: "Egypt & Sinai" },
+  { id: "memphis", name: "Memphis (Noph)", region: "Egypt & Sinai" },
+  { id: "rameses", name: "Rameses (Goshen)", region: "Egypt & Sinai" },
+  { id: "sinai", name: "Mt. Sinai (Horeb)", region: "Egypt & Sinai" },
+  { id: "eziongeber", name: "Ezion-Geber", region: "Egypt & Sinai" },
+  { id: "gaza", name: "Gaza", region: "Canaan & Levant" },
+  { id: "beersheba", name: "Beersheba", region: "Canaan & Levant" },
+  { id: "kirhareseth", name: "Kir-hareseth (Moab)", region: "Canaan & Levant" },
+  { id: "hebron", name: "Hebron", region: "Canaan & Levant" },
+  { id: "jerusalem", name: "Jerusalem", region: "Canaan & Levant" },
+  { id: "jericho", name: "Jericho", region: "Canaan & Levant" },
+  { id: "rabbah", name: "Rabbah (Ammon)", region: "Canaan & Levant" },
+  { id: "joppa", name: "Joppa", region: "Canaan & Levant" },
+  { id: "shechem", name: "Shechem", region: "Canaan & Levant" },
+  { id: "samaria", name: "Samaria", region: "Canaan & Levant" },
+  { id: "dan", name: "Dan", region: "Canaan & Levant" },
+  { id: "tyre", name: "Tyre", region: "Canaan & Levant" },
+  { id: "sidon", name: "Sidon", region: "Canaan & Levant" },
+  { id: "damascus", name: "Damascus", region: "Canaan & Levant" },
+  { id: "carchemish", name: "Carchemish", region: "Mesopotamia & Assyria" },
+  { id: "haran", name: "Haran", region: "Mesopotamia & Assyria" },
+  { id: "asshur", name: "Asshur", region: "Mesopotamia & Assyria" },
+  { id: "nineveh", name: "Nineveh", region: "Mesopotamia & Assyria" },
+  { id: "calah", name: "Calah (Nimrud)", region: "Mesopotamia & Assyria" },
+  { id: "babylon", name: "Babylon", region: "Babylonia" },
+  { id: "erech", name: "Erech (Uruk)", region: "Babylonia" },
+  { id: "ur", name: "Ur of the Chaldees", region: "Babylonia" },
+  { id: "dedan", name: "Dedan", region: "Arabia" },
+  { id: "tema", name: "Tema", region: "Arabia" },
+  { id: "ecbatana", name: "Ecbatana", region: "Persia & Media" },
+  { id: "susa", name: "Susa (Shushan)", region: "Persia & Media" },
+  { id: "persepolis", name: "Persepolis", region: "Persia & Media" },
+];
+
 export type AddPersonModalProps = {
   existingPeople?: Person[];
   people?: Person[];
@@ -45,7 +95,9 @@ export default function AddPersonModal({
   const females = personList.filter((p) => p.gender === "female");
   const hasSpouse = Boolean(formData.husbandId || formData.wifeId);
 
-  // Automatically select Father as anchor when Father changes (if Anchor hasn't been set manually)
+  // Group cities by region for select dropdown option groups
+  const regions = Array.from(new Set(OT_CITIES.map((c) => c.region)));
+
   const handleFatherChange = (fatherId: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -130,13 +182,24 @@ export default function AddPersonModal({
               </select>
             </div>
 
+            {/* Place of Birth Dropdown */}
             <div className="form-group">
               <label>Place of Birth (Optional)</label>
-              <input
-                type="text"
+              <select
                 value={formData.placeOfBirth}
                 onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
-              />
+              >
+                <option value="">-- Select Location --</option>
+                {regions.map((region) => (
+                  <optgroup key={region} label={region}>
+                    {OT_CITIES.filter((city) => city.region === region).map((city) => (
+                      <option key={city.id} value={city.name}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -248,7 +311,7 @@ export default function AddPersonModal({
             </div>
           )}
 
-          {/* Marriage Ages (Visible when a Spouse is selected) */}
+          {/* Marriage Ages */}
           {hasSpouse && (
             <div className="form-row">
               <div className="form-group">
