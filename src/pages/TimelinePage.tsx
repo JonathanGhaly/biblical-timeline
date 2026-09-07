@@ -150,7 +150,6 @@ export default function TimelinePage({ people, events, lang = "en" }: TimelinePa
     [events]
   );
 
-  // Filter Logic
   const term = searchTerm.trim().toLowerCase();
 
   const filteredPeople = useMemo(() => {
@@ -237,132 +236,151 @@ export default function TimelinePage({ people, events, lang = "en" }: TimelinePa
         </div>
       </div>
 
-      {/* Horizontal Chart Container */}
-      <div className="overflow-x-auto rounded-2xl border-2 border-[#D4AF37]/50 bg-white/70 dark:bg-[#1C1A17] p-5 shadow-inner">
-        <div className="relative" style={{ width: `${timelineWidth + 240}px` }}>
-          {/* Header Time Axis */}
-          <div className="relative h-10 border-b-2 border-[#D4AF37]/40 mb-6" style={{ marginInlineStart: "176px" }}>
-            {ticks.map((yr) => {
-              const pos = getPosPx(yr);
-              return (
-                <div
-                  key={yr}
-                  className={`absolute top-0 text-[11px] font-bold font-mono text-[#800020] dark:text-[#D4AF37] whitespace-nowrap ${
-                    isRTL ? "translate-x-1/2" : "-translate-x-1/2"
-                  }`}
-                  style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
-                >
-                  {formatYearDisplay(yr, lang)}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Vertical Grid Reference Lines */}
-          <div
-            className="absolute top-10 bottom-0 pointer-events-none"
-            style={{ [isRTL ? "right" : "left"]: "176px", width: `${timelineWidth}px` }}
-          >
-            {ticks.map((yr) => {
-              const pos = getPosPx(yr);
-              return (
-                <div
-                  key={`grid_${yr}`}
-                  className={`absolute top-0 bottom-0 w-px border-dashed border-[#D4AF37]/20 ${
-                    isRTL ? "border-r" : "border-l"
-                  }`}
-                  style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
-                />
-              );
-            })}
-          </div>
-
-          {/* 1. Biblical Figures Lifespan Bars */}
-          <div className="space-y-2 relative z-10 mb-8">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#800020] dark:text-[#D4AF37] mb-2 px-2 flex items-center gap-1.5">
-              <Clock size={14} />
-              <span>{t.totalPeople} ({filteredPeople.length})</span>
-            </h4>
-
-            {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
-              const displayName = getPersonDisplayName(person, lang);
-              const pos = getPosPx(birthYear);
-              const widthPx = getWidthPx(duration);
-
-              return (
-                <div
-                  key={person.id}
-                  className="flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer"
-                  onClick={() =>
-                    setSelectedItem({
-                      type: "person",
-                      data: person,
-                      birthYear,
-                      deathYear,
-                    })
-                  }
-                >
-                  {/* Name Label */}
+      {/* Horizontal Chart Wrapper with Fixed Sticky Side Column */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-[#D4AF37]/50 bg-white/70 dark:bg-[#1C1A17] shadow-inner">
+        <div className="overflow-x-auto">
+          <div className="relative" style={{ width: `${timelineWidth + 240}px` }}>
+            {/* Header Time Axis */}
+            <div
+              className="relative h-10 border-b-2 border-[#D4AF37]/40 mb-6"
+              style={{
+                marginInlineStart: "176px",
+              }}
+            >
+              {ticks.map((yr) => {
+                const pos = getPosPx(yr);
+                return (
                   <div
-                    className="w-44 shrink-0 px-2 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel text-start"
-                    title={displayName}
+                    key={yr}
+                    className={`absolute top-0 text-[11px] font-bold font-mono text-[#800020] dark:text-[#D4AF37] whitespace-nowrap ${
+                      isRTL ? "translate-x-1/2" : "-translate-x-1/2"
+                    }`}
+                    style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                   >
-                    {displayName}
+                    {formatYearDisplay(yr, lang)}
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Track & Bar */}
-                  <div className="relative flex-1 h-full">
+            {/* Vertical Grid Reference Lines */}
+            <div
+              className="absolute top-10 bottom-0 pointer-events-none"
+              style={{
+                [isRTL ? "right" : "left"]: "176px",
+                width: `${timelineWidth}px`,
+              }}
+            >
+              {ticks.map((yr) => {
+                const pos = getPosPx(yr);
+                return (
+                  <div
+                    key={`grid_${yr}`}
+                    className={`absolute top-0 bottom-0 w-px border-dashed border-[#D4AF37]/20 ${
+                      isRTL ? "border-r" : "border-l"
+                    }`}
+                    style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* 1. Biblical Figures Lifespan Bars */}
+            <div className="space-y-2 relative z-10 mb-8 pt-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#800020] dark:text-[#D4AF37] mb-2 px-2 flex items-center gap-1.5" style={{ marginInlineStart: "176px" }}>
+                <Clock size={14} />
+                <span>{t.totalPeople} ({filteredPeople.length})</span>
+              </h4>
+
+              {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
+                const displayName = getPersonDisplayName(person, lang);
+                const pos = getPosPx(birthYear);
+                const widthPx = getWidthPx(duration);
+
+                return (
+                  <div
+                    key={person.id}
+                    className="flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer"
+                    onClick={() =>
+                      setSelectedItem({
+                        type: "person",
+                        data: person,
+                        birthYear,
+                        deathYear,
+                      })
+                    }
+                  >
+                    {/* Sticky Pinned Name Label */}
                     <div
-                      className="absolute top-1 bottom-1 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-[#121110] px-2 flex items-center justify-between text-[10px] font-bold shadow-sm transition-transform hover:scale-y-110 border border-[#8C6F12]"
-                      style={{
-                        [isRTL ? "right" : "left"]: `${pos}px`,
-                        width: `${widthPx}px`,
-                      }}
+                      className={`sticky ${
+                        isRTL ? "right-0 text-right" : "left-0 text-left"
+                      } z-20 w-44 shrink-0 px-3 py-1 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel bg-white/90 dark:bg-[#1C1A17]/90 backdrop-blur-sm border-r border-l border-[#D4AF37]/30 shadow-sm`}
+                      title={displayName}
                     >
-                      <span className="truncate">{duration} {t.years}</span>
-                      <span className="hidden sm:inline text-[9px] opacity-80">
-                        {formatYearDisplay(birthYear, lang)}
-                      </span>
+                      {displayName}
+                    </div>
+
+                    {/* Track & Bar */}
+                    <div className="relative flex-1 h-full">
+                      <div
+                        className="absolute top-1 bottom-1 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-[#121110] px-2 flex items-center justify-between text-[10px] font-bold shadow-sm transition-transform hover:scale-y-110 border border-[#8C6F12]"
+                        style={{
+                          [isRTL ? "right" : "left"]: `${pos}px`,
+                          width: `${widthPx}px`,
+                        }}
+                      >
+                        <span className="truncate">{duration} {t.years}</span>
+                        <span className="hidden sm:inline text-[9px] opacity-80">
+                          {formatYearDisplay(birthYear, lang)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-          {/* 2. Key Biblical Events Pins */}
-          <div className="space-y-2 relative z-10 pt-4 border-t border-[#D4AF37]/30">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#1A365D] dark:text-[#90CDF4] mb-2 px-2 flex items-center gap-1.5">
-              <Calendar size={14} />
-              <span>{t.totalEvents} ({filteredEvents.length})</span>
-            </h4>
+            {/* 2. Key Biblical Events Pins */}
+            <div className="space-y-2 relative z-10 pt-4 border-t border-[#D4AF37]/30">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#1A365D] dark:text-[#90CDF4] mb-2 px-2 flex items-center gap-1.5" style={{ marginInlineStart: "176px" }}>
+                <Calendar size={14} />
+                <span>{t.totalEvents} ({filteredEvents.length})</span>
+              </h4>
 
-            {filteredEvents.map((event) => {
-              const displayTitle = getEventDisplayTitle(event, lang);
-              const eventYear = event.date!.year!;
-              const pos = getPosPx(eventYear);
+              {filteredEvents.map((event) => {
+                const displayTitle = getEventDisplayTitle(event, lang);
+                const eventYear = event.date!.year!;
+                const pos = getPosPx(eventYear);
 
-              return (
-                <div
-                  key={event.id}
-                  className="flex items-center h-7 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
-                  onClick={() => setSelectedItem({ type: "event", data: event })}
-                >
-                  <div className="w-44 shrink-0 px-2 text-xs font-semibold truncate text-[#1A365D] dark:text-[#90CDF4] text-start">
-                    {displayTitle}
-                  </div>
-                  <div className="relative flex-1 h-full">
+                return (
+                  <div
+                    key={event.id}
+                    className="flex items-center h-7 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
+                    onClick={() => setSelectedItem({ type: "event", data: event })}
+                  >
+                    {/* Sticky Pinned Event Label */}
                     <div
-                      className="absolute top-0.5 bottom-0.5 px-2.5 rounded-full bg-gradient-to-r from-[#800020] to-[#A01128] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm border border-[#D4AF37]"
-                      style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                      className={`sticky ${
+                        isRTL ? "right-0 text-right" : "left-0 text-left"
+                      } z-20 w-44 shrink-0 px-3 py-1 text-xs font-semibold truncate text-[#1A365D] dark:text-[#90CDF4] bg-white/90 dark:bg-[#1C1A17]/90 backdrop-blur-sm border-r border-l border-[#D4AF37]/30 shadow-sm`}
+                      title={displayTitle}
                     >
-                      <Sparkles size={10} className="text-[#D4AF37]" />
-                      <span>{displayTitle}</span>
+                      {displayTitle}
+                    </div>
+
+                    <div className="relative flex-1 h-full">
+                      <div
+                        className="absolute top-0.5 bottom-0.5 px-2.5 rounded-full bg-gradient-to-r from-[#800020] to-[#A01128] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm border border-[#D4AF37]"
+                        style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                      >
+                        <Sparkles size={10} className="text-[#D4AF37]" />
+                        <span>{displayTitle}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
