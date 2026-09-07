@@ -9,6 +9,41 @@ type EventsProps = {
   onUpdateEvent?: (updatedEvent: BiblicalEvent) => void;
 };
 
+const OT_LOCATIONS = [
+  "Asshur",
+  "Babylon",
+  "Beersheba",
+  "Calah (Nimrud)",
+  "Carchemish",
+  "Damascus",
+  "Dan",
+  "Dedan",
+  "Ecbatana",
+  "Erech (Uruk)",
+  "Ezion-Geber",
+  "Gaza",
+  "Haran",
+  "Hebron",
+  "Jericho",
+  "Jerusalem",
+  "Joppa",
+  "Kir-hareseth (Moab)",
+  "Memphis (Noph)",
+  "Mt. Sinai (Horeb)",
+  "Nineveh",
+  "Persepolis",
+  "Rabbah (Ammon)",
+  "Rameses (Goshen)",
+  "Samaria",
+  "Shechem",
+  "Sidon",
+  "Susa (Shushan)",
+  "Tema",
+  "Thebes (No-Amon)",
+  "Tyre",
+  "Ur of the Chaldees",
+];
+
 function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -260,8 +295,7 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                   >
                     Location
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editForm.location || ""}
                     onChange={(e) =>
                       setEditForm({ ...editForm, location: e.target.value })
@@ -271,8 +305,22 @@ function Events({ events, people, onAddEvent, onUpdateEvent }: EventsProps) {
                       padding: "8px 12px",
                       borderRadius: "6px",
                       border: "1px solid #cbd5e1",
+                      background: "#ffffff",
                     }}
-                  />
+                  >
+                    <option value="">-- Select Location --</option>
+                    {OT_LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                    {editForm.location &&
+                      !OT_LOCATIONS.includes(editForm.location) && (
+                        <option value={editForm.location}>
+                          {editForm.location}
+                        </option>
+                      )}
+                  </select>
                 </div>
 
                 <div>

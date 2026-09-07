@@ -7,6 +7,41 @@ type AddEventModalProps = {
   onClose: () => void;
 };
 
+const OT_LOCATIONS = [
+  "Asshur",
+  "Babylon",
+  "Beersheba",
+  "Calah (Nimrud)",
+  "Carchemish",
+  "Damascus",
+  "Dan",
+  "Dedan",
+  "Ecbatana",
+  "Erech (Uruk)",
+  "Ezion-Geber",
+  "Gaza",
+  "Haran",
+  "Hebron",
+  "Jericho",
+  "Jerusalem",
+  "Joppa",
+  "Kir-hareseth (Moab)",
+  "Memphis (Noph)",
+  "Mt. Sinai (Horeb)",
+  "Nineveh",
+  "Persepolis",
+  "Rabbah (Ammon)",
+  "Rameses (Goshen)",
+  "Samaria",
+  "Shechem",
+  "Sidon",
+  "Susa (Shushan)",
+  "Tema",
+  "Thebes (No-Amon)",
+  "Tyre",
+  "Ur of the Chaldees",
+];
+
 export default function AddEventModal({
   existingPeople = [],
   onAddEvent,
@@ -171,14 +206,19 @@ export default function AddEventModal({
 
           <div className="form-group">
             <label>Location (Optional)</label>
-            <input
-              type="text"
-              placeholder="e.g. Mount Sinai"
+            <select
               value={formData.location}
               onChange={(e) =>
                 setFormData({ ...formData, location: e.target.value })
               }
-            />
+            >
+              <option value="">-- Select Location --</option>
+              {OT_LOCATIONS.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
