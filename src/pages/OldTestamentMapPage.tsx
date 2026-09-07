@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import type { Person, BiblicalEvent } from "../types/genealogy";
 
 type CityRegion =
@@ -358,6 +358,14 @@ export default function OldTestamentMapPage({
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("All");
 
+  // Map Pan and Zoom States
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const mapViewportRef = useRef<HTMLDivElement>(null);
+
   const regions = [
     "All",
     "Egypt & Sinai",
@@ -414,6 +422,60 @@ export default function OldTestamentMapPage({
     return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
   };
 
+  // Zoom & Pan Handlers
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+    const newZoom = Math.min(Math.max(zoom * zoomFactor, 1), 6);
+
+    if (newZoom === zoom) return;
+
+    if (mapViewportRef.current) {
+      const rect = mapViewportRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const newPanX = mouseX - (mouseX - pan.x) * (newZoom / zoom);
+      const newPanY = mouseY - (mouseY - pan.y) * (newZoom / zoom);
+
+      setZoom(newZoom);
+      setPan({ x: newPanX, y: newPanY });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Left mouse button only
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  const zoomIn = () => {
+    setZoom((prev) => Math.min(prev * 1.25, 6));
+  };
+
+  const zoomOut = () => {
+    setZoom((prev) => {
+      const next = Math.max(prev / 1.25, 1);
+      if (next === 1) setPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const resetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
   return (
     <div
       style={{
@@ -452,8 +514,7 @@ export default function OldTestamentMapPage({
               fontFamily: "sans-serif",
             }}
           >
-            Geographic map of the Ancient Near East with
-            latitude/longitude-based biblical locations.
+            Interactive map. Scroll to zoom, click and drag to move.
           </p>
         </div>
 
@@ -490,21 +551,102 @@ export default function OldTestamentMapPage({
       </div>
 
       <div
+        ref={mapViewportRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         style={{
           width: "100%",
-          overflowX: "auto",
+          height: "650px",
+          overflow: "hidden",
+          position: "relative",
           borderRadius: "12px",
           border: "3px solid #78350f",
           boxShadow: "0 12px 30px rgba(0, 0, 0, 0.25)",
           background: "#1c1917",
+          cursor: isDragging ? "grabbing" : "grab",
+          userSelect: "none",
+          touchAction: "none",
         }}
       >
+        {/* MAP CONTROLS OVERLAY */}
         <div
           style={{
-            position: "relative",
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            zIndex: 100,
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            background: "rgba(255, 255, 255, 0.9)",
+            padding: "6px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            fontFamily: "sans-serif",
+          }}
+        >
+          <button
+            onClick={zoomIn}
+            title="Zoom In"
+            style={{
+              width: "32px",
+              height: "32px",
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              border: "1px solid #d6d3d1",
+              borderRadius: "4px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            +
+          </button>
+          <button
+            onClick={zoomOut}
+            title="Zoom Out"
+            style={{
+              width: "32px",
+              height: "32px",
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              border: "1px solid #d6d3d1",
+              borderRadius: "4px",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            −
+          </button>
+          <button
+            onClick={resetView}
+            title="Reset Map View"
+            style={{
+              padding: "4px 8px",
+              fontSize: "0.7rem",
+              fontWeight: "bold",
+              border: "1px solid #d6d3d1",
+              borderRadius: "4px",
+              background: "#f5f5f4",
+              cursor: "pointer",
+            }}
+          >
+            Reset
+          </button>
+        </div>
+
+        {/* TRANSFORMABLE CANVAS (SVG + MARKERS TOGETHER) */}
+        <div
+          style={{
+            position: "absolute",
             width: `${MAP_WIDTH}px`,
             height: `${MAP_HEIGHT}px`,
             background: "#ebdcb9",
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "0 0",
+            transition: isDragging ? "none" : "transform 0.1s ease-out",
           }}
         >
           <svg
@@ -549,7 +691,7 @@ export default function OldTestamentMapPage({
             {/* BASE LAND */}
             <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#landGrad)" />
 
-            {/* FERTILE CRESCENT ARC (SMOOTH CURVES) */}
+            {/* FERTILE CRESCENT ARC */}
             <path
               d="
                 M 330,500
@@ -566,7 +708,7 @@ export default function OldTestamentMapPage({
               fill="url(#fertileArc)"
             />
 
-            {/* MEDITERRANEAN SEA (SMOOTH LEVANT & DELTA COAST) */}
+            {/* MEDITERRANEAN SEA */}
             <path
               d="
                 M 0,0
@@ -586,7 +728,7 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* CYPRUS (ORGANIC BEZIER SMOOTH SHAPE) */}
+            {/* CYPRUS */}
             <path
               d="
                 M 465,275
@@ -600,7 +742,7 @@ export default function OldTestamentMapPage({
               strokeWidth="1.5"
             />
 
-            {/* BLACK SEA (SMOOTH CURVE) */}
+            {/* BLACK SEA */}
             <path
               d="
                 M 225,0
@@ -611,7 +753,7 @@ export default function OldTestamentMapPage({
               stroke="#1a3644"
             />
 
-            {/* CASPIAN SEA (SMOOTH CURVE) */}
+            {/* CASPIAN SEA */}
             <path
               d="
                 M 1450,0
@@ -623,7 +765,7 @@ export default function OldTestamentMapPage({
               stroke="#1a3644"
             />
 
-            {/* REALISTIC RED SEA & GULFS (SUEZ & AQABA + SINAI PENINSULA) */}
+            {/* REALISTIC RED SEA & GULFS */}
             <path
               d="
                 M 480,528
@@ -645,7 +787,7 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* PERSIAN GULF (ORGANIC SMOOTH SHAPE) */}
+            {/* PERSIAN GULF */}
             <path
               d="
                 M 1350,528
@@ -662,7 +804,7 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* NILE RIVER & DELTA (SMOOTH CURVING FLOW) */}
+            {/* NILE RIVER & DELTA */}
             <g stroke="#1e4e6d" fill="none" strokeLinecap="round">
               <path
                 d="M 500,950 C 495,880 482,800 485,740 C 440,690 405,620 405,528"
@@ -679,7 +821,7 @@ export default function OldTestamentMapPage({
               <path d="M 652,390 C 650,405 648,415 646,423" strokeWidth="2.5" />
             </g>
 
-            {/* EUPHRATES RIVER (SMOOTH BEZIER CURVE) */}
+            {/* EUPHRATES RIVER */}
             <path
               d="
                 M 984,11
@@ -694,7 +836,7 @@ export default function OldTestamentMapPage({
               strokeLinecap="round"
             />
 
-            {/* TIGRIS RIVER (SMOOTH BEZIER CURVE) */}
+            {/* TIGRIS RIVER */}
             <path
               d="
                 M 855,84
@@ -789,7 +931,8 @@ export default function OldTestamentMapPage({
             return (
               <div
                 key={city.id}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedCity(city);
                   setSelectedEvent(null);
                 }}
