@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
-  base: '/',
+  base: '/biblical-timeline/', // Updated for GitHub Pages hosting
   server: {
     host: '0.0.0.0',
     port: 3000,
