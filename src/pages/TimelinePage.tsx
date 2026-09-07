@@ -7,13 +7,45 @@ type TimelinePageProps = {
 };
 
 type SelectedItem =
-  | { type: "person"; data: Person }
+  | { type: "person"; data: Person; birthYear: number; deathYear: number }
   | { type: "event"; data: BiblicalEvent };
 
 export default function TimelinePage({ people, events }: TimelinePageProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
 
-  // Timeline scale settings
+  // Recursively calculate birth year using anchor person or father offset if direct year is missing
+  const getBirthYear = (
+    person: Person,
+    visited = new Set<string>()
+  ): number | undefined => {
+    if (person.birth?.year !== undefined) return person.birth.year;
+    if (visited.has(person.id)) return undefined;
+    visited.add(person.id);
+
+    if (person.anchorPersonId && person.anchorPersonAgeAtBirth !== undefined) {
+      const anchor = people.find((p) => p.id === person.anchorPersonId);
+      if (anchor) {
+        const anchorBirth = getBirthYear(anchor, visited);
+        if (anchorBirth !== undefined) {
+          return anchorBirth + person.anchorPersonAgeAtBirth;
+        }
+      }
+    }
+
+    if (person.fatherId && person.fatherAgeAtBirth !== undefined) {
+      const father = people.find((p) => p.id === person.fatherId);
+      if (father) {
+        const fatherBirth = getBirthYear(father, visited);
+        if (fatherBirth !== undefined) {
+          return fatherBirth + person.fatherAgeAtBirth;
+        }
+      }
+    }
+
+    return undefined;
+  };
+
+  // Scale bounds
   const minYear = -4000;
   const maxYear = -1500;
   const totalYears = maxYear - minYear;
@@ -34,13 +66,53 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     ticks.push(yr);
   }
 
-  const peopleWithBirth = people.filter((p) => p.birth?.year !== undefined);
+  // Calculate lifespans for all individuals
+  const peopleWithLifespans = people
+    .map((person) => {
+      const birthYear = getBirthYear(person);
+      if (birthYear === undefined) return null;
+
+      const duration =
+        person.yearsLived ||
+        (person.death?.year !== undefined
+          ? person.death.year - birthYear
+          : 70);
+      const deathYear = birthYear + duration;
+
+      return {
+        person,
+        birthYear,
+        deathYear,
+        duration,
+      };
+    })
+    .filter(
+      (
+        item
+      ): item is {
+        person: Person;
+        birthYear: number;
+        deathYear: number;
+        duration: number;
+      } => item !== null
+    );
+
+  // Sort chronologically by birth year
+  peopleWithLifespans.sort((a, b) => a.birthYear - b.birthYear);
+
   const validEvents = events.filter((e) => e.date?.year !== undefined);
 
   return (
     <div className="timeline-page-container" style={{ padding: "20px" }}>
       <div style={{ marginBottom: "20px" }}>
-        <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0 0 4px 0", color: "#0f172a" }}>
+        <h2
+          style={{
+            fontSize: "1.75rem",
+            fontWeight: "bold",
+            margin: "0 0 4px 0",
+            color: "#0f172a",
+          }}
+        >
           Integrated Biblical Timeline
         </h2>
         <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
@@ -58,12 +130,12 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
           boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
         }}
       >
-        <div style={{ position: "relative", minWidth: `${timelineWidth + 160}px` }}>
-          {/* Year Scale / Header Axis */}
+        <div style={{ position: "relative", minWidth: `${timelineWidth + 180}px` }}>
+          {/* Header Axis */}
           <div
             style={{
               display: "flex",
-              marginLeft: "140px",
+              marginLeft: "150px",
               position: "relative",
               height: "36px",
               borderBottom: "2px solid #cbd5e1",
@@ -94,7 +166,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
               position: "absolute",
               top: "36px",
               bottom: 0,
-              left: "140px",
+              left: "150px",
               width: `${timelineWidth}px`,
               pointerEvents: "none",
               zIndex: 0,
@@ -131,7 +203,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
             <div
               style={{
                 position: "relative",
-                marginLeft: "140px",
+                marginLeft: "150px",
                 width: `${timelineWidth}px`,
                 height: "60px",
               }}
@@ -208,19 +280,9 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {peopleWithBirth.map((person) => {
-                const birthYear = person.birth!.year!;
-                const deathYear =
-                  person.death?.year !== undefined
-                    ? person.death.year
-                    : person.yearsLived
-                    ? birthYear + person.yearsLived
-                    : birthYear + 70;
-                const yearsLived =
-                  person.yearsLived || Math.abs(deathYear - birthYear);
-
+              {peopleWithLifespans.map(({ person, birthYear, deathYear, duration }) => {
                 const left = getLeftPx(birthYear);
-                const width = Math.max(120, getWidthPx(yearsLived));
+                const width = Math.max(140, getWidthPx(duration));
 
                 return (
                   <div
@@ -231,10 +293,10 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                       height: "32px",
                     }}
                   >
-                    {/* Person Label on Left */}
+                    {/* Person Name Column */}
                     <div
                       style={{
-                        width: "130px",
+                        width: "140px",
                         paddingRight: "10px",
                         fontSize: "0.85rem",
                         fontWeight: "700",
@@ -248,7 +310,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                       {person.name}
                     </div>
 
-                    {/* Lifespan Blue Bar */}
+                    {/* Blue Lifespan Bar */}
                     <div
                       style={{
                         position: "relative",
@@ -257,7 +319,14 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                       }}
                     >
                       <div
-                        onClick={() => setSelectedItem({ type: "person", data: person })}
+                        onClick={() =>
+                          setSelectedItem({
+                            type: "person",
+                            data: person,
+                            birthYear,
+                            deathYear,
+                          })
+                        }
                         style={{
                           position: "absolute",
                           left: `${left}px`,
@@ -278,7 +347,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                           boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                         }}
                       >
-                        {person.name} ({Math.abs(birthYear)}-{Math.abs(deathYear)} BC - {yearsLived} yrs)
+                        {person.name} ({Math.abs(birthYear)}-{Math.abs(deathYear)} BC - {duration} yrs)
                       </div>
                     </div>
                   </div>
@@ -344,9 +413,8 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
             {selectedItem.type === "person" ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
                 <p style={{ margin: 0 }}><strong>Gender:</strong> {selectedItem.data.gender}</p>
-                {selectedItem.data.birth?.year !== undefined && (
-                  <p style={{ margin: 0 }}><strong>Born:</strong> {Math.abs(selectedItem.data.birth.year)} BC</p>
-                )}
+                <p style={{ margin: 0 }}><strong>Born:</strong> {Math.abs(selectedItem.birthYear)} BC</p>
+                <p style={{ margin: 0 }}><strong>Died:</strong> {Math.abs(selectedItem.deathYear)} BC</p>
                 {selectedItem.data.yearsLived && (
                   <p style={{ margin: 0 }}><strong>Lifespan:</strong> {selectedItem.data.yearsLived} years</p>
                 )}
