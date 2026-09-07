@@ -377,37 +377,50 @@ export default function OldTestamentMapPage({
     "Persia & Media",
   ];
 
+  // Helper matching function using regular expressions against aliases
+  const isCityMatch = (city: City, locationStr?: string) => {
+    if (!locationStr) return false;
+    const location = locationStr.trim().toLowerCase();
+
+    return city.aliases.some((alias) => {
+      const normalizedAlias = alias.trim().toLowerCase();
+      if (!normalizedAlias) return false;
+
+      const escapedAlias = normalizedAlias.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+      const regex = new RegExp(
+        `(^|[^\\p{L}\\p{N}])${escapedAlias}([^\\p{L}\\p{N}]|$)`,
+        "iu"
+      );
+
+      return regex.test(location);
+    });
+  };
+
   const eventsByCity = useMemo(() => {
     const map = new Map<string, BiblicalEvent[]>();
-
     OT_CITIES.forEach((city) => {
-      const matching = events.filter((event) => {
-        if (!event.location) return false;
-        const location = event.location.trim().toLowerCase();
-
-        return city.aliases.some((alias) => {
-          const normalizedAlias = alias.trim().toLowerCase();
-          if (!normalizedAlias) return false;
-
-          const escapedAlias = normalizedAlias.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          );
-
-          const regex = new RegExp(
-            `(^|[^\\p{L}\\p{N}])${escapedAlias}([^\\p{L}\\p{N}]|$)`,
-            "iu"
-          );
-
-          return regex.test(location);
-        });
-      });
-
+      const matching = events.filter((event) =>
+        isCityMatch(city, event.location)
+      );
       map.set(city.id, matching);
     });
-
     return map;
   }, [events]);
+
+  const peopleByBirthCity = useMemo(() => {
+    const map = new Map<string, Person[]>();
+    OT_CITIES.forEach((city) => {
+      const matching = people.filter((person) =>
+        isCityMatch(city, person.placeOfBirth)
+      );
+      map.set(city.id, matching);
+    });
+    return map;
+  }, [people]);
 
   const filteredCities = useMemo(() => {
     if (selectedRegion === "All") return OT_CITIES;
@@ -418,6 +431,10 @@ export default function OldTestamentMapPage({
     ? eventsByCity.get(selectedCity.id) || []
     : [];
 
+  const activeCityNativePeople = selectedCity
+    ? peopleByBirthCity.get(selectedCity.id) || []
+    : [];
+
   const formatYearLabel = (year?: number) => {
     if (year === undefined) return "";
     return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
@@ -425,7 +442,6 @@ export default function OldTestamentMapPage({
 
   // Zoom & Pan Handlers for Mouse
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
     const newZoom = Math.min(Math.max(zoom * zoomFactor, 1), 6);
 
@@ -1001,11 +1017,12 @@ export default function OldTestamentMapPage({
           {/* CITY MARKERS */}
           {filteredCities.map((city) => {
             const cityEvents = eventsByCity.get(city.id) || [];
-            const hasEvents = cityEvents.length > 0;
+            const cityPeople = peopleByBirthCity.get(city.id) || [];
+            const totalCount = cityEvents.length + cityPeople.length;
+            const hasData = totalCount > 0;
             const { x, y } = geoToPixel(city.lat, city.lon);
 
-            // Counter-scale dimensions dynamically based on zoom for mobile touch visibility
-            const markerSize = (hasEvents ? 22 : 16) / Math.pow(zoom, 0.4);
+            const markerSize = (hasData ? 22 : 16) / Math.pow(zoom, 0.4);
             const labelFontSize = 0.75 / Math.pow(zoom, 0.65);
             const paddingY = 2 / zoom;
             const paddingX = 6 / zoom;
@@ -1038,7 +1055,7 @@ export default function OldTestamentMapPage({
                     width: `${markerSize}px`,
                     height: `${markerSize}px`,
                     borderRadius: "50%",
-                    backgroundColor: hasEvents ? "#b91c1c" : "#0284c7",
+                    backgroundColor: hasData ? "#b91c1c" : "#0284c7",
                     border: `${2 / zoom}px solid #ffffff`,
                     boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
                     display: "flex",
@@ -1049,7 +1066,7 @@ export default function OldTestamentMapPage({
                     fontWeight: "bold",
                   }}
                 >
-                  {hasEvents ? cityEvents.length : ""}
+                  {hasData ? totalCount : ""}
                 </div>
 
                 <div
@@ -1075,7 +1092,7 @@ export default function OldTestamentMapPage({
         </div>
       </div>
 
-      {/* CITY EVENT MODAL */}
+      {/* CITY DETAILS MODAL */}
       {selectedCity && !selectedEvent && (
         <div
           style={{
@@ -1164,43 +1181,76 @@ export default function OldTestamentMapPage({
               </button>
             </div>
 
-            {activeCityEvents.length === 0 ? (
-              <p style={{ color: "#786c5e", fontSize: "0.9rem", fontFamily: "sans-serif" }}>
-                No biblical events currently tagged with this location in your dataset.
-              </p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontFamily: "sans-serif" }}>
-                {activeCityEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    onClick={() => setSelectedEvent(event)}
-                    style={{
-                      padding: "12px",
-                      borderRadius: "8px",
-                      border: "1px solid #d6d3d1",
-                      background: "#ffffff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px" }}>
-                      <h4 style={{ margin: "0 0 4px 0", color: "#1c1917", fontSize: "0.95rem" }}>
-                        {event.title}
-                      </h4>
-                      {event.date?.year !== undefined && (
-                        <span style={{ fontSize: "0.78rem", color: "#b91c1c", fontWeight: "bold", whiteSpace: "nowrap" }}>
-                          {formatYearLabel(event.date.year)}
-                        </span>
-                      )}
-                    </div>
-                    {event.description && (
-                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#57534e", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                        {event.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
+            {/* PEOPLE BORN HERE */}
+            {activeCityNativePeople.length > 0 && (
+              <div style={{ marginBottom: "16px", fontFamily: "sans-serif" }}>
+                <h4 style={{ margin: "0 0 8px 0", color: "#854d0e", fontSize: "0.95rem" }}>
+                  Born Here ({activeCityNativePeople.length})
+                </h4>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {activeCityNativePeople.map((p) => (
+                    <span
+                      key={p.id}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "16px",
+                        background: "#fef3c7",
+                        border: "1px solid #fde68a",
+                        color: "#78350f",
+                        fontSize: "0.82rem",
+                        fontWeight: "600",
+                      }}
+                    >
+                      👤 {p.name}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* EVENTS */}
+            <div style={{ fontFamily: "sans-serif" }}>
+              <h4 style={{ margin: "0 0 8px 0", color: "#854d0e", fontSize: "0.95rem" }}>
+                Biblical Events ({activeCityEvents.length})
+              </h4>
+              {activeCityEvents.length === 0 ? (
+                <p style={{ color: "#786c5e", fontSize: "0.85rem", margin: 0 }}>
+                  No biblical events currently tagged with this location in your dataset.
+                </p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {activeCityEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      style={{
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #d6d3d1",
+                        background: "#ffffff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px" }}>
+                        <h4 style={{ margin: "0 0 4px 0", color: "#1c1917", fontSize: "0.95rem" }}>
+                          {event.title}
+                        </h4>
+                        {event.date?.year !== undefined && (
+                          <span style={{ fontSize: "0.78rem", color: "#b91c1c", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                            {formatYearLabel(event.date.year)}
+                          </span>
+                        )}
+                      </div>
+                      {event.description && (
+                        <p style={{ margin: 0, fontSize: "0.85rem", color: "#57534e", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                          {event.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
