@@ -20,6 +20,15 @@ type City = {
   labelPosition?: "top" | "bottom" | "left" | "right";
 };
 
+type MountainPeak = {
+  id: string;
+  name?: string;
+  lat: number;
+  lon: number;
+  size: number;
+  showLabel?: boolean;
+};
+
 type OldTestamentMapPageProps = {
   events: BiblicalEvent[];
   people?: Person[];
@@ -59,6 +68,40 @@ function geoToPixel(lat: number, lon: number) {
 
   return { x, y };
 }
+
+// Dynamic geographic mountain dataset
+const OT_MOUNTAINS: MountainPeak[] = [
+  // Mt. Ararat / Armenia Range
+  { id: "ararat-1", name: "Mt. Ararat Range", lat: 39.702, lon: 44.299, size: 28, showLabel: true },
+  { id: "ararat-2", lat: 39.500, lon: 45.200, size: 22 },
+  { id: "ararat-3", lat: 39.800, lon: 43.100, size: 20 },
+  { id: "taurus-1", lat: 38.500, lon: 41.500, size: 24 },
+  { id: "taurus-2", lat: 38.200, lon: 40.000, size: 22 },
+
+  // Lebanon / Hermon Range
+  { id: "hermon", name: "Mt. Hermon", lat: 33.416, lon: 35.856, size: 18, showLabel: true },
+  { id: "lebanon-1", name: "Lebanon Mts.", lat: 34.180, lon: 35.950, size: 20, showLabel: true },
+  { id: "lebanon-2", lat: 33.800, lon: 35.700, size: 16 },
+
+  // Canaan / Transjordan
+  { id: "carmel", lat: 32.733, lon: 35.050, size: 14 },
+  { id: "samaria-hills", lat: 32.200, lon: 35.250, size: 15 },
+  { id: "judea-hills", lat: 31.700, lon: 35.150, size: 15 },
+  { id: "nebo", name: "Mt. Nebo (Moab)", lat: 31.765, lon: 35.725, size: 16, showLabel: true },
+  { id: "edom-hills", lat: 30.300, lon: 35.400, size: 16 },
+
+  // Sinai Range
+  { id: "sinai-peak", name: "Mt. Sinai / Horeb", lat: 28.539, lon: 33.975, size: 24, showLabel: true },
+  { id: "sinai-south", lat: 28.200, lon: 33.800, size: 20 },
+  { id: "sinai-west", lat: 28.800, lon: 33.500, size: 18 },
+
+  // Zagros Mountains (Persia/Media)
+  { id: "zagros-1", name: "Zagros Mountains", lat: 36.200, lon: 46.500, size: 24, showLabel: true },
+  { id: "zagros-2", lat: 34.800, lon: 48.000, size: 26 },
+  { id: "zagros-3", lat: 33.500, lon: 49.500, size: 25 },
+  { id: "zagros-4", lat: 32.200, lon: 51.000, size: 24 },
+  { id: "zagros-5", lat: 30.800, lon: 52.500, size: 22 },
+];
 
 const OT_CITIES: City[] = [
   {
@@ -928,71 +971,44 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* MOUNTAINS TOPOGRAPHY LAYER */}
-            <g id="mountain-ranges" stroke="#573a18" fill="#cbb387" strokeWidth="1.2" strokeLinejoin="round" opacity="0.8">
-              {/* Taurus / Armenia / Ararat Mountains (North) */}
-              <g id="ararat-taurus">
-                <polygon points="1020,80 1035,50 1050,80" />
-                <polygon points="1040,85 1060,45 1080,85" fill="#dfcca6" />
-                <polygon points="1070,90 1090,55 1110,90" />
-                <polygon points="1100,95 1125,50 1150,95" fill="#dfcca6" />
-                <polygon points="980,100 1000,70 1020,100" />
-                <polygon points="940,110 965,75 990,110" />
-                <polygon points="900,120 920,90 940,120" />
-              </g>
+            {/* DYNAMIC MOUNTAINS TOPOGRAPHY LAYER */}
+            <g id="dynamic-mountain-ranges" stroke="#573a18" strokeWidth="1" strokeLinejoin="round" opacity="0.85">
+              {OT_MOUNTAINS.map((peak) => {
+                const { x, y } = geoToPixel(peak.lat, peak.lon);
+                const h = peak.size;
+                const w = peak.size * 0.85;
 
-              {/* Zagros Mountains (Persia / Media East) */}
-              <g id="zagros-mountains">
-                <polygon points="1280,220 1300,180 1320,220" />
-                <polygon points="1310,250 1335,200 1360,250" fill="#dfcca6" />
-                <polygon points="1340,290 1365,245 1390,290" />
-                <polygon points="1370,330 1395,280 1420,330" fill="#dfcca6" />
-                <polygon points="1400,380 1425,325 1450,380" />
-                <polygon points="1430,430 1455,380 1480,430" fill="#dfcca6" />
-                <polygon points="1460,480 1485,430 1510,480" />
-                <polygon points="1490,530 1515,475 1540,530" />
-              </g>
+                const leftX = x - w;
+                const rightX = x + w;
+                const topY = y - h;
 
-              {/* Mount Lebanon & Anti-Lebanon / Hermon Range */}
-              <g id="lebanon-hermon">
-                <polygon points="655,300 668,270 681,300" />
-                <polygon points="662,325 677,290 692,325" fill="#dfcca6" />
-                <polygon points="670,350 682,320 694,350" />
-                <polygon points="680,285 692,260 704,285" fill="#dfcca6" />
-              </g>
-
-              {/* Mount Carmel / Central Canaan Hill Country */}
-              <g id="canaan-hills">
-                <polygon points="635,390 645,370 655,390" />
-                <polygon points="642,420 653,398 664,420" />
-                <polygon points="645,450 657,425 669,450" />
-                <polygon points="640,480 651,458 662,480" />
-              </g>
-
-              {/* Gilead / Moab / Edom Mountains (Transjordan) */}
-              <g id="transjordan-mountains">
-                <polygon points="675,410 686,388 697,410" />
-                <polygon points="670,445 682,420 694,445" />
-                <polygon points="665,485 677,458 689,485" />
-                <polygon points="655,530 668,500 681,530" />
-              </g>
-
-              {/* Sinai Peninsula Mountains */}
-              <g id="sinai-mountains">
-                <polygon points="545,610 560,575 575,610" fill="#dfcca6" />
-                <polygon points="565,635 580,595 595,635" />
-                <polygon points="530,640 545,605 560,640" />
-              </g>
+                return (
+                  <g key={peak.id}>
+                    {/* Left face (light shade) */}
+                    <polygon
+                      points={`${leftX},${y} ${x},${topY} ${x},${y}`}
+                      fill="#dfcca6"
+                    />
+                    {/* Right face (dark shade) */}
+                    <polygon
+                      points={`${x},${y} ${x},${topY} ${rightX},${y}`}
+                      fill="#a38f68"
+                    />
+                  </g>
+                );
+              })}
             </g>
 
-            {/* MOUNTAIN LABELS */}
+            {/* DYNAMIC MOUNTAIN LABELS */}
             <g fill="#573a18" fontFamily="Georgia, serif" fontSize="11" fontStyle="italic" textAnchor="middle" opacity="0.9">
-              <text x="1060" y="40">Mt. Ararat Range</text>
-              <text x="695" y="255">Mt. Hermon</text>
-              <text x="705" y="315">Lebanon Mts.</text>
-              <text x="710" y="475">Mt. Nebo (Moab)</text>
-              <text x="580" y="590">Mt. Sinai / Horeb</text>
-              <text x="1395" y="270" transform="rotate(48 1395 270)">Zagros Mountains</text>
+              {OT_MOUNTAINS.filter((peak) => peak.showLabel && peak.name).map((peak) => {
+                const { x, y } = geoToPixel(peak.lat, peak.lon);
+                return (
+                  <text key={`label-${peak.id}`} x={x} y={y - peak.size - 4}>
+                    {peak.name}
+                  </text>
+                );
+              })}
             </g>
 
             <g stroke="#1e4e6d" fill="none" strokeLinecap="round">
@@ -1443,4 +1459,4 @@ export default function OldTestamentMapPage({
       )}
     </div>
   );
-} 
+}
