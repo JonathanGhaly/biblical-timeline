@@ -4,16 +4,53 @@ import type { Person, BiblicalEvent } from "../types/genealogy";
 type TimelineProps = {
   people: Person[];
   events: BiblicalEvent[];
+  onUpdateEvent?: (updatedEvent: BiblicalEvent) => void;
 };
 
-export default function Timeline({ people, events }: TimelineProps) {
+export default function Timeline({ people, events, onUpdateEvent }: TimelineProps) {
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<BiblicalEvent | null>(null);
 
   const sortedEvents = [...events].sort((a, b) => {
     const yearA = a.date?.year ?? 0;
     const yearB = b.date?.year ?? 0;
     return yearA - yearB;
   });
+
+  const handleOpenModal = (event: BiblicalEvent) => {
+    setSelectedEvent(event);
+    setIsEditing(false);
+  };
+
+  const handleStartEdit = () => {
+    if (selectedEvent) {
+      setEditForm(JSON.parse(JSON.stringify(selectedEvent)));
+      setIsEditing(true);
+    }
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm) return;
+
+    if (onUpdateEvent) {
+      onUpdateEvent(editForm);
+    }
+
+    setSelectedEvent(editForm);
+    setIsEditing(false);
+  };
+
+  const togglePersonAssociation = (personId: string) => {
+    if (!editForm) return;
+    const currentPeople = editForm.personIds || [];
+    const updated = currentPeople.includes(personId)
+      ? currentPeople.filter((id) => id !== personId)
+      : [...currentPeople, personId];
+
+    setEditForm({ ...editForm, personIds: updated });
+  };
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px" }}>
@@ -41,7 +78,7 @@ export default function Timeline({ people, events }: TimelineProps) {
 
             return (
               <div key={event.id} style={{ position: "relative" }}>
-                {/* Year label left of line */}
+                {/* Year Label */}
                 <div
                   style={{
                     position: "absolute",
@@ -57,7 +94,7 @@ export default function Timeline({ people, events }: TimelineProps) {
                   {yearStr}
                 </div>
 
-                {/* Node Circle on line */}
+                {/* Timeline Dot */}
                 <div
                   style={{
                     position: "absolute",
@@ -72,9 +109,9 @@ export default function Timeline({ people, events }: TimelineProps) {
                   }}
                 />
 
-                {/* Clickable Event Card */}
+                {/* Event Card */}
                 <div
-                  onClick={() => setSelectedEvent(event)}
+                  onClick={() => handleOpenModal(event)}
                   style={{
                     background: "#f8fafc",
                     border: "1px solid #e2e8f0",
@@ -84,64 +121,27 @@ export default function Timeline({ people, events }: TimelineProps) {
                     transition: "all 0.15s ease-in-out",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#2563eb";
-                    e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#e2e8f0";
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-                  }}
                 >
-                  <h3
-                    style={{
-                      margin: "0 0 8px 0",
-                      fontSize: "1.05rem",
-                      fontWeight: "700",
-                      color: "#1e293b",
-                    }}
-                  >
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: "1.05rem", fontWeight: "700", color: "#1e293b" }}>
                     {event.title}
                   </h3>
 
                   {event.description && (
-                    <p
-                      style={{
-                        margin: "0 0 10px 0",
-                        fontSize: "0.875rem",
-                        color: "#475569",
-                        lineHeight: "1.5",
-                      }}
-                    >
+                    <p style={{ margin: "0 0 10px 0", fontSize: "0.875rem", color: "#475569", lineHeight: "1.5" }}>
                       {event.description}
                     </p>
                   )}
 
                   {event.location && (
-                    <p
-                      style={{
-                        margin: "0 0 10px 0",
-                        fontSize: "0.85rem",
-                        color: "#64748b",
-                      }}
-                    >
+                    <p style={{ margin: "0 0 10px 0", fontSize: "0.85rem", color: "#64748b" }}>
                       Location: {event.location}
                     </p>
                   )}
 
-                  {/* Associated People Chips */}
                   {(event.personIds || []).length > 0 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "6px",
-                        marginBottom: "10px",
-                      }}
-                    >
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
                       {(event.personIds || []).map((personId) => {
                         const p = people.find((person) => person.id === personId);
-                        const name = p ? p.name : personId;
                         return (
                           <span
                             key={personId}
@@ -154,21 +154,15 @@ export default function Timeline({ people, events }: TimelineProps) {
                               fontWeight: "500",
                             }}
                           >
-                            {name}
+                            {p ? p.name : personId}
                           </span>
                         );
                       })}
                     </div>
                   )}
 
-                  {/* Scripture Reference */}
                   {(event.biblicalReferences || []).length > 0 && (
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#64748b",
-                      }}
-                    >
+                    <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
                       {(event.biblicalReferences || []).join(", ")}
                     </div>
                   )}
@@ -179,7 +173,7 @@ export default function Timeline({ people, events }: TimelineProps) {
         </div>
       </div>
 
-      {/* Event Details Modal */}
+      {/* View/Edit Event Modal */}
       {selectedEvent && (
         <div
           style={{
@@ -198,69 +192,209 @@ export default function Timeline({ people, events }: TimelineProps) {
               background: "#ffffff",
               borderRadius: "12px",
               padding: "24px",
-              maxWidth: "500px",
+              maxWidth: "520px",
               width: "90%",
+              maxHeight: "90vh",
+              overflowY: "auto",
               boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
-                {selectedEvent.title}
+                {isEditing ? "Edit Event" : selectedEvent.title}
               </h3>
               <button
                 onClick={() => setSelectedEvent(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "1.25rem",
-                  cursor: "pointer",
-                  color: "#64748b",
-                }}
+                style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#64748b" }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#334155" }}>
-              {selectedEvent.date?.year !== undefined && (
-                <p style={{ margin: 0 }}>
-                  <strong>Date:</strong> {Math.abs(selectedEvent.date.year)}{" "}
-                  {selectedEvent.date.year < 0 ? "BC" : "AD"}
-                </p>
-              )}
-              {selectedEvent.location && (
-                <p style={{ margin: 0 }}>
-                  <strong>Location:</strong> {selectedEvent.location}
-                </p>
-              )}
-              {selectedEvent.description && (
-                <p style={{ margin: 0, lineHeight: "1.5" }}>
-                  {selectedEvent.description}
-                </p>
-              )}
-              {(selectedEvent.personIds || []).length > 0 && (
-                <p style={{ margin: 0 }}>
-                  <strong>Associated People:</strong>{" "}
-                  {(selectedEvent.personIds || [])
-                    .map((id) => people.find((p) => p.id === id)?.name || id)
-                    .join(", ")}
-                </p>
-              )}
-              {(selectedEvent.biblicalReferences || []).length > 0 && (
-                <p style={{ margin: 0 }}>
-                  <strong>References:</strong>{" "}
-                  {(selectedEvent.biblicalReferences || []).join(", ")}
-                </p>
-              )}
-            </div>
+            {isEditing && editForm ? (
+              <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    required
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    Year (Use negative number for BC, e.g. -2000)
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.date?.year ?? ""}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        date: { ...editForm.date, year: parseInt(e.target.value) || 0 },
+                      })
+                    }
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.location || ""}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editForm.description || ""}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    Scripture References (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={(editForm.biblicalReferences || []).join(", ")}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        biblicalReferences: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                      })
+                    }
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "6px" }}>
+                    Associated People
+                  </label>
+                  <div
+                    style={{
+                      maxHeight: "120px",
+                      overflowY: "auto",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      padding: "8px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                    }}
+                  >
+                    {people.map((p) => {
+                      const checked = (editForm.personIds || []).includes(p.id);
+                      return (
+                        <label key={p.id} style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => togglePersonAssociation(p.id)}
+                          />
+                          {p.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#f1f5f9",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: "8px 16px",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#334155" }}>
+                {selectedEvent.date?.year !== undefined && (
+                  <p style={{ margin: 0 }}>
+                    <strong>Date:</strong> {Math.abs(selectedEvent.date.year)}{" "}
+                    {selectedEvent.date.year < 0 ? "BC" : "AD"}
+                  </p>
+                )}
+                {selectedEvent.location && (
+                  <p style={{ margin: 0 }}>
+                    <strong>Location:</strong> {selectedEvent.location}
+                  </p>
+                )}
+                {selectedEvent.description && (
+                  <p style={{ margin: 0, lineHeight: "1.5" }}>{selectedEvent.description}</p>
+                )}
+                {(selectedEvent.personIds || []).length > 0 && (
+                  <p style={{ margin: 0 }}>
+                    <strong>Associated People:</strong>{" "}
+                    {(selectedEvent.personIds || [])
+                      .map((id) => people.find((p) => p.id === id)?.name || id)
+                      .join(", ")}
+                  </p>
+                )}
+                {(selectedEvent.biblicalReferences || []).length > 0 && (
+                  <p style={{ margin: 0 }}>
+                    <strong>References:</strong> {(selectedEvent.biblicalReferences || []).join(", ")}
+                  </p>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
+                  <button
+                    onClick={handleStartEdit}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Edit Event
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
