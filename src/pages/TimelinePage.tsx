@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import type { Person, BiblicalEvent, Language } from "../types/genealogy";
 import {
   UI_TRANSLATIONS,
@@ -65,6 +65,16 @@ const getBirthYear = (
 export default function TimelinePage({ people, events, lang = "en" }: TimelinePageProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Interactive Mouse Pointer Hover State
+  const [hoverState, setHoverState] = useState<{
+    x: number;
+    y: number;
+    year: number;
+  } | null>(null);
+
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
   const t = UI_TRANSLATIONS[lang];
 
   const peopleWithLifespans = useMemo(() => {
@@ -207,6 +217,27 @@ export default function TimelinePage({ people, events, lang = "en" }: TimelinePa
     return Math.max(12, (duration / totalYears) * timelineWidth);
   };
 
+  // Mouse move handler computing X & Y positions relative to the container
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const clampedX = Math.max(0, Math.min(timelineWidth, x));
+
+    let ratio = clampedX / timelineWidth;
+    if (isRTL) {
+      ratio = 1 - ratio;
+    }
+
+    const calculatedYear = Math.round(minYear + ratio * totalYears);
+    setHoverState({ x: clampedX, y, year: calculatedYear });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverState(null);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
@@ -263,123 +294,151 @@ export default function TimelinePage({ people, events, lang = "en" }: TimelinePa
               })}
             </div>
 
-            {/* Vertical Grid Reference Lines */}
+            {/* Main Interactive Timeline Track */}
             <div
-              className="absolute top-10 bottom-0 pointer-events-none"
+              ref={trackRef}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              className="relative cursor-crosshair"
               style={{
-                [isRTL ? "right" : "left"]: "176px",
+                marginInlineStart: "176px",
                 width: `${timelineWidth}px`,
               }}
             >
-              {ticks.map((yr) => {
-                const pos = getPosPx(yr);
-                return (
+              {/* Vertical Cursor Line & Adjacent Floating Year Badge */}
+              {hoverState && (
+                <>
                   <div
-                    key={`grid_${yr}`}
-                    className={`absolute top-0 bottom-0 w-px border-dashed border-[#D4AF37]/20 ${
-                      isRTL ? "border-r" : "border-l"
-                    }`}
-                    style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                    className="absolute top-0 bottom-0 pointer-events-none z-30 w-0.5 bg-[#800020] dark:bg-[#D4AF37] shadow-[0_0_8px_rgba(212,175,55,0.8)]"
+                    style={{ left: `${hoverState.x}px` }}
                   />
-                );
-              })}
-            </div>
-
-            {/* 1. Biblical Figures Lifespan Bars */}
-            <div className="space-y-2 relative z-10 mb-8 pt-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#800020] dark:text-[#D4AF37] mb-2 px-2 flex items-center gap-1.5" style={{ marginInlineStart: "176px" }}>
-                <Clock size={14} />
-                <span>{t.totalPeople} ({filteredPeople.length})</span>
-              </h4>
-
-              {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
-                const displayName = getPersonDisplayName(person, lang);
-                const pos = getPosPx(birthYear);
-                const widthPx = getWidthPx(duration);
-
-                return (
                   <div
-                    key={person.id}
-                    className="flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer"
-                    onClick={() =>
-                      setSelectedItem({
-                        type: "person",
-                        data: person,
-                        birthYear,
-                        deathYear,
-                      })
-                    }
+                    className="absolute pointer-events-none z-40 px-2 py-1 rounded-md bg-[#800020] text-[#F3E5AB] text-[11px] font-bold font-mono shadow-md border border-[#D4AF37] whitespace-nowrap transition-transform duration-75"
+                    style={{
+                      left: `${hoverState.x + (isRTL ? -12 : 12)}px`,
+                      top: `${hoverState.y - 12}px`,
+                      transform: isRTL ? "translateX(-100%)" : "none",
+                    }}
                   >
-                    {/* Sticky Pinned Name Label */}
-                    <div
-                      className={`sticky ${
-                        isRTL ? "right-0 text-right" : "left-0 text-left"
-                      } z-20 w-44 shrink-0 px-3 py-1 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel bg-white/90 dark:bg-[#1C1A17]/90 backdrop-blur-sm border-r border-l border-[#D4AF37]/30 shadow-sm`}
-                      title={displayName}
-                    >
-                      {displayName}
-                    </div>
+                    {formatYearDisplay(hoverState.year, lang)}
+                  </div>
+                </>
+              )}
 
-                    {/* Track & Bar */}
-                    <div className="relative flex-1 h-full">
+              {/* Vertical Grid Reference Lines */}
+              <div className="absolute top-0 bottom-0 left-0 right-0 pointer-events-none">
+                {ticks.map((yr) => {
+                  const pos = getPosPx(yr);
+                  return (
+                    <div
+                      key={`grid_${yr}`}
+                      className={`absolute top-0 bottom-0 w-px border-dashed border-[#D4AF37]/20 ${
+                        isRTL ? "border-r" : "border-l"
+                      }`}
+                      style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* 1. Biblical Figures Lifespan Bars */}
+              <div className="space-y-2 relative z-10 mb-8 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#800020] dark:text-[#D4AF37] mb-2 px-2 flex items-center gap-1.5">
+                  <Clock size={14} />
+                  <span>{t.totalPeople} ({filteredPeople.length})</span>
+                </h4>
+
+                {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
+                  const displayName = getPersonDisplayName(person, lang);
+                  const pos = getPosPx(birthYear);
+                  const widthPx = getWidthPx(duration);
+
+                  return (
+                    <div
+                      key={person.id}
+                      className="flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer"
+                      onClick={() =>
+                        setSelectedItem({
+                          type: "person",
+                          data: person,
+                          birthYear,
+                          deathYear,
+                        })
+                      }
+                    >
+                      {/* Sticky Pinned Name Label */}
                       <div
-                        className="absolute top-1 bottom-1 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-[#121110] px-2 flex items-center justify-between text-[10px] font-bold shadow-sm transition-transform hover:scale-y-110 border border-[#8C6F12]"
-                        style={{
-                          [isRTL ? "right" : "left"]: `${pos}px`,
-                          width: `${widthPx}px`,
-                        }}
+                        className={`sticky ${
+                          isRTL ? "right-0 text-right" : "left-0 text-left"
+                        } z-20 w-44 shrink-0 px-3 py-1 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel bg-white/90 dark:bg-[#1C1A17]/90 backdrop-blur-sm border-r border-l border-[#D4AF37]/30 shadow-sm`}
+                        style={{ marginInlineStart: "-176px" }}
+                        title={displayName}
                       >
-                        <span className="truncate">{duration} {t.years}</span>
-                        <span className="hidden sm:inline text-[9px] opacity-80">
-                          {formatYearDisplay(birthYear, lang)}
-                        </span>
+                        {displayName}
+                      </div>
+
+                      {/* Lifespan Bar */}
+                      <div className="relative flex-1 h-full">
+                        <div
+                          className="absolute top-1 bottom-1 rounded-md bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-[#121110] px-2 flex items-center justify-between text-[10px] font-bold shadow-sm transition-transform hover:scale-y-110 border border-[#8C6F12]"
+                          style={{
+                            [isRTL ? "right" : "left"]: `${pos}px`,
+                            width: `${widthPx}px`,
+                          }}
+                        >
+                          <span className="truncate">{duration} {t.years}</span>
+                          <span className="hidden sm:inline text-[9px] opacity-80">
+                            {formatYearDisplay(birthYear, lang)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            {/* 2. Key Biblical Events Pins */}
-            <div className="space-y-2 relative z-10 pt-4 border-t border-[#D4AF37]/30">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#1A365D] dark:text-[#90CDF4] mb-2 px-2 flex items-center gap-1.5" style={{ marginInlineStart: "176px" }}>
-                <Calendar size={14} />
-                <span>{t.totalEvents} ({filteredEvents.length})</span>
-              </h4>
+              {/* 2. Key Biblical Events Pins */}
+              <div className="space-y-2 relative z-10 pt-4 border-t border-[#D4AF37]/30">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#1A365D] dark:text-[#90CDF4] mb-2 px-2 flex items-center gap-1.5">
+                  <Calendar size={14} />
+                  <span>{t.totalEvents} ({filteredEvents.length})</span>
+                </h4>
 
-              {filteredEvents.map((event) => {
-                const displayTitle = getEventDisplayTitle(event, lang);
-                const eventYear = event.date!.year!;
-                const pos = getPosPx(eventYear);
+                {filteredEvents.map((event) => {
+                  const displayTitle = getEventDisplayTitle(event, lang);
+                  const eventYear = event.date!.year!;
+                  const pos = getPosPx(eventYear);
 
-                return (
-                  <div
-                    key={event.id}
-                    className="flex items-center h-7 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
-                    onClick={() => setSelectedItem({ type: "event", data: event })}
-                  >
-                    {/* Sticky Pinned Event Label */}
+                  return (
                     <div
-                      className={`sticky ${
-                        isRTL ? "right-0 text-right" : "left-0 text-left"
-                      } z-20 w-44 shrink-0 px-3 py-1 text-xs font-semibold truncate text-[#1A365D] dark:text-[#90CDF4] bg-white/90 dark:bg-[#1C1A17]/90 backdrop-blur-sm border-r border-l border-[#D4AF37]/30 shadow-sm`}
-                      title={displayTitle}
+                      key={event.id}
+                      className="flex items-center h-7 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
+                      onClick={() => setSelectedItem({ type: "event", data: event })}
                     >
-                      {displayTitle}
-                    </div>
-
-                    <div className="relative flex-1 h-full">
+                      {/* Sticky Pinned Event Label */}
                       <div
-                        className="absolute top-0.5 bottom-0.5 px-2.5 rounded-full bg-gradient-to-r from-[#800020] to-[#A01128] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm border border-[#D4AF37]"
-                        style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                        className={`sticky ${
+                          isRTL ? "right-0 text-right" : "left-0 text-left"
+                        } z-20 w-44 shrink-0 px-3 py-1 text-xs font-semibold truncate text-[#1A365D] dark:text-[#90CDF4] bg-white/90 dark:bg-[#1C1A17]/90 backdrop-blur-sm border-r border-l border-[#D4AF37]/30 shadow-sm`}
+                        style={{ marginInlineStart: "-176px" }}
+                        title={displayTitle}
                       >
-                        <Sparkles size={10} className="text-[#D4AF37]" />
-                        <span>{displayTitle}</span>
+                        {displayTitle}
+                      </div>
+
+                      <div className="relative flex-1 h-full">
+                        <div
+                          className="absolute top-0.5 bottom-0.5 px-2.5 rounded-full bg-gradient-to-r from-[#800020] to-[#A01128] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm border border-[#D4AF37]"
+                          style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
+                        >
+                          <Sparkles size={10} className="text-[#D4AF37]" />
+                          <span>{displayTitle}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
