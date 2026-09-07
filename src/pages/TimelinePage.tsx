@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Person, BiblicalEvent } from "../types/genealogy";
 
 type TimelinePageProps = {
@@ -6,37 +6,29 @@ type TimelinePageProps = {
   events: BiblicalEvent[];
 };
 
+type MarriageItem = {
+  id: string;
+  title: string;
+  year: number;
+  husbandName: string;
+  wifeName: string;
+  husbandAge?: number;
+  wifeAge?: number;
+  references?: string[];
+};
+
 type SelectedItem =
   | { type: "person"; data: Person; birthYear: number; deathYear: number }
-  | { type: "event"; data: BiblicalEvent };
+  | { type: "event"; data: BiblicalEvent }
+  | { type: "marriage"; data: MarriageItem };
 
 export default function TimelinePage({ people, events }: TimelinePageProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
 
-  // Fallback map for classic Old Testament patriarch birth years if date properties are omitted in data
-  const knownBirthYears: Record<string, number> = {
-    adam: -4000,
-    seth: -3874,
-    enosh: -3769,
-    kenan: -3679,
-    mahalalel: -3609,
-    jared: -3544,
-    enoch: -3382,
-    methuselah: -3317,
-    lamech: -3130,
-    noah: -2948,
-    shem: -2446,
-    terah: -2126,
-    abraham: -1996,
-    sarah: -1986,
-    isaac: -1896,
-    jacob: -1836,
-    joseph: -1745,
-  };
-
-  // Comprehensive birth year resolver
+  // Pure data-driven recursive birth year resolver using JSON lineage references
   const getBirthYear = (
     person: Person,
+    peopleList: Person[],
     visited = new Set<string>()
   ): number => {
     const pAny = person as any;
@@ -47,31 +39,136 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     if (pAny.birth_year !== undefined) return pAny.birth_year;
     if (pAny.dateOfBirth?.year !== undefined) return pAny.dateOfBirth.year;
 
-    if (visited.has(person.id)) return -3000;
+    if (visited.has(person.id)) return -4000;
     visited.add(person.id);
 
-    const parentId = person.fatherId || person.anchorPersonId || pAny.parentId;
+    const anchorId = person.anchorPersonId || person.fatherId || pAny.parentId;
     const ageAtBirth =
-      person.fatherAgeAtBirth ?? person.anchorPersonAgeAtBirth ?? pAny.ageAtBirth ?? 30;
+      person.anchorPersonAgeAtBirth ?? person.fatherAgeAtBirth ?? pAny.ageAtBirth;
 
-    if (parentId) {
-      const parent = people.find((p) => p.id === parentId);
-      if (parent) {
-        return getBirthYear(parent, visited) + ageAtBirth;
+    if (anchorId && ageAtBirth !== undefined) {
+      const anchor = peopleList.find((p) => p.id === anchorId);
+      if (anchor) {
+        return getBirthYear(anchor, peopleList, visited) + Number(ageAtBirth);
       }
     }
 
-    const nameLower = (person.name || "").toLowerCase();
-    for (const [key, year] of Object.entries(knownBirthYears)) {
-      if (nameLower.includes(key)) return year;
-    }
-
-    return -3000;
+    // Default baseline year if no parent or explicit birth year is specified in JSON
+    return -4000;
   };
 
-  const minYear = -4000;
-  const maxYear = -1500;
-  const totalYears = maxYear - minYear;
+  // 1. Process Lifespans directly from people data
+  const peopleWithLifespans = useMemo(() => {
+    const list = people.map((person) => {
+      const birthYear = getBirthYear(person, people);
+      const pAny = person as any;
+      const duration =
+        person.yearsLived ||
+        pAny.lifespan ||
+        (person.death?.year !== undefined
+          ? person.death.year - birthYear
+          : 70);
+      const deathYear = birthYear + duration;
+
+      return {
+        person,
+        birthYear,
+        deathYear,
+        duration,
+      };
+    });
+
+    return list.sort((a, b) => a.birthYear - b.birthYear);
+  }, [people]);
+
+  // 2. Process Marriages directly from people data
+  const derivedMarriages = useMemo(() => {
+    const list: MarriageItem[] = [];
+    const processedPairs = new Set<string>();
+
+    peopleWithLifespans.forEach(({ person }) => {
+      const spouseId =
+        person.gender === "female"
+          ? person.husbandId || person.spouseIds?.[0]
+          : person.wifeId || person.spouseIds?.[0];
+
+      if (!spouseId) return;
+
+      const spouse = people.find((p) => p.id === spouseId);
+      if (!spouse) return;
+
+      const coupleKey = [person.id, spouse.id].sort().join("_");
+      if (processedPairs.has(coupleKey)) return;
+      processedPairs.add(coupleKey);
+
+      const husband = person.gender === "male" ? person : spouse;
+      const wife = person.gender === "female" ? person : spouse;
+
+      const husbandBirth = getBirthYear(husband, people);
+      const wifeBirth = getBirthYear(wife, people);
+
+      let marriageYear: number | null = null;
+      const husbandAge = husband.husbandMarriageAge;
+      const wifeAge = wife.wifeMarriageAge;
+
+      if (husbandAge !== undefined && husbandAge !== null) {
+        marriageYear = husbandBirth + Number(husbandAge);
+      } else if (wifeAge !== undefined && wifeAge !== null) {
+        marriageYear = wifeBirth + Number(wifeAge);
+      }
+
+      if (marriageYear !== null) {
+        const refs = [
+          ...(husband.biblicalReferences || []),
+          ...(wife.biblicalReferences || []),
+        ];
+
+        list.push({
+          id: `marriage_${coupleKey}`,
+          title: `${husband.name} & ${wife.name}`,
+          year: marriageYear,
+          husbandName: husband.name,
+          wifeName: wife.name,
+          husbandAge: husbandAge !== undefined ? Number(husbandAge) : undefined,
+          wifeAge: wifeAge !== undefined ? Number(wifeAge) : undefined,
+          references: Array.from(new Set(refs)),
+        });
+      }
+    });
+
+    return list.sort((a, b) => a.year - b.year);
+  }, [people, peopleWithLifespans]);
+
+  // 3. Process Events
+  const validEvents = useMemo(
+    () => events.filter((e) => e.date?.year !== undefined),
+    [events]
+  );
+
+  // 4. Dynamic Timeline Boundaries from Dataset
+  const { minYear, maxYear, ticks } = useMemo(() => {
+    const allYears: number[] = [
+      ...peopleWithLifespans.map((p) => p.birthYear),
+      ...peopleWithLifespans.map((p) => p.deathYear),
+      ...validEvents.map((e) => e.date!.year!),
+      ...derivedMarriages.map((m) => m.year),
+    ];
+
+    const rawMin = allYears.length ? Math.min(...allYears) : -4000;
+    const rawMax = allYears.length ? Math.max(...allYears) : -1000;
+
+    const min = Math.floor(rawMin / 250) * 250;
+    const max = Math.ceil(rawMax / 250) * 250;
+
+    const generatedTicks: number[] = [];
+    for (let yr = min; yr <= max; yr += 250) {
+      generatedTicks.push(yr);
+    }
+
+    return { minYear: min, maxYear: max, ticks: generatedTicks };
+  }, [peopleWithLifespans, validEvents, derivedMarriages]);
+
+  const totalYears = maxYear - minYear || 1;
   const timelineWidth = 2600;
 
   const getLeftPx = (year: number) => {
@@ -83,33 +180,9 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     return (duration / totalYears) * timelineWidth;
   };
 
-  const ticks: number[] = [];
-  for (let yr = minYear; yr <= maxYear; yr += 250) {
-    ticks.push(yr);
-  }
-
-  const peopleWithLifespans = people.map((person) => {
-    const birthYear = getBirthYear(person);
-    const pAny = person as any;
-    const duration =
-      person.yearsLived ||
-      pAny.lifespan ||
-      (person.death?.year !== undefined
-        ? person.death.year - birthYear
-        : 70);
-    const deathYear = birthYear + duration;
-
-    return {
-      person,
-      birthYear,
-      deathYear,
-      duration,
-    };
-  });
-
-  peopleWithLifespans.sort((a, b) => a.birthYear - b.birthYear);
-
-  const validEvents = events.filter((e) => e.date?.year !== undefined);
+  const formatYearLabel = (year: number) => {
+    return year < 0 ? `${Math.abs(year)} BC` : `${year} AD`;
+  };
 
   return (
     <div className="timeline-page-container" style={{ padding: "20px" }}>
@@ -125,7 +198,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
           Integrated Biblical Timeline
         </h2>
         <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
-          Scroll horizontally to explore overlapping lifespans and historical events.
+          Scroll horizontally to explore overlapping lifespans, marriages, and historical events sourced directly from dataset.
         </p>
       </div>
 
@@ -164,7 +237,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {Math.abs(yr)} BC
+                {formatYearLabel(yr)}
               </div>
             ))}
           </div>
@@ -265,7 +338,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                         {evt.title}
                       </div>
                       <div style={{ fontSize: "0.65rem", color: "#64748b" }}>
-                        {Math.abs(year)} BC
+                        {formatYearLabel(year)}
                       </div>
                     </div>
                   </div>
@@ -273,6 +346,85 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
               })}
             </div>
           </div>
+
+          {/* MARRIAGES & UNIONS Section */}
+          {derivedMarriages.length > 0 && (
+            <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: "800",
+                  color: "#334155",
+                  letterSpacing: "0.05em",
+                  marginBottom: "16px",
+                }}
+              >
+                MARRIAGES & UNIONS
+              </div>
+
+              <div
+                style={{
+                  position: "relative",
+                  marginLeft: "150px",
+                  width: `${timelineWidth}px`,
+                  height: "60px",
+                }}
+              >
+                {derivedMarriages.map((marriage, idx) => {
+                  const left = getLeftPx(marriage.year);
+                  const topOffset = (idx % 2) * 32;
+
+                  return (
+                    <div
+                      key={marriage.id}
+                      onClick={() => setSelectedItem({ type: "marriage", data: marriage })}
+                      style={{
+                        position: "absolute",
+                        left: `${left}px`,
+                        top: `${topOffset}px`,
+                        transform: "translateX(-50%)",
+                        background: "#ffffff",
+                        border: "1px solid #fbcfe8",
+                        borderRadius: "10px",
+                        padding: "4px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: "#fdf2f8",
+                          border: "1px solid #f472b6",
+                          borderRadius: "50%",
+                          width: "18px",
+                          height: "18px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        💍
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: "700", color: "#831843", lineHeight: "1.2" }}>
+                          {marriage.title}
+                        </div>
+                        <div style={{ fontSize: "0.65rem", color: "#9d174d" }}>
+                          {formatYearLabel(marriage.year)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* PATRIARCH LIFESPANS Section */}
           <div style={{ position: "relative", zIndex: 1 }}>
@@ -302,7 +454,6 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                       height: "30px",
                     }}
                   >
-                    {/* Person Name Label Column */}
                     <div
                       style={{
                         width: "140px",
@@ -320,7 +471,6 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                       {person.name}
                     </div>
 
-                    {/* Lifespan Blue Pill Bar */}
                     <div
                       style={{
                         position: "relative",
@@ -358,7 +508,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                           boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                         }}
                       >
-                        {person.name} ({Math.abs(birthYear)}-{Math.abs(deathYear)} BC - {duration} yrs)
+                        {person.name} ({formatYearLabel(birthYear)} - {formatYearLabel(deathYear)} | {duration} yrs)
                       </div>
                     </div>
                   </div>
@@ -405,6 +555,8 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
               <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
                 {selectedItem.type === "person"
                   ? selectedItem.data.name
+                  : selectedItem.type === "marriage"
+                  ? `Marriage: ${selectedItem.data.title}`
                   : selectedItem.data.title}
               </h3>
               <button
@@ -421,11 +573,11 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
               </button>
             </div>
 
-            {selectedItem.type === "person" ? (
+            {selectedItem.type === "person" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
                 <p style={{ margin: 0 }}><strong>Gender:</strong> {selectedItem.data.gender}</p>
-                <p style={{ margin: 0 }}><strong>Born:</strong> {Math.abs(selectedItem.birthYear)} BC</p>
-                <p style={{ margin: 0 }}><strong>Died:</strong> {Math.abs(selectedItem.deathYear)} BC</p>
+                <p style={{ margin: 0 }}><strong>Born:</strong> {formatYearLabel(selectedItem.birthYear)}</p>
+                <p style={{ margin: 0 }}><strong>Died:</strong> {formatYearLabel(selectedItem.deathYear)}</p>
                 {selectedItem.data.yearsLived && (
                   <p style={{ margin: 0 }}><strong>Lifespan:</strong> {selectedItem.data.yearsLived} years</p>
                 )}
@@ -441,10 +593,25 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                   </p>
                 )}
               </div>
-            ) : (
+            )}
+
+            {selectedItem.type === "marriage" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
+                <p style={{ margin: 0 }}><strong>Date:</strong> {formatYearLabel(selectedItem.data.year)}</p>
+                <p style={{ margin: 0 }}><strong>Husband:</strong> {selectedItem.data.husbandName} {selectedItem.data.husbandAge !== undefined ? `(Age ${selectedItem.data.husbandAge})` : ""}</p>
+                <p style={{ margin: 0 }}><strong>Wife:</strong> {selectedItem.data.wifeName} {selectedItem.data.wifeAge !== undefined ? `(Age ${selectedItem.data.wifeAge})` : ""}</p>
+                {(selectedItem.data.references || []).length > 0 && (
+                  <p style={{ margin: 0 }}>
+                    <strong>References:</strong> {(selectedItem.data.references || []).join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {selectedItem.type === "event" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.9rem", color: "#334155" }}>
                 {selectedItem.data.date?.year !== undefined && (
-                  <p style={{ margin: 0 }}><strong>Date:</strong> {Math.abs(selectedItem.data.date.year)} BC</p>
+                  <p style={{ margin: 0 }}><strong>Date:</strong> {formatYearLabel(selectedItem.data.date.year)}</p>
                 )}
                 {selectedItem.data.location && (
                   <p style={{ margin: 0 }}><strong>Location:</strong> {selectedItem.data.location}</p>
