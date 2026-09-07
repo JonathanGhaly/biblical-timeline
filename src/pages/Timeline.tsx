@@ -16,7 +16,7 @@ export default function Timeline({ people, events }: TimelineProps) {
             <h3>{event.title}</h3>
 
             {event.date?.year !== undefined && (
-              <p>
+              <p className="timeline-date">
                 <strong>Date:</strong> {Math.abs(event.date.year)}{" "}
                 {event.date.year < 0 ? "BC" : "AD"}
               </p>
@@ -31,7 +31,7 @@ export default function Timeline({ people, events }: TimelineProps) {
             {event.description && <p>{event.description}</p>}
 
             {(event.personIds || []).length > 0 && (
-              <div>
+              <p>
                 <strong>People: </strong>
                 {(event.personIds || [])
                   .map((personId: string) => {
@@ -39,14 +39,14 @@ export default function Timeline({ people, events }: TimelineProps) {
                     return p ? p.name : personId;
                   })
                   .join(", ")}
-              </div>
+              </p>
             )}
 
             {(event.biblicalReferences || []).length > 0 && (
-              <div>
+              <p className="timeline-ref">
                 <strong>References: </strong>
                 {(event.biblicalReferences || []).join(", ")}
-              </div>
+              </p>
             )}
           </div>
         ))}

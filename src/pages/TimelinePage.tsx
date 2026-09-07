@@ -7,10 +7,7 @@ type TimelinePageProps = {
 };
 
 export default function TimelinePage({ people, events }: TimelinePageProps) {
-  const [selectedItem, setSelectedItem] = useState<{
-    type: "event" | "person";
-    data: BiblicalEvent | Person;
-  } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<BiblicalEvent | null>(null);
 
   const minYear = -4000;
   const maxYear = 0;
@@ -19,56 +16,62 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     return Math.max(0, Math.min(100, ((year - minYear) / (maxYear - minYear)) * 100));
   };
 
+  const validEvents = events.filter((e) => e.date?.year !== undefined);
+
   return (
     <div className="timeline-page-container">
       <h2>Lifespans & Events Timeline</h2>
+      <p>Click any event marker to view details.</p>
 
-      <div className="timeline-visual" style={{ position: "relative", minHeight: "200px" }}>
-        {events.map((evt) => {
-          if (evt.date?.year === undefined) return null;
-          const left = getPercent(evt.date.year);
+      <div className="timeline-track-wrapper">
+        <div className="timeline-track">
+          {validEvents.map((evt, index) => {
+            const year = evt.date!.year!;
+            const left = getPercent(year);
+            // Stagger vertical placement across 4 rows to prevent label collision
+            const topOffset = (index % 4) * 42;
 
-          return (
-            <div
-              key={evt.id}
-              className="timeline-event-marker"
-              style={{ position: "absolute", left: `${left}%`, cursor: "pointer" }}
-              onClick={() => setSelectedItem({ type: "event", data: evt })}
-            >
-              <span>{evt.title}</span>
-              <br />
-              <small>{Math.abs(evt.date.year)} BC</small>
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={evt.id}
+                className="timeline-marker-node"
+                style={{
+                  left: `${left}%`,
+                  top: `${topOffset}px`,
+                }}
+                onClick={() => setSelectedItem(evt)}
+              >
+                <div className="marker-dot" />
+                <div className="marker-label">
+                  <strong>{evt.title}</strong>
+                  <small>{Math.abs(year)} BC</small>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {selectedItem && selectedItem.type === "event" && (
-        <div className="details-panel" style={{ marginTop: "20px" }}>
-          <h3>{(selectedItem.data as BiblicalEvent).title}</h3>
-
-          {(selectedItem.data as BiblicalEvent).date?.year !== undefined && (
+      {selectedItem && (
+        <div className="event-detail-card">
+          <div className="card-header">
+            <h3>{selectedItem.title}</h3>
+            <button className="btn-secondary" onClick={() => setSelectedItem(null)}>
+              ✕ Close
+            </button>
+          </div>
+          {selectedItem.date?.year !== undefined && (
             <p>
-              <strong>Year:</strong> {Math.abs((selectedItem.data as BiblicalEvent).date!.year!)} BC
+              <strong>Date:</strong> {Math.abs(selectedItem.date.year)}{" "}
+              {selectedItem.date.year < 0 ? "BC" : "AD"}
             </p>
           )}
-
-          {(selectedItem.data as BiblicalEvent).description && (
-            <p>{(selectedItem.data as BiblicalEvent).description}</p>
-          )}
-
-          {((selectedItem.data as BiblicalEvent).personIds || []).length > 0 && (
-            <div>
-              <strong>Associated People: </strong>
-              {((selectedItem.data as BiblicalEvent).personIds || []).map((id: string) => {
-                const p = people.find((person) => person.id === id);
-                return (
-                  <span key={id} style={{ marginRight: "8px" }}>
-                    {p ? p.name : id}
-                  </span>
-                );
-              })}
-            </div>
+          {selectedItem.location && <p><strong>Location:</strong> {selectedItem.location}</p>}
+          {selectedItem.description && <p>{selectedItem.description}</p>}
+          {(selectedItem.biblicalReferences || []).length > 0 && (
+            <p>
+              <strong>References:</strong> {(selectedItem.biblicalReferences || []).join(", ")}
+            </p>
           )}
         </div>
       )}
