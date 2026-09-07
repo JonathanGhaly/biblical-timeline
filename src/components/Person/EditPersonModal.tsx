@@ -99,8 +99,9 @@ export default function EditPersonModal({
 
   if (!isOpen || !person) return null;
 
-  const males = personList.filter((p) => p.gender === "male" && p.id !== person.id);
-  const females = personList.filter((p) => p.gender === "female" && p.id !== person.id);
+  const availablePeople = personList.filter((p) => p.id !== person.id);
+  const males = availablePeople.filter((p) => p.gender === "male");
+  const females = availablePeople.filter((p) => p.gender === "female");
   const regions = Array.from(new Set(OT_CITIES.map((c) => c.region)));
 
   const handleFatherChange = (fatherId: string) => {
@@ -277,8 +278,34 @@ export default function EditPersonModal({
             </div>
           </div>
 
-          {/* Age of Father at Birth & Place of Birth */}
+          {/* Reference Person at Birth & Anchor Age */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                {lang === "ar" ? "الشخص المرجعي عند الميلاد" : "Reference Person at Birth"}
+              </label>
+              <select
+                value={formData.anchorPersonId}
+                onChange={(e) => setFormData({ ...formData, anchorPersonId: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+              >
+                <option value="">
+                  {formData.fatherId
+                    ? lang === "ar"
+                      ? "— نفس الأب —"
+                      : "— Same as Father —"
+                    : lang === "ar"
+                    ? "— لا يوجد —"
+                    : "— None —"}
+                </option>
+                {availablePeople.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.arabicName ? `(${p.arabicName})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
                 {t.anchorAgeLabel}
@@ -293,29 +320,30 @@ export default function EditPersonModal({
                 className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
+          </div>
 
-            <div className="space-y-1">
-              <label className="flex items-center gap-1.5 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                <MapPin size={14} />
-                {t.placeOfBirthLabel}
-              </label>
-              <select
-                value={formData.placeOfBirth}
-                onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-              >
-                <option value="">{lang === "ar" ? "— اختر مدينة العهد القديم —" : "— Select Biblical City —"}</option>
-                {regions.map((region) => (
-                  <optgroup key={region} label={region}>
-                    {OT_CITIES.filter((c) => c.region === region).map((city) => (
-                      <option key={city.id} value={city.name}>
-                        {city.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
+          {/* Place of Birth */}
+          <div className="space-y-1">
+            <label className="flex items-center gap-1.5 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+              <MapPin size={14} />
+              {t.placeOfBirthLabel}
+            </label>
+            <select
+              value={formData.placeOfBirth}
+              onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+            >
+              <option value="">{lang === "ar" ? "— اختر مدينة العهد القديم —" : "— Select Biblical City —"}</option>
+              {regions.map((region) => (
+                <optgroup key={region} label={region}>
+                  {OT_CITIES.filter((c) => c.region === region).map((city) => (
+                    <option key={city.id} value={city.name}>
+                      {city.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
 
           {/* Marriage / Spouse */}
