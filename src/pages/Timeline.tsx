@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Person, BiblicalEvent } from "../types/genealogy";
 
 type TimelineProps = {
@@ -6,6 +7,8 @@ type TimelineProps = {
 };
 
 export default function Timeline({ people, events }: TimelineProps) {
+  const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
+
   const sortedEvents = [...events].sort((a, b) => {
     const yearA = a.date?.year ?? 0;
     const yearB = b.date?.year ?? 0;
@@ -69,13 +72,25 @@ export default function Timeline({ people, events }: TimelineProps) {
                   }}
                 />
 
-                {/* Event Card */}
+                {/* Clickable Event Card */}
                 <div
+                  onClick={() => setSelectedEvent(event)}
                   style={{
                     background: "#f8fafc",
                     border: "1px solid #e2e8f0",
                     borderRadius: "8px",
                     padding: "16px 20px",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease-in-out",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#2563eb";
+                    e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
                   }}
                 >
                   <h3
@@ -163,6 +178,92 @@ export default function Timeline({ people, events }: TimelineProps) {
           })}
         </div>
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setSelectedEvent(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              padding: "24px",
+              maxWidth: "500px",
+              width: "90%",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
+                {selectedEvent.title}
+              </h3>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.25rem",
+                  cursor: "pointer",
+                  color: "#64748b",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#334155" }}>
+              {selectedEvent.date?.year !== undefined && (
+                <p style={{ margin: 0 }}>
+                  <strong>Date:</strong> {Math.abs(selectedEvent.date.year)}{" "}
+                  {selectedEvent.date.year < 0 ? "BC" : "AD"}
+                </p>
+              )}
+              {selectedEvent.location && (
+                <p style={{ margin: 0 }}>
+                  <strong>Location:</strong> {selectedEvent.location}
+                </p>
+              )}
+              {selectedEvent.description && (
+                <p style={{ margin: 0, lineHeight: "1.5" }}>
+                  {selectedEvent.description}
+                </p>
+              )}
+              {(selectedEvent.personIds || []).length > 0 && (
+                <p style={{ margin: 0 }}>
+                  <strong>Associated People:</strong>{" "}
+                  {(selectedEvent.personIds || [])
+                    .map((id) => people.find((p) => p.id === id)?.name || id)
+                    .join(", ")}
+                </p>
+              )}
+              {(selectedEvent.biblicalReferences || []).length > 0 && (
+                <p style={{ margin: 0 }}>
+                  <strong>References:</strong>{" "}
+                  {(selectedEvent.biblicalReferences || []).join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
