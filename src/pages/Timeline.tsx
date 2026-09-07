@@ -1,89 +1,56 @@
-import type { BiblicalEvent, Person } from "../types/genealogy";
+import type { Person, BiblicalEvent } from "../types/genealogy";
 
 type TimelineProps = {
   people: Person[];
   events: BiblicalEvent[];
 };
 
-function formatYear(year?: number) {
-  if (year === undefined) {
-    return "Unknown date";
-  }
-
-  return `${Math.abs(year)} ${year < 0 ? "BC" : "AD"}`;
-}
-
-function Timeline({ people, events }: TimelineProps) {
-  const sortedEvents = [...events].sort(
-    (a, b) =>
-      (a.date?.year ?? 999999) -
-      (b.date?.year ?? 999999),
-  );
-
-  const findPerson = (id: string) =>
-    people.find((person) => person.id === id);
-
+export default function Timeline({ people, events }: TimelineProps) {
   return (
-    <div>
+    <div className="timeline-page">
       <h2>Timeline</h2>
 
-      <p>
-        Chronological view of events recorded in the
-        application.
-      </p>
+      <div className="timeline-list">
+        {events.map((event) => (
+          <div key={event.id} className="timeline-card">
+            <h3>{event.title}</h3>
 
-      <div className="timeline">
-        {sortedEvents.map((event) => (
-          <div className="timeline-item" key={event.id}>
-            <div className="timeline-date">
-              {formatYear(event.date?.year)}
-            </div>
+            {event.date?.year !== undefined && (
+              <p>
+                <strong>Date:</strong> {Math.abs(event.date.year)}{" "}
+                {event.date.year < 0 ? "BC" : "AD"}
+              </p>
+            )}
 
-            <div className="timeline-marker" />
+            {event.location && (
+              <p>
+                <strong>Location:</strong> {event.location}
+              </p>
+            )}
 
-            <div className="timeline-content">
-              <h3>{event.title}</h3>
+            {event.description && <p>{event.description}</p>}
 
-              {event.description && (
-                <p>{event.description}</p>
-              )}
+            {(event.personIds || []).length > 0 && (
+              <div>
+                <strong>People: </strong>
+                {(event.personIds || [])
+                  .map((personId: string) => {
+                    const p = people.find((person) => person.id === personId);
+                    return p ? p.name : personId;
+                  })
+                  .join(", ")}
+              </div>
+            )}
 
-              {event.location && (
-                <span className="event-location">
-                  Location: {event.location}
-                </span>
-              )}
-
-              {event.personIds.length > 0 && (
-                <div className="event-people">
-                  {event.personIds.map((personId) => {
-                    const person = findPerson(personId);
-
-                    if (!person) return null;
-
-                    return (
-                      <span
-                        className="person-tag"
-                        key={person.id}
-                      >
-                        {person.name}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              {event.biblicalReferences.length > 0 && (
-                <small>
-                  {event.biblicalReferences.join(", ")}
-                </small>
-              )}
-            </div>
+            {(event.biblicalReferences || []).length > 0 && (
+              <div>
+                <strong>References: </strong>
+                {(event.biblicalReferences || []).join(", ")}
+              </div>
+            )}
           </div>
         ))}
       </div>
     </div>
   );
 }
-
-export default Timeline;

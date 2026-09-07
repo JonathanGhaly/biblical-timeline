@@ -9,7 +9,11 @@ type PeopleProps = {
   onUpdatePerson: (updatedPerson: Person) => void;
 };
 
-function People({ people, onAddPerson, onUpdatePerson }: PeopleProps) {
+export default function People({
+  people,
+  onAddPerson,
+  onUpdatePerson,
+}: PeopleProps) {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
@@ -23,7 +27,7 @@ function People({ people, onAddPerson, onUpdatePerson }: PeopleProps) {
       <div className="page-header">
         <div>
           <h2>People</h2>
-          <p>Browse or click on any person to edit their details.</p>
+          <p>Manage individuals in the genealogy database.</p>
         </div>
 
         <button
@@ -42,66 +46,48 @@ function People({ people, onAddPerson, onUpdatePerson }: PeopleProps) {
         onChange={(event) => setSearch(event.target.value)}
       />
 
-      <div className="people-grid">
+      <div className="events-grid">
         {filteredPeople.map((person) => (
-          <div className="person-card" key={person.id}>
-            <div className="person-card-header">
-              <h3
-                className="clickable-name"
+          <div className="event-card" key={person.id}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h3>{person.name}</h3>
+              <button
+                className="btn-secondary"
                 onClick={() => setEditingPerson(person)}
-                title="Click to edit person"
               >
-                {person.name}
-              </h3>
-
-              <div className="card-actions">
-                <span className="gender-badge">{person.gender}</span>
-                <button
-                  className="btn-edit-icon"
-                  onClick={() => setEditingPerson(person)}
-                  title="Edit details"
-                >
-                  ✏️
-                </button>
-              </div>
+                Edit
+              </button>
             </div>
 
-            {person.birth && (
+            <p>Gender: {person.gender}</p>
+
+            {person.birth?.year !== undefined && (
               <p>
-                Born:{" "}
-                {person.birth.year
-                  ? `${Math.abs(person.birth.year)} ${
-                      person.birth.year < 0 ? "BC" : "AD"
-                    }`
-                  : "Unknown"}
+                Birth: {Math.abs(person.birth.year)}{" "}
+                {person.birth.year < 0 ? "BC" : "AD"}
               </p>
             )}
 
-            {person.death && (
+            {person.death?.year !== undefined && (
               <p>
-                Died:{" "}
-                {person.death.year
-                  ? `${Math.abs(person.death.year)} ${
-                      person.death.year < 0 ? "BC" : "AD"
-                    }`
-                  : "Unknown"}
+                Death: {Math.abs(person.death.year)}{" "}
+                {person.death.year < 0 ? "BC" : "AD"}
               </p>
             )}
 
-            {person.yearsLived ? (
-              <p>Lifespan: {person.yearsLived} years</p>
-            ) : null}
+            {person.yearsLived ? <p>Lifespan: {person.yearsLived} years</p> : null}
 
-            {person.biblicalReferences && person.biblicalReferences.length > 0 && (
-              <p className="references">
-                {person.biblicalReferences.join(", ")}
-              </p>
-            )}
+            {person.notes && <p>{person.notes}</p>}
           </div>
         ))}
       </div>
 
-      {/* Add Modal */}
       {isAddModalOpen && (
         <AddPersonModal
           existingPeople={people}
@@ -110,7 +96,6 @@ function People({ people, onAddPerson, onUpdatePerson }: PeopleProps) {
         />
       )}
 
-      {/* Edit Modal */}
       {editingPerson && (
         <EditPersonModal
           person={editingPerson}
@@ -122,5 +107,3 @@ function People({ people, onAddPerson, onUpdatePerson }: PeopleProps) {
     </div>
   );
 }
-
-export default People;

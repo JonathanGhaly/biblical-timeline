@@ -26,8 +26,8 @@ export default function FamilyTree({ people = [] }: FamilyTreeProps) {
           const mother = findPerson(husband.motherId);
 
           // 2. Wife/Spouses (Current Marriage Generation)
-          const wives = husband.spouseIds
-            .map((id) => findPerson(id))
+          const wives = (husband.spouseIds || [])
+            .map((wifeId) => people.find((p) => p.id === wifeId))
             .filter(Boolean);
 
           // 3. Children (Next Generation Below)

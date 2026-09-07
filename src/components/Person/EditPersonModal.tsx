@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Person } from "../../types/genealogy";
+import type { Gender, Person } from "../../types/genealogy";
 
 type EditPersonModalProps = {
   person: Person;
@@ -21,7 +21,7 @@ export default function EditPersonModal({
     fatherId: person.fatherId || "",
     motherId: person.motherId || "",
     anchorPersonId: person.anchorPersonId || person.fatherId || "",
-    anchorAgeAtBirth: person.fatherAgeAtBirth || 0,
+    anchorAgeAtBirth: person.anchorPersonAgeAtBirth || person.fatherAgeAtBirth || 0,
     husbandId: person.spouseIds?.[0] || "",
     yearsLived: person.yearsLived || 0,
     biblicalReferences: person.biblicalReferences ? person.biblicalReferences.join(", ") : "",
@@ -40,11 +40,12 @@ export default function EditPersonModal({
     const updatedPerson: Person = {
       ...person,
       name: formData.name,
-      gender: formData.gender as "male" | "female",
+      gender: formData.gender as Gender,
       placeOfBirth: formData.placeOfBirth || undefined,
       fatherId: formData.fatherId || undefined,
       motherId: formData.motherId || undefined,
       anchorPersonId: selectedAnchor || undefined,
+      anchorPersonAgeAtBirth: Number(formData.anchorAgeAtBirth) || 0,
       fatherAgeAtBirth: Number(formData.anchorAgeAtBirth) || 0,
       yearsLived: Number(formData.yearsLived) || 0,
       spouseIds:
@@ -87,7 +88,9 @@ export default function EditPersonModal({
               <label>Gender</label>
               <select
                 value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, gender: e.target.value as Gender })
+                }
               >
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -136,10 +139,9 @@ export default function EditPersonModal({
             </div>
           </div>
 
-          {/* Anchor Selection */}
           <div className="form-row">
             <div className="form-group">
-              <label>Anchor Person (Timeline Reference)</label>
+              <label>Anchor Person</label>
               <select
                 value={formData.anchorPersonId}
                 onChange={(e) => setFormData({ ...formData, anchorPersonId: e.target.value })}
@@ -194,7 +196,7 @@ export default function EditPersonModal({
           )}
 
           <div className="form-group">
-            <label>Scripture References (Comma separated)</label>
+            <label>Scripture References</label>
             <input
               type="text"
               value={formData.biblicalReferences}
@@ -203,7 +205,7 @@ export default function EditPersonModal({
           </div>
 
           <div className="form-group">
-            <label>Notes / Short Biography</label>
+            <label>Notes</label>
             <textarea
               rows={3}
               value={formData.notes}

@@ -1,49 +1,43 @@
-export type DatePrecision = "exact" | "approximate" | "range";
+export type Gender = "male" | "female";
+
+export type DatePrecision = "exact" | "approximate" | "about" | "calculated";
 
 export type DateInfo = {
   year?: number;
-  startYear?: number;
-  endYear?: number;
-  precision: DatePrecision;
+  precision?: DatePrecision;
 };
-
-export type Gender = "male" | "female" | "unknown";
 
 export type Person = {
   id: string;
   name: string;
   gender: Gender;
-  
-  // Dynamic birth anchor
-  anchorPersonId?: string;       // ID of any referenced person (e.g., Adam, Noah, Methuselah)
-  anchorPersonAgeAtBirth?: number; // Age of that person when this individual was born
-  
-  yearsLived?: number;            // Lifespan in years
-  
-  // Genealogical relationships
+  placeOfBirth?: string;
   fatherId?: string;
   motherId?: string;
-  spouseIds: string[];
-  
-  biblicalReferences: string[];
+  anchorPersonId?: string;
+  anchorPersonAgeAtBirth?: number;
+  fatherAgeAtBirth?: number;
+  yearsLived?: number;
+  spouseIds?: string[];
+  biblicalReferences?: string[];
   notes?: string;
+  birth?: DateInfo;
+  death?: DateInfo;
 };
+
 export type BiblicalEvent = {
   id: string;
   title: string;
-
   date?: DateInfo;
-
-  personIds: string[];
-
+  anchorPersonId?: string;
+  anchorAge?: number;
   location?: string;
   description?: string;
-
-  biblicalReferences: string[];
+  biblicalReferences?: string[];
+  personIds?: string[];
 };
 
 export type GenealogyData = {
-  version: number;
   people: Person[];
   events: BiblicalEvent[];
 };

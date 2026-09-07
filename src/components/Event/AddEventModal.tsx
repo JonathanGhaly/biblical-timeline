@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { BiblicalEvent, Person } from "../../types/genealogy";
+import type { BiblicalEvent, DateInfo, Person } from "../../types/genealogy";
 
 type AddEventModalProps = {
   existingPeople: Person[];
@@ -27,19 +27,16 @@ export default function AddEventModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    let computedDate = undefined;
+    let computedDate: DateInfo | undefined = undefined;
 
     if (dateType === "direct" && formData.year) {
       const numericYear = Number(formData.year);
       const signedYear =
         formData.era === "BC" ? -Math.abs(numericYear) : Math.abs(numericYear);
-      computedDate = { year: signedYear };
+      computedDate = { year: signedYear, precision: "exact" };
     }
 
-    const newEvent: BiblicalEvent & {
-      anchorPersonId?: string;
-      anchorAge?: number;
-    } = {
+    const newEvent: BiblicalEvent = {
       id: formData.title.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now(),
       title: formData.title,
       date: computedDate,
@@ -56,7 +53,7 @@ export default function AddEventModal({
         : [],
     };
 
-    onAddEvent(newEvent as BiblicalEvent);
+    onAddEvent(newEvent);
     onClose();
   };
 
@@ -83,7 +80,6 @@ export default function AddEventModal({
             />
           </div>
 
-          {/* Timing Mode Toggle */}
           <div className="form-group">
             <label>Date Method</label>
             <div className="radio-group" style={{ display: "flex", gap: "16px", margin: "8px 0" }}>
@@ -110,7 +106,6 @@ export default function AddEventModal({
             </div>
           </div>
 
-          {/* Conditional Date Inputs */}
           {dateType === "direct" ? (
             <div className="form-row">
               <div className="form-group">
@@ -164,7 +159,7 @@ export default function AddEventModal({
                   type="number"
                   required
                   min="0"
-                  placeholder="e.g. 600 (for Noah at Flood)"
+                  placeholder="e.g. 600"
                   value={formData.anchorAge}
                   onChange={(e) =>
                     setFormData({ ...formData, anchorAge: e.target.value })
@@ -190,7 +185,7 @@ export default function AddEventModal({
             <label>Scripture References (Comma separated)</label>
             <input
               type="text"
-              placeholder="e.g. Genesis 7:11, Genesis 8:14"
+              placeholder="e.g. Genesis 7:11"
               value={formData.biblicalReferences}
               onChange={(e) =>
                 setFormData({ ...formData, biblicalReferences: e.target.value })

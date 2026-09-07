@@ -8,7 +8,7 @@ type PersonFormProps = {
 
 export default function PersonForm({ existingPeople, onAddPerson }: PersonFormProps) {
   const [name, setName] = useState("");
-  const [gender, setGender] = useState<Person["gender"]>("male");
+  const [gender] = useState<Person["gender"]>("male");
   const [yearsLived, setYearsLived] = useState<number>(100);
   
   // Search & Anchor selection state
