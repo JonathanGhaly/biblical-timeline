@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "creationYearBC": 4000,
+  "people": [
+    {
+      "id": "adam",
+      "name": "Adam",
+      "gender": "male",
+      "fatherAgeAtBirth": 0,
+      "yearsLived": 930,
+      "spouseIds": ["eve"],
+      "biblicalReferences": ["Genesis 1-5"],
+      "notes": "Created 4000 BC. Lived 930 years."
+    },
+    {
+      "id": "eve",
+      "name": "Eve",
+      "gender": "female",
+      "spouseIds": ["adam"],
+      "biblicalReferences": ["Genesis 1-4"],
+      "notes": "Mother of all living."
+    },
+    {
+      "id": "seth",
+      "name": "Seth",
+      "gender": "male",
+      "fatherId": "adam",
+      "motherId": "eve",
+      "fatherAgeAtBirth": 130,
+      "yearsLived": 912,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:3-8"],
+      "notes": "Born when Adam was 130 years old."
+    },
+    {
+      "id": "enosh",
+      "name": "Enosh",
+      "gender": "male",
+      "fatherId": "seth",
+      "fatherAgeAtBirth": 105,
+      "yearsLived": 905,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:9-11"],
+      "notes": "Born when Seth was 105 years old."
+    },
+    {
+      "id": "kenan",
+      "name": "Kenan",
+      "gender": "male",
+      "fatherId": "enosh",
+      "fatherAgeAtBirth": 90,
+      "yearsLived": 910,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:12-14"],
+      "notes": "Born when Enosh was 90 years old."
+    },
+    {
+      "id": "mahalalel",
+      "name": "Mahalalel",
+      "gender": "male",
+      "fatherId": "kenan",
+      "fatherAgeAtBirth": 70,
+      "yearsLived": 895,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:15-17"],
+      "notes": "Born when Kenan was 70 years old."
+    },
+    {
+      "id": "jared",
+      "name": "Jared",
+      "gender": "male",
+      "fatherId": "mahalalel",
+      "fatherAgeAtBirth": 65,
+      "yearsLived": 892,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:18-20"],
+      "notes": "Born when Mahalalel was 65 years old."
+    },
+    {
+      "id": "enoch",
+      "name": "Enoch",
+      "gender": "male",
+      "fatherId": "jared",
+      "fatherAgeAtBirth": 162,
+      "yearsLived": 365,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:21-24"],
+      "notes": "Born when Jared was 162 years old."
+    },
+    {
+      "id": "methuselah",
+      "name": "Methuselah",
+      "gender": "male",
+      "fatherId": "enoch",
+      "fatherAgeAtBirth": 65,
+      "yearsLived": 969,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:25-27"],
+      "notes": "Born when Enoch was 65 years old. Lived 969 years."
+    },
+    {
+      "id": "lamech",
+      "name": "Lamech",
+      "gender": "male",
+      "fatherId": "methuselah",
+      "fatherAgeAtBirth": 187,
+      "yearsLived": 777,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:28-31"],
+      "notes": "Born when Methuselah was 187 years old."
+    },
+    {
+      "id": "noah",
+      "name": "Noah",
+      "gender": "male",
+      "fatherId": "lamech",
+      "fatherAgeAtBirth": 182,
+      "yearsLived": 950,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 5:32", "Genesis 9:28-29"],
+      "notes": "Born when Lamech was 182 years old."
+    },
+    {
+      "id": "abraham",
+      "name": "Abraham",
+      "gender": "male",
+      "fatherId": "noah",
+      "fatherAgeAtBirth": 778,
+      "yearsLived": 175,
+      "spouseIds": ["sarah"],
+      "biblicalReferences": ["Genesis 11-25"],
+      "notes": "Father of the covenant nation."
+    },
+    {
+      "id": "sarah",
+      "name": "Sarah",
+      "gender": "female",
+      "spouseIds": ["abraham"],
+      "yearsLived": 127,
+      "biblicalReferences": ["Genesis 11-23"],
+      "notes": "Wife of Abraham, mother of Isaac."
+    },
+    {
+      "id": "isaac",
+      "name": "Isaac",
+      "gender": "male",
+      "fatherId": "abraham",
+      "motherId": "sarah",
+      "fatherAgeAtBirth": 100,
+      "yearsLived": 180,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 21-35"],
+      "notes": "Son of promise born to Abraham and Sarah."
+    }
+  ],
+  "events": [
+    {
+      "id": "creation",
+      "title": "Creation",
+      "date": {
+        "year": -4000,
+        "precision": "approximate"
+      },
+      "personIds": ["adam", "eve"],
+      "description": "The creation narrative in Genesis.",
+      "biblicalReferences": ["Genesis 1-2"]
+    },
+    {
+      "id": "fall",
+      "title": "The Fall",
+      "date": {
+        "year": -4000,
+        "precision": "approximate"
+      },
+      "personIds": ["adam", "eve"],
+      "description": "Adam and Eve eat from the tree of the knowledge of good and evil.",
+      "biblicalReferences": ["Genesis 3"]
+    },
+    {
+      "id": "flood",
+      "title": "The Flood",
+      "date": {
+        "year": -2348,
+        "precision": "approximate"
+      },
+      "personIds": ["noah"],
+      "description": "The Flood narrative involving Noah and his family.",
+      "biblicalReferences": ["Genesis 6-9"]
+    },
+    {
+      "id": "abraham-covenant",
+      "title": "Covenant with Abraham",
+      "date": {
+        "year": -2091,
+        "precision": "approximate"
+      },
+      "personIds": ["abraham"],
+      "location": "Canaan",
+      "description": "God establishes a covenant with Abraham.",
+      "biblicalReferences": ["Genesis 12", "Genesis 15", "Genesis 17"]
+    },
+    {
+      "id": "isaac-birth",
+      "title": "Birth of Isaac",
+      "date": {
+        "year": -2066,
+        "precision": "approximate"
+      },
+      "personIds": ["abraham", "sarah", "isaac"],
+      "description": "Isaac is born to Abraham and Sarah.",
+      "biblicalReferences": ["Genesis 21"]
+    }
+  ]
+}
