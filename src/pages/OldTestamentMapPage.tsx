@@ -549,40 +549,36 @@ export default function OldTestamentMapPage({
             {/* BASE LAND */}
             <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="url(#landGrad)" />
 
-            {/* FERTILE CRESCENT ARC */}
+            {/* FERTILE CRESCENT ARC (SMOOTH CURVES) */}
             <path
               d="
                 M 330,500
-                Q 420,440 580,450
-                Q 630,320 750,200
-                Q 900,120 1100,180
-                Q 1280,320 1350,520
-                Q 1200,520 1100,430
-                Q 900,280 780,240
-                Q 680,300 620,460
-                Q 480,560 330,500
+                C 420,440 500,445 580,450
+                C 640,350 700,260 760,200
+                C 880,120 1020,130 1120,180
+                C 1260,280 1320,420 1350,520
+                C 1220,510 1140,430 1080,390
+                C 920,280 810,250 760,240
+                C 680,290 630,370 610,460
+                C 480,550 400,530 330,500
                 Z
               "
               fill="url(#fertileArc)"
             />
 
-            {/* MEDITERRANEAN SEA */}
+            {/* MEDITERRANEAN SEA (SMOOTH LEVANT & DELTA COAST) */}
             <path
               d="
                 M 0,0
                 L 0,448
-                L 332,464
-                L 467,464
-                L 534,464
-                L 589,448
-                L 605,420
-                L 630,355
-                L 640,340
-                L 669,200
-                L 613,164
-                L 365,185
-                L 225,185
-                L 0,169
+                C 100,452 220,458 332,464
+                C 375,445 420,442 455,460
+                C 480,465 530,458 575,450
+                C 595,440 605,425 612,410
+                C 620,380 625,350 635,320
+                C 648,270 660,220 669,180
+                C 620,168 520,175 365,185
+                C 225,185 100,175 0,169
                 Z
               "
               fill="url(#oceanGrad)"
@@ -590,13 +586,13 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* CYPRUS */}
+            {/* CYPRUS (ORGANIC BEZIER SMOOTH SHAPE) */}
             <path
               d="
-                M 467,258
-                L 596,227
-                L 551,274
-                L 472,280
+                M 465,275
+                C 490,260 540,240 595,226
+                C 570,245 540,265 510,278
+                C 485,285 460,285 465,275
                 Z
               "
               fill="url(#landGrad)"
@@ -604,47 +600,44 @@ export default function OldTestamentMapPage({
               strokeWidth="1.5"
             />
 
-            {/* BLACK SEA */}
+            {/* BLACK SEA (SMOOTH CURVE) */}
             <path
               d="
                 M 225,0
-                C 400,60 700,60 956,0
+                C 380,75 700,75 956,0
                 Z
               "
               fill="url(#oceanGrad)"
               stroke="#1a3644"
             />
 
-            {/* CASPIAN SEA */}
+            {/* CASPIAN SEA (SMOOTH CURVE) */}
             <path
               d="
-                M 1451,0
-                C 1430,70 1434,132 1480,180
-                C 1580,200 1650,150 1688,0
+                M 1450,0
+                C 1425,75 1430,140 1480,180
+                C 1580,205 1650,155 1688,0
                 Z
               "
               fill="url(#oceanGrad)"
               stroke="#1a3644"
             />
 
-            {/* RED SEA & GULFS (SUEZ & AQABA) */}
+            {/* REALISTIC RED SEA & GULFS (SUEZ & AQABA + SINAI PENINSULA) */}
             <path
               d="
-                M 481,533
-                L 506,607
-                L 540,660
-                L 579,739
-                L 647,844
-                L 731,950
-                L 816,950
-                L 759,844
-                L 703,739
-                L 647,633
-                L 616,553
-                L 596,607
-                L 577,649
-                L 523,591
-                L 481,533
+                M 480,528
+                C 492,550 510,588 528,620
+                C 555,668 600,748 645,828
+                C 680,888 715,928 735,950
+                L 830,950
+                C 795,908 755,848 718,778
+                C 680,708 645,658 618,618
+                C 608,602 602,578 615,552
+                C 602,572 588,600 578,625
+                C 572,638 568,646 565,648
+                C 555,628 532,592 512,558
+                C 498,536 488,528 480,528
                 Z
               "
               fill="url(#oceanGrad)"
@@ -652,21 +645,16 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* PERSIAN GULF */}
+            {/* PERSIAN GULF (ORGANIC SMOOTH SHAPE) */}
             <path
               d="
                 M 1350,528
-                L 1378,581
-                L 1463,686
-                L 1547,765
-                L 1631,844
-                L 1744,950
-                L 1800,950
-                L 1800,739
-                L 1828,686
-                L 1519,633
-                L 1434,581
-                L 1350,528
+                C 1370,565 1420,630 1470,685
+                C 1520,740 1590,800 1670,850
+                C 1720,880 1760,920 1800,945
+                L 1800,750
+                C 1750,700 1650,650 1520,625
+                C 1450,590 1380,550 1350,528
                 Z
               "
               fill="url(#oceanGrad)"
@@ -674,33 +662,31 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
-            {/* NILE RIVER */}
+            {/* NILE RIVER & DELTA (SMOOTH CURVING FLOW) */}
             <g stroke="#1e4e6d" fill="none" strokeLinecap="round">
               <path
-                d="M 422,950 L 501,844 L 486,756 L 405,676 L 408,536"
-                strokeWidth="5"
+                d="M 500,950 C 495,880 482,800 485,740 C 440,690 405,620 405,528"
+                strokeWidth="4.5"
               />
-              <path d="M 408,536 L 332,464" strokeWidth="2.5" />
-              <path d="M 408,536 L 467,464" strokeWidth="2.5" />
+              <path d="M 405,528 C 385,500 365,475 350,462" strokeWidth="2.5" />
+              <path d="M 405,528 C 425,500 445,475 455,460" strokeWidth="2.5" />
             </g>
 
             {/* JORDAN RIVER SYSTEM */}
             <g stroke="#1e4e6d" fill="none">
               <ellipse cx="652" cy="378" rx="8" ry="12" fill="#2b5368" stroke="none" />
               <ellipse cx="646" cy="455" rx="14" ry="32" fill="#2b5368" stroke="none" />
-              <path d="M 652,390 L 646,423" strokeWidth="2.5" />
+              <path d="M 652,390 C 650,405 648,415 646,423" strokeWidth="2.5" />
             </g>
 
-            {/* EUPHRATES RIVER */}
+            {/* EUPHRATES RIVER (SMOOTH BEZIER CURVE) */}
             <path
               d="
                 M 984,11
-                Q 872,53 788,132
-                Q 780,160 784,167
-                Q 844,216 906,248
-                Q 951,296 1086,348
-                Q 1149,395 1217,458
-                Q 1243,477 1350,528
+                C 890,45 810,100 788,132
+                C 770,160 810,190 870,220
+                C 940,260 1020,310 1100,360
+                C 1180,410 1260,470 1350,528
               "
               fill="none"
               stroke="#1e4e6d"
@@ -708,15 +694,13 @@ export default function OldTestamentMapPage({
               strokeLinecap="round"
             />
 
-            {/* TIGRIS RIVER */}
+            {/* TIGRIS RIVER (SMOOTH BEZIER CURVE) */}
             <path
               d="
                 M 855,84
-                Q 911,111 1024,158
-                Q 1077,192 1087,206
-                Q 1083,240 1086,306
-                Q 1148,354 1226,422
-                Q 1316,475 1350,528
+                C 920,105 980,135 1024,158
+                C 1070,185 1085,230 1086,306
+                C 1140,360 1220,430 1350,528
               "
               fill="none"
               stroke="#1e4e6d"
@@ -732,10 +716,10 @@ export default function OldTestamentMapPage({
               strokeDasharray="4,4"
               opacity="0.45"
             >
-              <path d="M 360,185 Q 500,170 650,160 Q 720,150 780,165" />
-              <path d="M 645,300 L 640,370" />
-              <path d="M 980,30 Q 1100,20 1200,60" />
-              <path d="M 1150,120 Q 1300,280 1650,580" />
+              <path d="M 360,185 C 500,170 600,160 780,165" />
+              <path d="M 645,300 C 642,330 641,350 640,370" />
+              <path d="M 980,30 C 1100,20 1150,40 1200,60" />
+              <path d="M 1150,120 C 1300,280 1500,450 1650,580" />
             </g>
 
             {/* REGIONAL LABELS */}
@@ -747,7 +731,7 @@ export default function OldTestamentMapPage({
               filter="url(#labelShadow)"
             >
               <text x="370" y="680" fontSize="26">EGYPT</text>
-              <text x="550" y="580" fontSize="16">SINAI</text>
+              <text x="548" y="585" fontSize="16">SINAI</text>
               <text x="390" y="100" fontSize="22">ASIA MINOR</text>
               <text x="680" y="420" fontSize="20" transform="rotate(-75 680 420)">CANAAN</text>
               <text x="730" y="260" fontSize="22">SYRIA (ARAM)</text>
@@ -776,7 +760,7 @@ export default function OldTestamentMapPage({
               <text x="600" y="30" fontSize="14">Black Sea</text>
               <text x="1530" y="80" fontSize="15">Caspian Sea</text>
               <text x="1550" y="720" fontSize="18">Persian Gulf</text>
-              <text x="670" y="750" fontSize="15" transform="rotate(-60 670 750)">Red Sea</text>
+              <text x="650" y="750" fontSize="15" transform="rotate(-62 650 750)">Red Sea</text>
             </g>
 
             {/* LEGEND */}
