@@ -79,17 +79,17 @@ const OT_CITIES: City[] = [
     lat: 29.8448,
     lon: 31.2508,
     aliases: ["Memphis", "Noph", "منف"],
-    labelPosition: "top",
+    labelPosition: "left",
   },
   {
     id: "rameses",
     name: "Rameses (Goshen)",
     arabicName: "رعمسيس / جاسان",
     region: "Egypt & Sinai",
-    lat: 30.75,
-    lon: 32.05,
+    lat: 30.796,
+    lon: 31.83,
     aliases: ["Rameses", "Ramesses", "Goshen", "جاسان", "رعمسيس"],
-    labelPosition: "right",
+    labelPosition: "top",
   },
   {
     id: "sinai",
@@ -106,10 +106,10 @@ const OT_CITIES: City[] = [
     name: "Ezion-Geber",
     arabicName: "عصيون جابر",
     region: "Egypt & Sinai",
-    lat: 29.53,
+    lat: 29.55,
     lon: 34.95,
     aliases: ["Ezion-geber", "Ezion geber", "عصيون جابر"],
-    labelPosition: "bottom",
+    labelPosition: "right",
   },
   {
     id: "gaza",
@@ -119,7 +119,7 @@ const OT_CITIES: City[] = [
     lat: 31.5017,
     lon: 34.4668,
     aliases: ["Gaza", "غزة"],
-    labelPosition: "bottom",
+    labelPosition: "left",
   },
   {
     id: "beersheba",
@@ -139,7 +139,7 @@ const OT_CITIES: City[] = [
     lat: 31.182,
     lon: 35.705,
     aliases: ["Moab", "Kir-hareseth", "Kir", "قير حارسة"],
-    labelPosition: "bottom",
+    labelPosition: "right",
   },
   {
     id: "hebron",
@@ -179,7 +179,7 @@ const OT_CITIES: City[] = [
     lat: 31.9539,
     lon: 35.9106,
     aliases: ["Rabbah", "Ammon", "Rabbath", "ربة"],
-    labelPosition: "right",
+    labelPosition: "top",
   },
   {
     id: "joppa",
@@ -189,7 +189,7 @@ const OT_CITIES: City[] = [
     lat: 32.05,
     lon: 34.75,
     aliases: ["Joppa", "Jaffa", "يافا"],
-    labelPosition: "bottom",
+    labelPosition: "left",
   },
   {
     id: "shechem",
@@ -199,7 +199,7 @@ const OT_CITIES: City[] = [
     lat: 32.213,
     lon: 35.282,
     aliases: ["Shechem", "شكيم"],
-    labelPosition: "bottom",
+    labelPosition: "right",
   },
   {
     id: "samaria",
@@ -207,19 +207,9 @@ const OT_CITIES: City[] = [
     arabicName: "السامرة",
     region: "Canaan & Levant",
     lat: 32.276,
-    lon: 35.198,
+    lon: 35.188,
     aliases: ["Samaria", "السامرة"],
     labelPosition: "top",
-  },
-  {
-    id: "dan",
-    name: "Dan",
-    arabicName: "دان",
-    region: "Canaan & Levant",
-    lat: 33.249,
-    lon: 35.652,
-    aliases: ["Dan", "Laish", "دان"],
-    labelPosition: "right",
   },
   {
     id: "tyre",
@@ -232,6 +222,16 @@ const OT_CITIES: City[] = [
     labelPosition: "left",
   },
   {
+    id: "dan",
+    name: "Dan",
+    arabicName: "دان",
+    region: "Canaan & Levant",
+    lat: 33.249,
+    lon: 35.652,
+    aliases: ["Dan", "Laish", "دان"],
+    labelPosition: "right",
+  },
+  {
     id: "sidon",
     name: "Sidon",
     arabicName: "صيدون",
@@ -239,7 +239,7 @@ const OT_CITIES: City[] = [
     lat: 33.56,
     lon: 35.375,
     aliases: ["Sidon", "صيدون"],
-    labelPosition: "top",
+    labelPosition: "left",
   },
   {
     id: "damascus",
@@ -391,7 +391,6 @@ export default function OldTestamentMapPage({
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("All");
 
-  // Map Pan and Zoom States
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -580,7 +579,6 @@ export default function OldTestamentMapPage({
     setPan({ x: 0, y: 0 });
   };
 
-  // Dynamic layout calculator for pin labels
   const getFlexDirection = (position?: "top" | "bottom" | "left" | "right") => {
     switch (position) {
       case "top":
@@ -632,7 +630,7 @@ export default function OldTestamentMapPage({
               fontFamily: "sans-serif",
             }}
           >
-            Interactive map. Pinch/scroll to zoom, drag to explore locations.
+            Interactive map with topography. Pinch/scroll to zoom, drag to explore locations.
           </p>
         </div>
 
@@ -930,6 +928,73 @@ export default function OldTestamentMapPage({
               strokeWidth="2"
             />
 
+            {/* MOUNTAINS TOPOGRAPHY LAYER */}
+            <g id="mountain-ranges" stroke="#573a18" fill="#cbb387" strokeWidth="1.2" strokeLinejoin="round" opacity="0.8">
+              {/* Taurus / Armenia / Ararat Mountains (North) */}
+              <g id="ararat-taurus">
+                <polygon points="1020,80 1035,50 1050,80" />
+                <polygon points="1040,85 1060,45 1080,85" fill="#dfcca6" />
+                <polygon points="1070,90 1090,55 1110,90" />
+                <polygon points="1100,95 1125,50 1150,95" fill="#dfcca6" />
+                <polygon points="980,100 1000,70 1020,100" />
+                <polygon points="940,110 965,75 990,110" />
+                <polygon points="900,120 920,90 940,120" />
+              </g>
+
+              {/* Zagros Mountains (Persia / Media East) */}
+              <g id="zagros-mountains">
+                <polygon points="1280,220 1300,180 1320,220" />
+                <polygon points="1310,250 1335,200 1360,250" fill="#dfcca6" />
+                <polygon points="1340,290 1365,245 1390,290" />
+                <polygon points="1370,330 1395,280 1420,330" fill="#dfcca6" />
+                <polygon points="1400,380 1425,325 1450,380" />
+                <polygon points="1430,430 1455,380 1480,430" fill="#dfcca6" />
+                <polygon points="1460,480 1485,430 1510,480" />
+                <polygon points="1490,530 1515,475 1540,530" />
+              </g>
+
+              {/* Mount Lebanon & Anti-Lebanon / Hermon Range */}
+              <g id="lebanon-hermon">
+                <polygon points="655,300 668,270 681,300" />
+                <polygon points="662,325 677,290 692,325" fill="#dfcca6" />
+                <polygon points="670,350 682,320 694,350" />
+                <polygon points="680,285 692,260 704,285" fill="#dfcca6" />
+              </g>
+
+              {/* Mount Carmel / Central Canaan Hill Country */}
+              <g id="canaan-hills">
+                <polygon points="635,390 645,370 655,390" />
+                <polygon points="642,420 653,398 664,420" />
+                <polygon points="645,450 657,425 669,450" />
+                <polygon points="640,480 651,458 662,480" />
+              </g>
+
+              {/* Gilead / Moab / Edom Mountains (Transjordan) */}
+              <g id="transjordan-mountains">
+                <polygon points="675,410 686,388 697,410" />
+                <polygon points="670,445 682,420 694,445" />
+                <polygon points="665,485 677,458 689,485" />
+                <polygon points="655,530 668,500 681,530" />
+              </g>
+
+              {/* Sinai Peninsula Mountains */}
+              <g id="sinai-mountains">
+                <polygon points="545,610 560,575 575,610" fill="#dfcca6" />
+                <polygon points="565,635 580,595 595,635" />
+                <polygon points="530,640 545,605 560,640" />
+              </g>
+            </g>
+
+            {/* MOUNTAIN LABELS */}
+            <g fill="#573a18" fontFamily="Georgia, serif" fontSize="11" fontStyle="italic" textAnchor="middle" opacity="0.9">
+              <text x="1060" y="40">Mt. Ararat Range</text>
+              <text x="695" y="255">Mt. Hermon</text>
+              <text x="705" y="315">Lebanon Mts.</text>
+              <text x="710" y="475">Mt. Nebo (Moab)</text>
+              <text x="580" y="590">Mt. Sinai / Horeb</text>
+              <text x="1395" y="270" transform="rotate(48 1395 270)">Zagros Mountains</text>
+            </g>
+
             <g stroke="#1e4e6d" fill="none" strokeLinecap="round">
               <path
                 d="M 500,950 C 495,880 482,800 485,740 C 440,690 405,620 405,528"
@@ -985,7 +1050,7 @@ export default function OldTestamentMapPage({
               <path d="M 1150,120 C 1300,280 1500,450 1650,580" />
             </g>
 
-            {/* REGIONAL LABELS (Sized dynamically to prevent text overlap) */}
+            {/* REGIONAL LABELS */}
             <g
               fill="#451a03"
               fontFamily="Georgia, serif"
@@ -1001,7 +1066,7 @@ export default function OldTestamentMapPage({
               <text x="370" y="680" fontSize="26">EGYPT</text>
               <text x="548" y="585" fontSize="16">SINAI</text>
               <text x="390" y="100" fontSize="22">ASIA MINOR</text>
-              <text x="680" y="420" fontSize="20" transform="rotate(-75 680 420)">CANAAN</text>
+              <text x="575" y="400" fontSize="18" transform="rotate(-80 575 400)">CANAAN</text>
               <text x="730" y="260" fontSize="22">SYRIA (ARAM)</text>
               <text x="930" y="210" fontSize="26">MESOPOTAMIA</text>
               <text x="930" y="235" fontSize="14" fontStyle="italic">Paddan-aram</text>
@@ -1035,7 +1100,7 @@ export default function OldTestamentMapPage({
                 THE OLD TESTAMENT WORLD
               </text>
               <text x="160" y="60" textAnchor="middle" fill="#78350f" fontFamily="sans-serif" fontSize="12">
-                Ancient Near East Geographic Map
+                Ancient Near East Topographic Map
               </text>
               <line x1="30" y1="75" x2="290" y2="75" stroke="#78350f" strokeWidth="1" opacity="0.5" />
               <circle cx="50" cy="90" r="5" fill="#b91c1c" />
@@ -1053,8 +1118,7 @@ export default function OldTestamentMapPage({
             const hasData = totalCount > 0;
             const { x, y } = geoToPixel(city.lat, city.lon);
 
-            // Scale factor reduces footprint progressively as zoom increases
-            const markerScale = 1 / Math.pow(zoom, 0.6);
+            const markerScale = 1 / Math.pow(zoom, 0.55);
 
             return (
               <div
@@ -1077,23 +1141,23 @@ export default function OldTestamentMapPage({
                   flexDirection: getFlexDirection(city.labelPosition),
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "4px",
+                  gap: "2px",
                   touchAction: "manipulation",
                 }}
               >
                 <div
                   style={{
-                    width: "22px",
-                    height: "22px",
+                    width: "18px",
+                    height: "18px",
                     borderRadius: "50%",
                     backgroundColor: hasData ? "#b91c1c" : "#0284c7",
                     border: "2px solid #ffffff",
-                    boxShadow: "0 2px 5px rgba(0,0,0,0.4)",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#ffffff",
-                    fontSize: "0.75rem",
+                    fontSize: "0.7rem",
                     fontWeight: "bold",
                     flexShrink: 0,
                   }}
@@ -1103,14 +1167,14 @@ export default function OldTestamentMapPage({
 
                 <div
                   style={{
-                    background: "rgba(28, 25, 23, 0.9)",
+                    background: "rgba(28, 25, 23, 0.88)",
                     color: "#fef3c7",
-                    padding: "3px 8px",
+                    padding: "2px 6px",
                     borderRadius: "4px",
-                    fontSize: "0.78rem",
+                    fontSize: "0.72rem",
                     fontWeight: "600",
                     whiteSpace: "nowrap",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
                     border: "1px solid rgba(217, 119, 6, 0.3)",
                     fontFamily: "sans-serif",
                   }}
@@ -1379,4 +1443,4 @@ export default function OldTestamentMapPage({
       )}
     </div>
   );
-}
+} 
