@@ -9,6 +9,7 @@ import FamilyTree from "./pages/FamilyTree";
 import TimelinePage from "./pages/TimelinePage";
 import Timeline from "./pages/Timeline";
 import Events from "./pages/Events";
+import OldTestamentMapPage from "./pages/OldTestamentMapPage";
 import type { GenealogyData, Person, BiblicalEvent } from "./types/genealogy";
 
 type Page =
@@ -17,7 +18,8 @@ type Page =
   | "family-tree"
   | "family-timeline"
   | "timeline"
-  | "events";
+  | "events"
+  | "map";
 
 const data = bibleData as GenealogyData;
 
@@ -118,6 +120,15 @@ function App() {
           />
         );
 
+      case "map":
+        return (
+          <OldTestamentMapPage
+            events={events}
+            people={people}
+            mapSrc="/map.png" // Ensure map.png is placed in public/map.png
+          />
+        );
+
       case "dashboard":
       default:
         return <Dashboard data={{ ...data, people, events }} />;
@@ -205,6 +216,13 @@ function App() {
               onClick={() => setCurrentPage("events")}
             >
               Events
+            </button>
+
+            <button
+              className={`nav-item ${currentPage === "map" ? "active" : ""}`}
+              onClick={() => setCurrentPage("map")}
+            >
+              Map Explorer
             </button>
           </nav>
         </aside>
