@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Person, BiblicalEvent } from "../types/genealogy";
 
 type TimelineProps = {
@@ -11,12 +11,27 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<BiblicalEvent | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const sortedEvents = [...events].sort((a, b) => {
-    const yearA = a.date?.year ?? 0;
-    const yearB = b.date?.year ?? 0;
-    return yearA - yearB;
-  });
+  const filteredEvents = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const sorted = [...events].sort((a, b) => (a.date?.year ?? 0) - (b.date?.year ?? 0));
+
+    if (!term) return sorted;
+
+    return sorted.filter((evt) => {
+      const matchTitle = evt.title.toLowerCase().includes(term);
+      const matchDesc = evt.description?.toLowerCase().includes(term) ?? false;
+      const matchLocation = evt.location?.toLowerCase().includes(term) ?? false;
+      const matchRef = (evt.biblicalReferences || []).some((r) => r.toLowerCase().includes(term));
+      const matchPeople = (evt.personIds || []).some((id) => {
+        const p = people.find((person) => person.id === id);
+        return p?.name.toLowerCase().includes(term);
+      });
+
+      return matchTitle || matchDesc || matchLocation || matchRef || matchPeople;
+    });
+  }, [events, people, searchTerm]);
 
   const handleOpenModal = (event: BiblicalEvent) => {
     setSelectedEvent(event);
@@ -42,24 +57,40 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
     setIsEditing(false);
   };
 
-  const togglePersonAssociation = (personId: string) => {
-    if (!editForm) return;
-    const currentPeople = editForm.personIds || [];
-    const updated = currentPeople.includes(personId)
-      ? currentPeople.filter((id) => id !== personId)
-      : [...currentPeople, personId];
-
-    setEditForm({ ...editForm, personIds: updated });
-  };
-
   return (
     <div style={{ padding: "20px", maxWidth: "800px" }}>
-      <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", marginBottom: "28px", color: "#0f172a" }}>
-        Timeline
-      </h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "28px",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", margin: 0, color: "#0f172a" }}>
+          Timeline
+        </h2>
+
+        <input
+          type="text"
+          placeholder="Filter events by name, reference..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "8px 14px",
+            borderRadius: "8px",
+            border: "1px solid #cbd5e1",
+            width: "280px",
+            fontSize: "0.9rem",
+            outline: "none",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+          }}
+        />
+      </div>
 
       <div style={{ position: "relative", paddingLeft: "110px" }}>
-        {/* Vertical Timeline Line */}
         <div
           style={{
             position: "absolute",
@@ -72,13 +103,12 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
         />
 
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {sortedEvents.map((event) => {
+          {filteredEvents.map((event) => {
             const year = event.date?.year;
             const yearStr = year !== undefined ? `${Math.abs(year)} ${year < 0 ? "BC" : "AD"}` : "";
 
             return (
               <div key={event.id} style={{ position: "relative" }}>
-                {/* Year Label */}
                 <div
                   style={{
                     position: "absolute",
@@ -94,7 +124,6 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
                   {yearStr}
                 </div>
 
-                {/* Timeline Dot */}
                 <div
                   style={{
                     position: "absolute",
@@ -109,7 +138,6 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
                   }}
                 />
 
-                {/* Event Card */}
                 <div
                   onClick={() => handleOpenModal(event)}
                   style={{
@@ -118,7 +146,6 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
                     borderRadius: "8px",
                     padding: "16px 20px",
                     cursor: "pointer",
-                    transition: "all 0.15s ease-in-out",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   }}
                 >
@@ -173,7 +200,6 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
         </div>
       </div>
 
-      {/* View/Edit Event Modal */}
       {selectedEvent && (
         <div
           style={{
@@ -229,7 +255,7 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
 
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Year (Use negative number for BC, e.g. -2000)
+                    Year
                   </label>
                   <input
                     type="number"
@@ -250,149 +276,42 @@ export default function Timeline({ people, events, onUpdateEvent }: TimelineProp
                   </label>
                   <input
                     type="text"
-                    value={editForm.location || ""}
+                    value={editForm.location ?? ""}
                     onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                     style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Description
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={editForm.description || ""}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "4px" }}>
-                    Scripture References (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={(editForm.biblicalReferences || []).join(", ")}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        biblicalReferences: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                      })
-                    }
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "bold", marginBottom: "6px" }}>
-                    Associated People
-                  </label>
-                  <div
-                    style={{
-                      maxHeight: "120px",
-                      overflowY: "auto",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "6px",
-                      padding: "8px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                    }}
-                  >
-                    {people.map((p) => {
-                      const checked = (editForm.personIds || []).includes(p.id);
-                      return (
-                        <label key={p.id} style={{ fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => togglePersonAssociation(p.id)}
-                          />
-                          {p.name}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "10px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#f1f5f9",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      padding: "8px 16px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Save Changes
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "10px",
+                    borderRadius: "6px",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    border: "none",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                  }}
+                >
+                  Save Changes
+                </button>
               </form>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.9rem", color: "#334155" }}>
-                {selectedEvent.date?.year !== undefined && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Date:</strong> {Math.abs(selectedEvent.date.year)}{" "}
-                    {selectedEvent.date.year < 0 ? "BC" : "AD"}
-                  </p>
-                )}
-                {selectedEvent.location && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Location:</strong> {selectedEvent.location}
-                  </p>
-                )}
-                {selectedEvent.description && (
-                  <p style={{ margin: 0, lineHeight: "1.5" }}>{selectedEvent.description}</p>
-                )}
-                {(selectedEvent.personIds || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Associated People:</strong>{" "}
-                    {(selectedEvent.personIds || [])
-                      .map((id) => people.find((p) => p.id === id)?.name || id)
-                      .join(", ")}
-                  </p>
-                )}
-                {(selectedEvent.biblicalReferences || []).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    <strong>References:</strong> {(selectedEvent.biblicalReferences || []).join(", ")}
-                  </p>
-                )}
-
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
-                  <button
-                    onClick={handleStartEdit}
-                    style={{
-                      padding: "8px 16px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Edit Event
-                  </button>
-                </div>
+              <div>
+                <p style={{ margin: "0 0 12px 0", color: "#334155" }}>{selectedEvent.description}</p>
+                <button
+                  onClick={handleStartEdit}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    background: "#f1f5f9",
+                    border: "1px solid #cbd5e1",
+                    cursor: "pointer",
+                  }}
+                >
+                  Edit Event
+                </button>
               </div>
             )}
           </div>

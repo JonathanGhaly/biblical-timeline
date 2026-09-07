@@ -24,8 +24,8 @@ type SelectedItem =
 
 export default function TimelinePage({ people, events }: TimelinePageProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Pure data-driven recursive birth year resolver using JSON lineage references
   const getBirthYear = (
     person: Person,
     peopleList: Person[],
@@ -53,11 +53,9 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
       }
     }
 
-    // Default baseline year if no parent or explicit birth year is specified in JSON
     return -4000;
   };
 
-  // 1. Process Lifespans directly from people data
   const peopleWithLifespans = useMemo(() => {
     const list = people.map((person) => {
       const birthYear = getBirthYear(person, people);
@@ -81,7 +79,6 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     return list.sort((a, b) => a.birthYear - b.birthYear);
   }, [people]);
 
-  // 2. Process Marriages directly from people data
   const derivedMarriages = useMemo(() => {
     const list: MarriageItem[] = [];
     const processedPairs = new Set<string>();
@@ -139,13 +136,45 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
     return list.sort((a, b) => a.year - b.year);
   }, [people, peopleWithLifespans]);
 
-  // 3. Process Events
   const validEvents = useMemo(
     () => events.filter((e) => e.date?.year !== undefined),
     [events]
   );
 
-  // 4. Dynamic Timeline Boundaries from Dataset
+  // Search Filter Logic
+  const term = searchTerm.trim().toLowerCase();
+
+  const filteredPeople = useMemo(() => {
+    if (!term) return peopleWithLifespans;
+    return peopleWithLifespans.filter(({ person }) =>
+      person.name.toLowerCase().includes(term) ||
+      (person.notes && person.notes.toLowerCase().includes(term)) ||
+      (person.biblicalReferences || []).some((r) => r.toLowerCase().includes(term))
+    );
+  }, [peopleWithLifespans, term]);
+
+  const filteredMarriages = useMemo(() => {
+    if (!term) return derivedMarriages;
+    return derivedMarriages.filter(
+      (m) =>
+        m.title.toLowerCase().includes(term) ||
+        m.husbandName.toLowerCase().includes(term) ||
+        m.wifeName.toLowerCase().includes(term) ||
+        (m.references || []).some((r) => r.toLowerCase().includes(term))
+    );
+  }, [derivedMarriages, term]);
+
+  const filteredEvents = useMemo(() => {
+    if (!term) return validEvents;
+    return validEvents.filter(
+      (e) =>
+        e.title.toLowerCase().includes(term) ||
+        (e.description && e.description.toLowerCase().includes(term)) ||
+        (e.location && e.location.toLowerCase().includes(term)) ||
+        (e.biblicalReferences || []).some((r) => r.toLowerCase().includes(term))
+    );
+  }, [validEvents, term]);
+
   const { minYear, maxYear, ticks } = useMemo(() => {
     const allYears: number[] = [
       ...peopleWithLifespans.map((p) => p.birthYear),
@@ -186,20 +215,40 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
 
   return (
     <div className="timeline-page-container" style={{ padding: "20px" }}>
-      <div style={{ marginBottom: "20px" }}>
-        <h2
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "20px",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", margin: "0 0 4px 0", color: "#0f172a" }}>
+            Integrated Biblical Timeline
+          </h2>
+          <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
+            Scroll horizontally to explore overlapping lifespans, marriages, and historical events.
+          </p>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Search timeline (e.g. Abraham, Genesis, Ur)..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
-            fontSize: "1.75rem",
-            fontWeight: "bold",
-            margin: "0 0 4px 0",
-            color: "#0f172a",
+            padding: "8px 14px",
+            borderRadius: "8px",
+            border: "1px solid #cbd5e1",
+            width: "300px",
+            fontSize: "0.9rem",
+            outline: "none",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
           }}
-        >
-          Integrated Biblical Timeline
-        </h2>
-        <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
-          Scroll horizontally to explore overlapping lifespans, marriages, and historical events sourced directly from dataset.
-        </p>
+        />
       </div>
 
       <div
@@ -213,7 +262,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
         }}
       >
         <div style={{ position: "relative", width: `${timelineWidth + 180}px` }}>
-          {/* Timeline Header Axis */}
+          {/* Header Axis */}
           <div
             style={{
               display: "flex",
@@ -242,7 +291,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
             ))}
           </div>
 
-          {/* Background Vertical Guidelines */}
+          {/* Guidelines */}
           <div
             style={{
               position: "absolute",
@@ -268,109 +317,62 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
             ))}
           </div>
 
-          {/* MAJOR EVENTS Section */}
-          <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: "800",
-                color: "#334155",
-                letterSpacing: "0.05em",
-                marginBottom: "16px",
-              }}
-            >
-              MAJOR EVENTS
-            </div>
+          {/* MAJOR EVENTS */}
+          {filteredEvents.length > 0 && (
+            <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: "800", color: "#334155", letterSpacing: "0.05em", marginBottom: "16px" }}>
+                MAJOR EVENTS ({filteredEvents.length})
+              </div>
+              <div style={{ position: "relative", marginLeft: "150px", width: `${timelineWidth}px`, height: "60px" }}>
+                {filteredEvents.map((evt, idx) => {
+                  const year = evt.date!.year!;
+                  const left = getLeftPx(year);
+                  const topOffset = (idx % 2) * 32;
 
-            <div
-              style={{
-                position: "relative",
-                marginLeft: "150px",
-                width: `${timelineWidth}px`,
-                height: "60px",
-              }}
-            >
-              {validEvents.map((evt, idx) => {
-                const year = evt.date!.year!;
-                const left = getLeftPx(year);
-                const topOffset = (idx % 2) * 32;
-
-                return (
-                  <div
-                    key={evt.id}
-                    onClick={() => setSelectedItem({ type: "event", data: evt })}
-                    style={{
-                      position: "absolute",
-                      left: `${left}px`,
-                      top: `${topOffset}px`,
-                      transform: "translateX(-50%)",
-                      background: "#ffffff",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "10px",
-                      padding: "4px 10px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    <span
+                  return (
+                    <div
+                      key={evt.id}
+                      onClick={() => setSelectedItem({ type: "event", data: evt })}
                       style={{
-                        background: "#fef2f2",
-                        border: "1px solid #fca5a5",
-                        color: "#dc2626",
-                        borderRadius: "50%",
-                        width: "18px",
-                        height: "18px",
+                        position: "absolute",
+                        left: `${left}px`,
+                        top: `${topOffset}px`,
+                        transform: "translateX(-50%)",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "10px",
+                        padding: "4px 10px",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.7rem",
+                        gap: "6px",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.75rem",
                       }}
                     >
-                      📍
-                    </span>
-                    <div>
-                      <div style={{ fontWeight: "700", color: "#1e293b", lineHeight: "1.2" }}>
-                        {evt.title}
-                      </div>
-                      <div style={{ fontSize: "0.65rem", color: "#64748b" }}>
-                        {formatYearLabel(year)}
+                      <span style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: "50%", width: "18px", height: "18px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>
+                        📍
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: "700", color: "#1e293b", lineHeight: "1.2" }}>{evt.title}</div>
+                        <div style={{ fontSize: "0.65rem", color: "#64748b" }}>{formatYearLabel(year)}</div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* MARRIAGES & UNIONS Section */}
-          {derivedMarriages.length > 0 && (
-            <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
-              <div
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: "800",
-                  color: "#334155",
-                  letterSpacing: "0.05em",
-                  marginBottom: "16px",
-                }}
-              >
-                MARRIAGES & UNIONS
+                  );
+                })}
               </div>
+            </div>
+          )}
 
-              <div
-                style={{
-                  position: "relative",
-                  marginLeft: "150px",
-                  width: `${timelineWidth}px`,
-                  height: "60px",
-                }}
-              >
-                {derivedMarriages.map((marriage, idx) => {
+          {/* MARRIAGES & UNIONS */}
+          {filteredMarriages.length > 0 && (
+            <div style={{ position: "relative", zIndex: 1, marginBottom: "32px" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: "800", color: "#334155", letterSpacing: "0.05em", marginBottom: "16px" }}>
+                MARRIAGES & UNIONS ({filteredMarriages.length})
+              </div>
+              <div style={{ position: "relative", marginLeft: "150px", width: `${timelineWidth}px`, height: "60px" }}>
+                {filteredMarriages.map((marriage, idx) => {
                   const left = getLeftPx(marriage.year);
                   const topOffset = (idx % 2) * 32;
 
@@ -396,28 +398,12 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                         fontSize: "0.75rem",
                       }}
                     >
-                      <span
-                        style={{
-                          background: "#fdf2f8",
-                          border: "1px solid #f472b6",
-                          borderRadius: "50%",
-                          width: "18px",
-                          height: "18px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.7rem",
-                        }}
-                      >
+                      <span style={{ background: "#fdf2f8", border: "1px solid #f472b6", borderRadius: "50%", width: "18px", height: "18px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>
                         💍
                       </span>
                       <div>
-                        <div style={{ fontWeight: "700", color: "#831843", lineHeight: "1.2" }}>
-                          {marriage.title}
-                        </div>
-                        <div style={{ fontSize: "0.65rem", color: "#9d174d" }}>
-                          {formatYearLabel(marriage.year)}
-                        </div>
+                        <div style={{ fontWeight: "700", color: "#831843", lineHeight: "1.2" }}>{marriage.title}</div>
+                        <div style={{ fontSize: "0.65rem", color: "#9d174d" }}>{formatYearLabel(marriage.year)}</div>
                       </div>
                     </div>
                   );
@@ -426,132 +412,68 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
             </div>
           )}
 
-          {/* PATRIARCH LIFESPANS Section */}
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: "800",
-                color: "#334155",
-                letterSpacing: "0.05em",
-                marginBottom: "16px",
-              }}
-            >
-              PATRIARCH LIFESPANS
-            </div>
+          {/* PATRIARCH LIFESPANS */}
+          {filteredPeople.length > 0 && (
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: "800", color: "#334155", letterSpacing: "0.05em", marginBottom: "16px" }}>
+                PATRIARCH LIFESPANS ({filteredPeople.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {filteredPeople.map(({ person, birthYear, deathYear, duration }) => {
+                  const left = getLeftPx(birthYear);
+                  const width = Math.max(140, getWidthPx(duration));
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {peopleWithLifespans.map(({ person, birthYear, deathYear, duration }) => {
-                const left = getLeftPx(birthYear);
-                const width = Math.max(140, getWidthPx(duration));
-
-                return (
-                  <div
-                    key={person.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      height: "30px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "140px",
-                        flexShrink: 0,
-                        paddingRight: "10px",
-                        fontSize: "0.85rem",
-                        fontWeight: "700",
-                        color: "#1e293b",
-                        textAlign: "left",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {person.name}
-                    </div>
-
-                    <div
-                      style={{
-                        position: "relative",
-                        width: `${timelineWidth}px`,
-                        flexShrink: 0,
-                        height: "100%",
-                      }}
-                    >
-                      <div
-                        onClick={() =>
-                          setSelectedItem({
-                            type: "person",
-                            data: person,
-                            birthYear,
-                            deathYear,
-                          })
-                        }
-                        style={{
-                          position: "absolute",
-                          left: `${left}px`,
-                          width: `${width}px`,
-                          height: "28px",
-                          background: "#2563eb",
-                          color: "#ffffff",
-                          borderRadius: "14px",
-                          display: "flex",
-                          alignItems: "center",
-                          padding: "0 12px",
-                          fontSize: "0.75rem",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                        }}
-                      >
-                        {person.name} ({formatYearLabel(birthYear)} - {formatYearLabel(deathYear)} | {duration} yrs)
+                  return (
+                    <div key={person.id} style={{ display: "flex", alignItems: "center", height: "30px" }}>
+                      <div style={{ width: "140px", flexShrink: 0, paddingRight: "10px", fontSize: "0.85rem", fontWeight: "700", color: "#1e293b", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {person.name}
+                      </div>
+                      <div style={{ position: "relative", width: `${timelineWidth}px`, flexShrink: 0, height: "100%" }}>
+                        <div
+                          onClick={() => setSelectedItem({ type: "person", data: person, birthYear, deathYear })}
+                          style={{
+                            position: "absolute",
+                            left: `${left}px`,
+                            width: `${width}px`,
+                            height: "28px",
+                            background: "#2563eb",
+                            color: "#ffffff",
+                            borderRadius: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "0 12px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                          }}
+                        >
+                          {person.name} ({formatYearLabel(birthYear)} - {formatYearLabel(deathYear)} | {duration} yrs)
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Item Details Overlay */}
       {selectedItem && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
           onClick={() => setSelectedItem(null)}
         >
           <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "12px",
-              padding: "24px",
-              maxWidth: "500px",
-              width: "90%",
-              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
-            }}
+            style={{ background: "#ffffff", borderRadius: "12px", padding: "24px", maxWidth: "500px", width: "90%", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "1.25rem", color: "#0f172a" }}>
                 {selectedItem.type === "person"
                   ? selectedItem.data.name
@@ -559,16 +481,7 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                   ? `Marriage: ${selectedItem.data.title}`
                   : selectedItem.data.title}
               </h3>
-              <button
-                onClick={() => setSelectedItem(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "1.25rem",
-                  cursor: "pointer",
-                  color: "#64748b",
-                }}
-              >
+              <button onClick={() => setSelectedItem(null)} style={{ background: "none", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "#64748b" }}>
                 ✕
               </button>
             </div>
@@ -578,15 +491,9 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                 <p style={{ margin: 0 }}><strong>Gender:</strong> {selectedItem.data.gender}</p>
                 <p style={{ margin: 0 }}><strong>Born:</strong> {formatYearLabel(selectedItem.birthYear)}</p>
                 <p style={{ margin: 0 }}><strong>Died:</strong> {formatYearLabel(selectedItem.deathYear)}</p>
-                {selectedItem.data.yearsLived && (
-                  <p style={{ margin: 0 }}><strong>Lifespan:</strong> {selectedItem.data.yearsLived} years</p>
-                )}
-                {selectedItem.data.placeOfBirth && (
-                  <p style={{ margin: 0 }}><strong>Birthplace:</strong> {selectedItem.data.placeOfBirth}</p>
-                )}
-                {selectedItem.data.notes && (
-                  <p style={{ margin: 0 }}><strong>Notes:</strong> {selectedItem.data.notes}</p>
-                )}
+                {selectedItem.data.yearsLived && <p style={{ margin: 0 }}><strong>Lifespan:</strong> {selectedItem.data.yearsLived} years</p>}
+                {selectedItem.data.placeOfBirth && <p style={{ margin: 0 }}><strong>Birthplace:</strong> {selectedItem.data.placeOfBirth}</p>}
+                {selectedItem.data.notes && <p style={{ margin: 0 }}><strong>Notes:</strong> {selectedItem.data.notes}</p>}
                 {(selectedItem.data.biblicalReferences || []).length > 0 && (
                   <p style={{ margin: 0 }}>
                     <strong>References:</strong> {(selectedItem.data.biblicalReferences || []).join(", ")}
@@ -613,12 +520,8 @@ export default function TimelinePage({ people, events }: TimelinePageProps) {
                 {selectedItem.data.date?.year !== undefined && (
                   <p style={{ margin: 0 }}><strong>Date:</strong> {formatYearLabel(selectedItem.data.date.year)}</p>
                 )}
-                {selectedItem.data.location && (
-                  <p style={{ margin: 0 }}><strong>Location:</strong> {selectedItem.data.location}</p>
-                )}
-                {selectedItem.data.description && (
-                  <p style={{ margin: 0 }}>{selectedItem.data.description}</p>
-                )}
+                {selectedItem.data.location && <p style={{ margin: 0 }}><strong>Location:</strong> {selectedItem.data.location}</p>}
+                {selectedItem.data.description && <p style={{ margin: 0 }}>{selectedItem.data.description}</p>}
                 {(selectedItem.data.personIds || []).length > 0 && (
                   <p style={{ margin: 0 }}>
                     <strong>People:</strong>{" "}
