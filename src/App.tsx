@@ -57,7 +57,6 @@ function App() {
     savePeople(updated);
   };
 
-  // ADDED: Handler to delete a person
   const handleDeletePerson = (personId: string) => {
     const filtered = people.filter((p) => p.id !== personId);
     savePeople(filtered);
@@ -74,7 +73,6 @@ function App() {
     saveEvents(updated);
   };
 
-  // ADDED: Handler to delete an event
   const handleDeleteEvent = (eventId: string) => {
     const filtered = events.filter((e) => e.id !== eventId);
     saveEvents(filtered);
@@ -114,7 +112,7 @@ function App() {
             people={people}
             onAddPerson={handleAddPerson}
             onUpdatePerson={handleUpdatePerson}
-            onDeletePerson={handleDeletePerson} // ADDED: Passing delete handler
+            onDeletePerson={handleDeletePerson}
           />
         );
 
@@ -134,7 +132,7 @@ function App() {
             people={people}
             onAddEvent={handleAddEvent}
             onUpdateEvent={handleUpdateEvent}
-            onDeleteEvent={handleDeleteEvent} // ADDED: Passing delete handler
+            onDeleteEvent={handleDeleteEvent}
           />
         );
 
@@ -246,8 +244,29 @@ function App() {
 
         <main className="main-content">{renderPage()}</main>
       </div>
+
+      {/* Watermark Overlay */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: "12px",
+          right: "16px",
+          zIndex: 9999,
+          pointerEvents: "none",
+          color: "#ffffff",
+          opacity: 0.5,
+          fontSize: "0.85rem",
+          fontWeight: "bold",
+          fontFamily: "sans-serif",
+          letterSpacing: "1px",
+          textTransform: "uppercase",
+          textShadow: "1px 1px 3px rgba(0,0,0,0.8)",
+        }}
+      >
+        Created by Jonathan Ghaly
+      </div>
     </div>
   );
 }
 
-export default App; 
+export default App;
