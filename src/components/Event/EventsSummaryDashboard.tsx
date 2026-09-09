@@ -5,7 +5,7 @@ import {
   getMillenniumDisplayLabel,
   getMillenniumSpanDisplay,
   type MillenniumId,
-  type MillenniumSummaryItem,
+  // type MillenniumSummaryItem,
 } from "../../utils/millennium";
 import {
   UI_TRANSLATIONS,
