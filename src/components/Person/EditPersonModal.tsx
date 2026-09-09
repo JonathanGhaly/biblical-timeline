@@ -86,12 +86,16 @@ export default function EditPersonModal({
     fatherId: person?.fatherId || "",
     motherId: person?.motherId || "",
     anchorPersonId: person?.anchorPersonId || "",
-    anchorAgeAtBirth: person?.anchorPersonAgeAtBirth ?? person?.fatherAgeAtBirth ?? 0,
+    anchorAgeAtBirth:
+      (person?.anchorPersonAgeAtBirth ?? person?.fatherAgeAtBirth) !== undefined
+        ? (person?.anchorPersonAgeAtBirth ?? person?.fatherAgeAtBirth)
+        : ("" as string | number),
     husbandId: person?.husbandId || (person?.gender === "female" ? initialSpouseId : ""),
     wifeId: person?.wifeId || (person?.gender === "male" ? initialSpouseId : ""),
     husbandMarriageAge: person?.husbandMarriageAge ?? "",
     wifeMarriageAge: person?.wifeMarriageAge ?? "",
-    yearsLived: person?.yearsLived ?? 100,
+    yearsLived:
+      person?.yearsLived !== undefined ? person.yearsLived : ("" as string | number),
     biblicalReferences: person?.biblicalReferences ? person.biblicalReferences.join(", ") : "",
     notes: person?.notes || "",
     arabicNotes: person?.arabicNotes || "",
@@ -118,6 +122,15 @@ export default function EditPersonModal({
     const selectedAnchor = formData.anchorPersonId || formData.fatherId;
     const spouseId = formData.gender === "female" ? formData.husbandId : formData.wifeId;
 
+    const parsedAnchorAge =
+      formData.anchorAgeAtBirth !== "" && !isNaN(Number(formData.anchorAgeAtBirth))
+        ? Number(formData.anchorAgeAtBirth)
+        : undefined;
+    const parsedYearsLived =
+      formData.yearsLived !== "" && !isNaN(Number(formData.yearsLived))
+        ? Number(formData.yearsLived)
+        : undefined;
+
     const updatedPerson: Person = {
       ...person,
       name: formData.name,
@@ -127,15 +140,15 @@ export default function EditPersonModal({
       fatherId: formData.fatherId || undefined,
       motherId: formData.motherId || undefined,
       anchorPersonId: selectedAnchor || undefined,
-      anchorPersonAgeAtBirth: Number(formData.anchorAgeAtBirth) || undefined,
-      fatherAgeAtBirth: Number(formData.anchorAgeAtBirth) || undefined,
+      anchorPersonAgeAtBirth: parsedAnchorAge,
+      fatherAgeAtBirth: parsedAnchorAge,
       husbandId: formData.husbandId || undefined,
       wifeId: formData.wifeId || undefined,
       husbandMarriageAge:
         formData.husbandMarriageAge !== "" ? Number(formData.husbandMarriageAge) : undefined,
       wifeMarriageAge:
         formData.wifeMarriageAge !== "" ? Number(formData.wifeMarriageAge) : undefined,
-      yearsLived: Number(formData.yearsLived) || undefined,
+      yearsLived: parsedYearsLived,
       spouseIds: spouseId ? [spouseId] : [],
       biblicalReferences: formData.biblicalReferences
         ? formData.biblicalReferences.split(",").map((r) => r.trim()).filter(Boolean)
@@ -225,15 +238,21 @@ export default function EditPersonModal({
             </div>
 
             <div className="space-y-1">
-              <label className="flex items-center gap-1.5 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                <Calendar size={14} />
-                {t.yearsLivedLabel}
+              <label className="flex items-center justify-between text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                <span className="flex items-center gap-1.5">
+                  <Calendar size={14} />
+                  {t.yearsLivedLabel}
+                </span>
+                <span className="text-[10px] font-normal text-[#8C7B6B] dark:text-[#A99F8D]">
+                  {lang === "ar" ? "(اختياري)" : "(Optional)"}
+                </span>
               </label>
               <input
                 type="number"
                 min="0"
+                placeholder={lang === "ar" ? "غير محدد (اختياري)" : "Undefined (Optional)"}
                 value={formData.yearsLived}
-                onChange={(e) => setFormData({ ...formData, yearsLived: Number(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, yearsLived: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
@@ -307,15 +326,19 @@ export default function EditPersonModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                {t.anchorAgeLabel}
+              <label className="flex items-center justify-between text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                <span>{t.anchorAgeLabel}</span>
+                <span className="text-[10px] font-normal text-[#8C7B6B] dark:text-[#A99F8D]">
+                  {lang === "ar" ? "(اختياري)" : "(Optional)"}
+                </span>
               </label>
               <input
                 type="number"
                 min="0"
+                placeholder={lang === "ar" ? "غير محدد (اختياري)" : "Undefined (Optional)"}
                 value={formData.anchorAgeAtBirth}
                 onChange={(e) =>
-                  setFormData({ ...formData, anchorAgeAtBirth: Number(e.target.value) })
+                  setFormData({ ...formData, anchorAgeAtBirth: e.target.value })
                 }
                 className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />

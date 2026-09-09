@@ -9,12 +9,12 @@ type PersonFormProps = {
 export default function PersonForm({ existingPeople, onAddPerson }: PersonFormProps) {
   const [name, setName] = useState("");
   const [gender] = useState<Person["gender"]>("male");
-  const [yearsLived, setYearsLived] = useState<number>(100);
+  const [yearsLived, setYearsLived] = useState<number | string>("");
   
   // Search & Anchor selection state
   const [searchAnchor, setSearchAnchor] = useState("");
   const [anchorPersonId, setAnchorPersonId] = useState<string>("");
-  const [anchorAge, setAnchorAge] = useState<number>(30);
+  const [anchorAge, setAnchorAge] = useState<number | string>("");
 
   const filteredAnchors = existingPeople.filter((p) =>
     p.name.toLowerCase().includes(searchAnchor.toLowerCase())
@@ -24,13 +24,17 @@ export default function PersonForm({ existingPeople, onAddPerson }: PersonFormPr
     e.preventDefault();
     if (!name.trim()) return;
 
+    const parsedYears = yearsLived !== "" && !isNaN(Number(yearsLived)) ? Number(yearsLived) : undefined;
+    const parsedAnchorAge = anchorAge !== "" && !isNaN(Number(anchorAge)) ? Number(anchorAge) : undefined;
+
     const newPerson: Person = {
       id: name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now(),
       name,
       gender,
-      yearsLived,
+      yearsLived: parsedYears,
       anchorPersonId: anchorPersonId || undefined,
-      anchorPersonAgeAtBirth: anchorPersonId ? anchorAge : 0,
+      anchorPersonAgeAtBirth: parsedAnchorAge,
+      fatherAgeAtBirth: parsedAnchorAge,
       spouseIds: [],
       biblicalReferences: [],
     };

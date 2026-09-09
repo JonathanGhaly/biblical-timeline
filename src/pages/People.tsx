@@ -6,6 +6,8 @@ import {
   UI_TRANSLATIONS,
   getPersonDisplayName,
   getPersonDisplayNotes,
+  localizeBiblicalReferences,
+  matchesBiblicalSearch,
 } from "../utils/i18n";
 import {
   Search,
@@ -46,7 +48,10 @@ export default function People({
     const arabicMatch = (person.arabicName || "").toLowerCase().includes(term);
     const notesMatch = (person.notes || "").toLowerCase().includes(term);
     const arNotesMatch = (person.arabicNotes || "").toLowerCase().includes(term);
-    return nameMatch || arabicMatch || notesMatch || arNotesMatch;
+    const refMatch = (person.biblicalReferences || []).some((r) =>
+      matchesBiblicalSearch(r, term)
+    );
+    return nameMatch || arabicMatch || notesMatch || arNotesMatch || refMatch;
   });
 
   const handleDelete = (person: Person) => {
@@ -211,7 +216,11 @@ export default function People({
               {person.biblicalReferences && person.biblicalReferences.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center gap-1.5 text-[11px] text-[#8C6F12] dark:text-[#F3E5AB]">
                   <BookOpen size={12} />
-                  <span className="font-semibold">{person.biblicalReferences.join(", ")}</span>
+                  <span className="font-semibold">
+                    {localizeBiblicalReferences(person.biblicalReferences, lang).join(
+                      lang === "ar" ? "، " : ", "
+                    )}
+                  </span>
                 </div>
               )}
             </div>

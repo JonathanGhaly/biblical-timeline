@@ -116,21 +116,21 @@
 }
 
 /* ========================================================================= */
-/* CSS CONTAINMENT: MAP MARKERS & LABELS                                    */
-/* Enforces strict layout, style, and paint boundaries to isolate markers,   */
-/* prevent visual text overlap, eliminate layout cascades, and optimize GPU. */
+/* CRISP RENDERING: MAP MARKERS & LABELS                                    */
+/* Eliminates offscreen paint caching and will-change texture blurring.      */
 /* ========================================================================= */
 .map-marker-contained {
-  contain: layout style paint;
-  isolation: isolate;
-  will-change: transform;
+  transform-origin: center center;
+  pointer-events: auto;
 }
 
 .map-label-contained {
-  contain: layout style paint;
-  isolation: isolate;
+  pointer-events: none;
 }
 
-.map-feature-contained {
-  contain: layout paint;
+#map-transform-layer {
+  transform-origin: 0 0;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  transform-style: flat;
 }

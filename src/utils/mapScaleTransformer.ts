@@ -81,17 +81,14 @@ export function computeMapScale(zoom: number): MapScaleFactors {
   const lodTier: 1 | 2 | 3 = safeZoom < 1.0 ? 1 : safeZoom < 2.0 ? 2 : 3;
   const minPinDistance = Math.max(26 * markerScale, 13);
 
-  // 6. CSS Containment & Layout Isolation
-  // Prevents visual overlap, subpixel bleeding, and layout invalidation cascades
+  // 6. Marker & Label Styling
+  // Ensures clean rendering without offscreen texture rasterization caching
   const markerContainmentStyle: React.CSSProperties = {
-    contain: "layout style paint",
-    isolation: "isolate",
-    willChange: "transform",
+    pointerEvents: "auto",
   };
 
   const labelContainmentStyle: React.CSSProperties = {
-    contain: "layout style paint",
-    isolation: "isolate",
+    pointerEvents: "none",
   };
 
   return {

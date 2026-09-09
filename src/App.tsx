@@ -255,7 +255,9 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-[#FBF8EF] dark:bg-[#121110] text-[#2D2721] dark:text-[#E6E0D4] font-body transition-colors duration-200"
+      className={`min-h-screen flex flex-col bg-[#FBF8EF] dark:bg-[#121110] text-[#2D2721] dark:text-[#E6E0D4] font-body transition-colors duration-200 ${
+        currentPage === "map" ? "h-screen overflow-hidden" : ""
+      }`}
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
       {/* Coptic Heritage Header */}
@@ -271,29 +273,41 @@ export default function App() {
       />
 
       {/* Main Container with Sidebar & Content */}
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
+      <div
+        className={`flex-1 flex flex-col md:flex-row ${
+          currentPage === "map"
+            ? "w-full max-w-none h-[calc(100vh-65px)] overflow-hidden"
+            : "max-w-7xl w-full mx-auto"
+        }`}
+      >
         <CopticSidebar
           currentPage={currentPage}
           onSelectPage={setCurrentPage}
           lang={lang}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+        <main
+          className={`flex-1 min-w-0 ${
+            currentPage === "map" ? "p-0 h-full overflow-hidden" : "p-4 sm:p-6 lg:p-8"
+          }`}
+        >
           {renderPage()}
         </main>
       </div>
 
-      {/* Attribution & Coptic Footer Motif */}
-      <footer className="w-full border-t border-[#D4AF37]/30 py-4 px-6 text-center text-xs text-[#7A6E5E] dark:text-[#887C6C] flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <span className="font-cinzel font-bold text-[#800020] dark:text-[#D4AF37]">
-            ✝ Coptic Heritage Biblical Chronology
-          </span>
-        </div>
-        <div className="font-mono text-[11px] tracking-wide text-[#8C6F12] dark:text-[#A99F8D]">
-          Created by Jonathan Ghaly
-        </div>
-      </footer>
+      {/* Attribution & Coptic Footer Motif (Hidden on Map to fit window purely to map) */}
+      {currentPage !== "map" && (
+        <footer className="w-full border-t border-[#D4AF37]/30 py-4 px-6 text-center text-xs text-[#7A6E5E] dark:text-[#887C6C] flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="font-cinzel font-bold text-[#800020] dark:text-[#D4AF37]">
+              ✝ Coptic Heritage Biblical Chronology
+            </span>
+          </div>
+          <div className="font-mono text-[11px] tracking-wide text-[#8C6F12] dark:text-[#A99F8D]">
+            Created by Jonathan Ghaly
+          </div>
+        </footer>
+      )}
 
       {/* Gist Sync & Database Settings Modal */}
       <GistSyncModal

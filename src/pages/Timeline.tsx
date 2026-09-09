@@ -5,6 +5,8 @@ import {
   getEventDisplayTitle,
   getEventDisplayDescription,
   formatYearDisplay,
+  localizeBiblicalReferences,
+  matchesBiblicalSearch,
 } from "../utils/i18n";
 import { MapPin, BookOpen, Edit3, X } from "lucide-react";
 import { CopticCross } from "../components/Coptic/CopticCross";
@@ -42,7 +44,7 @@ export default function Timeline({
       const matchArDesc = evt.arabicDescription?.toLowerCase().includes(term) ?? false;
       const matchLocation = evt.location?.toLowerCase().includes(term) ?? false;
       const matchRef = (evt.biblicalReferences || []).some((r) =>
-        r.toLowerCase().includes(term)
+        matchesBiblicalSearch(r, term)
       );
       const matchPeople = (evt.personIds || []).some((id) => {
         const p = people.find((person) => person.id === id);
@@ -179,10 +181,36 @@ export default function Timeline({
                   </p>
                 )}
 
+                {/* Associated People Chips */}
+                {event.personIds && event.personIds.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {event.personIds.map((id) => {
+                      const p = people.find((person) => person.id === id);
+                      const pName = p
+                        ? lang === "ar" && p.arabicName
+                          ? p.arabicName
+                          : p.name
+                        : id;
+                      return (
+                        <span
+                          key={id}
+                          className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#800020]/10 text-[#800020] dark:text-[#F3E5AB] border border-[#D4AF37]/30"
+                        >
+                          👤 {pName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {event.biblicalReferences && event.biblicalReferences.length > 0 && (
                   <div className="pt-2 border-t border-[#D4AF37]/20 flex items-center gap-1.5 text-[11px] text-[#8C6F12] dark:text-[#F3E5AB] font-semibold">
                     <BookOpen size={12} />
-                    <span>{event.biblicalReferences.join(", ")}</span>
+                    <span>
+                      {localizeBiblicalReferences(event.biblicalReferences, lang).join(
+                        lang === "ar" ? "، " : ", "
+                      )}
+                    </span>
                   </div>
                 )}
               </div>
@@ -309,7 +337,11 @@ export default function Timeline({
                 {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
                   <div className="flex items-center gap-1.5 font-semibold text-[#8C6F12] dark:text-[#F3E5AB]">
                     <BookOpen size={13} />
-                    <span>{selectedEvent.biblicalReferences.join(", ")}</span>
+                    <span>
+                      {localizeBiblicalReferences(selectedEvent.biblicalReferences, lang).join(
+                        lang === "ar" ? "، " : ", "
+                      )}
+                    </span>
                   </div>
                 )}
 

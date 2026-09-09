@@ -7,6 +7,8 @@ import {
   getEventDisplayDescription,
   formatYearDisplay,
   getPersonDisplayName,
+  localizeBiblicalReferences,
+  matchesBiblicalSearch,
 } from "../utils/i18n";
 import {
   Search,
@@ -98,7 +100,10 @@ export default function Events({
     const descMatch = (event.description || "").toLowerCase().includes(term);
     const arDescMatch = (event.arabicDescription || "").toLowerCase().includes(term);
     const locMatch = (event.location || "").toLowerCase().includes(term);
-    return titleMatch || arTitleMatch || descMatch || arDescMatch || locMatch;
+    const refMatch = (event.biblicalReferences || []).some((r) =>
+      matchesBiblicalSearch(r, term)
+    );
+    return titleMatch || arTitleMatch || descMatch || arDescMatch || locMatch || refMatch;
   });
 
   const getPersonName = (id?: string) => {
@@ -244,7 +249,11 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
               {event.biblicalReferences && event.biblicalReferences.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center gap-1.5 text-[11px] text-[#8C6F12] dark:text-[#F3E5AB] font-semibold">
                   <BookOpen size={12} />
-                  <span>{event.biblicalReferences.join(", ")}</span>
+                  <span>
+                    {localizeBiblicalReferences(event.biblicalReferences, lang).join(
+                      lang === "ar" ? "، " : ", "
+                    )}
+                  </span>
                 </div>
               )}
             </div>
@@ -441,7 +450,11 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
                 {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#8C6F12] dark:text-[#F3E5AB]">
                     <BookOpen size={14} />
-                    <span>{selectedEvent.biblicalReferences.join(", ")}</span>
+                    <span>
+                      {localizeBiblicalReferences(selectedEvent.biblicalReferences, lang).join(
+                        lang === "ar" ? "، " : ", "
+                      )}
+                    </span>
                   </div>
                 )}
 

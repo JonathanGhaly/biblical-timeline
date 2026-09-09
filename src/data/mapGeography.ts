@@ -910,11 +910,420 @@ export type AncientRoute = {
   id: string;
   name: string;
   arabicName: string;
-  type: "trade" | "exodus" | "royal";
+  type: "trade" | "exodus" | "royal" | "abraham";
   coords: [number, number][];
 };
 
+export interface RouteStation {
+  id: string;
+  stationNumber: number;
+  title: string;
+  arabicTitle: string;
+  scripture: string;
+  coords: [number, number]; // [lat, lon]
+  description: string;
+  arabicDescription: string;
+  routeType: "abraham" | "exodus";
+  stage?: number;
+  stageName?: string;
+  stageArabicName?: string;
+}
+
+export const ABRAHAM_STATIONS: RouteStation[] = [
+  {
+    id: "abraham-ur",
+    stationNumber: 1,
+    title: "Ur of the Chaldees",
+    arabicTitle: "أور الكلدانيين",
+    scripture: "Genesis 11:31, 15:7",
+    coords: [30.962, 46.104],
+    description: "Abram's ancestral birthplace in Sumer on the lower Euphrates. Departure with his father Terah, wife Sarai, and nephew Lot.",
+    arabicDescription: "مسقط رأس إبراهيم وموطن آبائه في بلاد سومر. انطلق مع أبيه تارح وزوجته ساراي ولوط ابن أخيه طاعة للدعوة الإلهية.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-haran",
+    stationNumber: 2,
+    title: "Haran (Paddan-Aram)",
+    arabicTitle: "حاران (فدان أرام)",
+    scripture: "Genesis 11:31 - 12:4",
+    coords: [36.864, 39.031],
+    description: "Major trading crossroads on the Balikh River where Terah died at 205 years. God gave Abraham the Great Call: 'Go from your country... to the land that I will show you.'",
+    arabicDescription: "ملتقى القوافل على نهر البليخ حيث مات تارح، وفيها وجه الله لأبينا إبراهيم الدعوة الكبرى: 'اذهب من أرضك ومن عشيرتك... إلى الأرض التي أريك'.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-damascus",
+    stationNumber: 3,
+    title: "Damascus Oasis",
+    arabicTitle: "واحة دمشق",
+    scripture: "Genesis 15:2",
+    coords: [33.51, 36.29],
+    description: "Caravan resting oasis en route south into Canaan, and home of Abraham's trusted steward Eliezer of Damascus.",
+    arabicDescription: "واحة استراحة القوافل في طريق النزول إلى كنعان، وموطن أليعازر الدمشقي وكيل بيت إبراهيم الأمين.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-shechem",
+    stationNumber: 4,
+    title: "Shechem (Oak of Moreh)",
+    arabicTitle: "شكيم (بلوطة مورة)",
+    scripture: "Genesis 12:6-7",
+    coords: [32.213, 35.281],
+    description: "Abraham's first recorded encampment in the Promised Land. The Lord appeared to him and promised 'To your offspring I will give this land.' Abraham built his first altar here.",
+    arabicDescription: "أول محطة لإبراهيم في أرض كنعان عند بلوطة مورة. ظهر له الرب ووعده 'لنسلك أعطي هذه الأرض' فبنى هناك أول مذبح للرب.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-bethel",
+    stationNumber: 5,
+    title: "Bethel & Ai",
+    arabicTitle: "بين بيت إيل وعاي",
+    scripture: "Genesis 12:8, 13:3-4",
+    coords: [31.93, 35.22],
+    description: "Abraham pitched his tent with Bethel on the west and Ai on the east, built an altar to the Lord and called on the name of Yahweh.",
+    arabicDescription: "نصب إبراهيم خيمته وجعل بيت إيل من المغرب وعاي من المشرق، وبنى مذبحاً للرب ودعا باسم الرب العلي.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-egypt",
+    stationNumber: 6,
+    title: "Egypt (Nile Delta)",
+    arabicTitle: "أرض مصر (دلتا النيل)",
+    scripture: "Genesis 12:10-20",
+    coords: [30.796, 31.83],
+    description: "Famine forced Abraham to sojourn in Egypt. God protected Sarah from Pharaoh through plagues, and Abraham returned to Canaan enriched.",
+    arabicDescription: "اضطر إبراهيم للنزول إلى مصر لشدة الجوع. حفظ الله سارة من فرعون بضربات عظيمة، وخرج إبراهيم غنياً جداً في المواشي والفضة والذهب.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-hebron",
+    stationNumber: 7,
+    title: "Hebron (Oaks of Mamre)",
+    arabicTitle: "حبرون (بلوطات ممرا)",
+    scripture: "Genesis 13:18, 18:1, 23:19",
+    coords: [31.53, 35.10],
+    description: "Abraham settled by the Oaks of Mamre in Hebron, built an altar, received the Three Heavenly Visitors, and purchased the Cave of Machpelah for burial.",
+    arabicDescription: "استقر إبراهيم عند بلوطات ممرا في حبرون وبنى مذبحاً، واستضاف الملائكة الثلاثة وبُشر بإسحق، واشترى حقل ومغارة المكفيلة كمدفن لأجيال الإيمان.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-beersheba",
+    stationNumber: 8,
+    title: "Beersheba (Well of Oath)",
+    arabicTitle: "بئر سبع (بئر القَسَم)",
+    scripture: "Genesis 21:31-33",
+    coords: [31.25, 34.79],
+    description: "Abraham made a peace covenant with Abimelech, dug the historic well, planted a tamarisk tree, and called on the name of Yahweh the Everlasting God.",
+    arabicDescription: "قطع إبراهيم عهد سلام مع أبيمالك وحفر البئر وغرس أثلاً في بئر سبع ودعا هناك باسم الرب الإله السرمدي.",
+    routeType: "abraham",
+  },
+  {
+    id: "abraham-moriah",
+    stationNumber: 9,
+    title: "Mount Moriah (Jerusalem)",
+    arabicTitle: "جبل المريا (أورشليم)",
+    scripture: "Genesis 22:1-14",
+    coords: [31.777, 35.234],
+    description: "The supreme test of faith: God commanded Abraham to offer Isaac. An angel stopped him, a ram was provided in the thicket, and Abraham named the place 'The Lord Will Provide' (Yahweh-Yireh).",
+    arabicDescription: "امتحان الإيمان الأسمى: أمر الله بتقديم إسحق ذبيحة، فافتدى الرب إسحق بكبش موثق في الغابة، ودعا إبراهيم الموضع 'يهوه يرأه' (في جبل الرب يُرى).",
+    routeType: "abraham",
+  },
+];
+
+export const EXODUS_STATIONS: RouteStation[] = [
+  // Stage 1: Deliverance from Egypt
+  {
+    id: "exodus-rameses",
+    stationNumber: 1,
+    stage: 1,
+    stageName: "Departure from Egypt",
+    stageArabicName: "الانطلاق والعبور المعجزي",
+    title: "Rameses (Goshen)",
+    arabicTitle: "رعمسيس (أرض جاسان)",
+    scripture: "Exodus 12:37, Numbers 33:3",
+    coords: [30.796, 31.83],
+    description: "Launch point of the Exodus after the tenth plague and Passover night. 600,000 men plus women and children marched out in victory.",
+    arabicDescription: "نقطة انطلاق الخروج بعد الضربة العاشرة وليلة الفصح الأولى، نحو 600 ألف رجل مشاة عدا النساء والأولاد خرجوا بذراع رفيعة.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-succoth",
+    stationNumber: 2,
+    stage: 1,
+    stageName: "Departure from Egypt",
+    stageArabicName: "الانطلاق والعبور المعجزي",
+    title: "Succoth",
+    arabicTitle: "سكوت (المظال)",
+    scripture: "Exodus 12:37, 13:20",
+    coords: [30.552, 32.098],
+    description: "First encampment station east of Goshen. Israelites baked unleavened cakes of dough brought out of Egypt.",
+    arabicDescription: "أول محطة للمخيم شرق جاسان حيث خبز الشعب عجيناً فطيراً لأنهم طردوا من مصر ولم يقدروا أن يتأخروا.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-red-sea",
+    stationNumber: 3,
+    stage: 1,
+    stageName: "Departure from Egypt",
+    stageArabicName: "الانطلاق والعبور المعجزي",
+    title: "Red Sea Crossing (Yam Suph)",
+    arabicTitle: "عبور بحر سوف (البحر الأحمر)",
+    scripture: "Exodus 14:15-31",
+    coords: [29.97, 32.55],
+    description: "God split the sea with an east wind. Israel crossed on dry ground with walls of water on left and right; Pharaoh's chariots and army were drowned.",
+    arabicDescription: "شق الرب البحر بريح شرقية شديدة وعبر بنو إسرائيل في وسطه على اليابسة والماء سور لهم، وغرق فرعون ومركباته وخيله في لجة اليم.",
+    routeType: "exodus",
+  },
+
+  // Stage 2: Wilderness to Mount Sinai
+  {
+    id: "exodus-marah",
+    stationNumber: 4,
+    stage: 2,
+    stageName: "Journey to Mount Sinai",
+    stageArabicName: "المسير إلى جبل سيناء",
+    title: "Marah (Bitter Waters)",
+    arabicTitle: "مارة (المياه المرة)",
+    scripture: "Exodus 15:23-25",
+    coords: [29.566, 32.883],
+    description: "Three days in the wilderness without water. The bitter waters were miraculously made sweet when Moses threw a piece of wood into the spring.",
+    arabicDescription: "ساروا ثلاثة أيام في البرية ولم يجدوا ماء. تحولت المياه المرة إلى ماء عذب حلو بعدما طرح موسى شجرة أراه إياها الرب.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-elim",
+    stationNumber: 5,
+    stage: 2,
+    stageName: "Journey to Mount Sinai",
+    stageArabicName: "المسير إلى جبل سيناء",
+    title: "Elim (12 Springs & 70 Palms)",
+    arabicTitle: "إيليم (12 عيناً و70 نخلة)",
+    scripture: "Exodus 15:27",
+    coords: [29.283, 32.966],
+    description: "Refreshment oasis in the desert featuring 12 springs of water and 70 date palm trees, where the congregation encamped.",
+    arabicDescription: "واحة راحة وارتواء في البرية تضم 12 عين ماء بعدد أسباط إسرائيل و70 نخلة بعدد الشيوخ، فنزلوا هناك عند الماء.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-rephidim",
+    stationNumber: 6,
+    stage: 2,
+    stageName: "Journey to Mount Sinai",
+    stageArabicName: "المسير إلى جبل سيناء",
+    title: "Rephidim (Massah & Meribah)",
+    arabicTitle: "رفيديم (صخرة مريبة وهزيمة عماليق)",
+    scripture: "Exodus 17:1-16",
+    coords: [28.716, 33.616],
+    description: "Moses struck the rock at Horeb to bring forth water. Joshua led Israel in defeating Amalek while Aaron and Hur held up Moses' hands until sunset.",
+    arabicDescription: "ضرب موسى الصخرة بعصاه فخرج ماء ارتوى منه الشعب. وهزم يشوع جيش عماليق حين أسند هارون وحور يدي موسى المرفوعتين بالصلاة.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-sinai",
+    stationNumber: 7,
+    stage: 2,
+    stageName: "Covenant & Law at Sinai",
+    stageArabicName: "العهد والوصايا في سيناء",
+    title: "Mount Sinai (Horeb)",
+    arabicTitle: "جبل سيناء (حوريب / جبل الوصايا)",
+    scripture: "Exodus 19-20, 24, 40",
+    coords: [28.5394, 33.975],
+    description: "The peak where God descended in fire and smoke, gave the Ten Commandments and the Law, made the Covenant with Israel, and the Tabernacle was erected.",
+    arabicDescription: "جبل الله المقدس حيث نزل الرب بالنار والسحاب وسلم موسى لوحي العهد والوصايا العشر، وفيه كُشف مثال خيمة الاجتماع وبنيت وحلت شكينة مجد الرب.",
+    routeType: "exodus",
+  },
+
+  // Stage 3: The 38 Years Wanderings
+  {
+    id: "exodus-kadesh",
+    stationNumber: 8,
+    stage: 3,
+    stageName: "The 38 Years Wanderings",
+    stageArabicName: "تيه الـ 38 عاماً في قادش",
+    title: "Kadesh-Barnea",
+    arabicTitle: "قادش برنيع",
+    scripture: "Numbers 13:26, 14:33-34, 20:1",
+    coords: [30.647, 34.417],
+    description: "Oasis base where 12 spies were sent into Canaan. Israel rebelled in unbelief and was sentenced to wander 40 years until the generation passed.",
+    arabicDescription: "واحة البرية الكبرى التي أرسل منها موسى الجواسيس الـ 12 لتفقد كنعان، وبسبب تمرد الشعب قُضي عليهم بالتيه 40 سنة حتى فني ذلك الجيل.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-mount-hor",
+    stationNumber: 9,
+    stage: 3,
+    stageName: "The 38 Years Wanderings",
+    stageArabicName: "تيه الـ 38 عاماً في قادش",
+    title: "Mount Hor (Aaron's Death)",
+    arabicTitle: "جبل هور (وفاة هارون الكاهن)",
+    scripture: "Numbers 20:22-29",
+    coords: [30.317, 35.405],
+    description: "Summit on the border of Edom where High Priest Aaron was gathered to his people. His priestly garments were transferred to his son Eleazar.",
+    arabicDescription: "قمة جبلية على تخوم أدوم حيث صعد هارون ومات، ونزع موسى عنه ثياب الكهنوت وألبسها ألعازار ابنه، وبكاه الشعب 30 يوماً.",
+    routeType: "exodus",
+  },
+
+  // Stage 4: Around Edom to Mount Nebo & Promised Land
+  {
+    id: "exodus-punon",
+    stationNumber: 10,
+    stage: 4,
+    stageName: "Journey to Mount Nebo",
+    stageArabicName: "بلوغ جبل نيبو وأرض الموعد",
+    title: "Punon (The Bronze Serpent)",
+    arabicTitle: "فونون (الحية النحاسية)",
+    scripture: "Numbers 21:4-9",
+    coords: [30.65, 35.60],
+    description: "Fiery serpents bit the people for grumbling. God instructed Moses to make a bronze serpent and put it on a pole; anyone who looked at it lived.",
+    arabicDescription: "لدغت الحيات المحرقة الشعب لتذمرهم، فأمر الرب موسى بصنع حية من نحاس ورفعها على راية، فكان كل لديغ ينظر إليها يبرأ ويحيا.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-arnon",
+    stationNumber: 11,
+    stage: 4,
+    stageName: "Journey to Mount Nebo",
+    stageArabicName: "بلوغ جبل نيبو وأرض الموعد",
+    title: "Arnon River Gorge",
+    arabicTitle: "وادي وسيل أرنون",
+    scripture: "Numbers 21:13-20",
+    coords: [31.45, 35.75],
+    description: "Dramatic canyon border between Moab and the Amorites. Israel sang the Song of the Well and conquered Sihon king of the Amorites.",
+    arabicDescription: "الوادي والخانق الطبيعي الفاصل بين موآب والأموريين. ترنم الشعب بأنشودة البئر وهزموا سيحون ملك الأموريين واستولوا على أرضه.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-mount-nebo",
+    stationNumber: 12,
+    stage: 4,
+    stageName: "Journey to Mount Nebo",
+    stageArabicName: "بلوغ جبل نيبو وأرض الموعد",
+    title: "Mount Nebo (Pisgah)",
+    arabicTitle: "جبل نيبو (الفَسجة - مشهد موسى)",
+    scripture: "Deuteronomy 34:1-5",
+    coords: [31.765, 35.725],
+    description: "Moses climbed from the Plains of Moab to Pisgah. God showed him all the Promised Land from Dan to the Western Sea. Moses died there and God buried him.",
+    arabicDescription: "صعد موسى إلى رأس الفسجة فأراه الرب جميع أرض الموعد من جلعاد إلى دان والبحر الغربي. ومات هناك موسى عبد الرب ودفنه الرب في الجواء.",
+    routeType: "exodus",
+  },
+  {
+    id: "exodus-plains-of-moab",
+    stationNumber: 13,
+    stage: 4,
+    stageName: "Journey to Mount Nebo",
+    stageArabicName: "بلوغ جبل نيبو وأرض الموعد",
+    title: "Plains of Moab (Shittim)",
+    arabicTitle: "عربات موآب (شطيم أمام أريحا)",
+    scripture: "Numbers 22:1, Joshua 3:1",
+    coords: [31.84, 35.65],
+    description: "Final encampment station east of Jordan opposite Jericho where Deuteronomy was delivered, Joshua was commissioned, and Israel prepared to cross the Jordan.",
+    arabicDescription: "المحطة الختامية ومقر المخيم شرق الأردن مقابل أريحا، حيث ألقى موسى خطب سفر التثنية، وتولى يشوع القيادة للعبور إلى كنعان.",
+    routeType: "exodus",
+  },
+];
+
 export const ANCIENT_ROUTES: AncientRoute[] = [
+  // =========================================================================
+  // 1. ABRAHAM'S PATH (FROM UR TO HARAN, CANAAN & EGYPT)
+  // =========================================================================
+  {
+    id: "abraham-route",
+    name: "Abraham's Journey of Faith (Ur to Canaan & Egypt)",
+    arabicName: "مسار رحلة إبراهيم الخليل (من أور الكلدانيين إلى كنعان ومصر)",
+    type: "abraham",
+    coords: [
+      [30.962, 46.104], // 1. Ur of the Chaldees (Birthplace & departure)
+      [31.326, 45.637], // Uruk / Erech
+      [32.12, 45.23], // Nippur
+      [32.536, 44.42], // Babylon (Land of Shinar)
+      [33.32, 44.42], // Akkad / Opis
+      [34.4, 40.92], // Mari on Euphrates
+      [35.95, 39.05], // Balikh river confluence
+      [36.864, 39.031], // 2. Haran (Paddan-Aram - Terah dies, Divine Call)
+      [36.83, 37.93], // Carchemish (Crossing Euphrates into Syria)
+      [36.2, 37.15], // Aleppo corridor
+      [35.13, 36.75], // Hamath on Orontes
+      [34.73, 36.71], // Emesa / Homs
+      [33.51, 36.29], // 3. Damascus oasis (Eliezer's home)
+      [33.249, 35.652], // Dan / Headwaters of Jordan
+      [33.0, 35.65], // Hazor
+      [32.7, 35.3], // Jezreel Valley
+      [32.213, 35.281], // 4. Shechem (Oak of Moreh - 1st Altar in Promised Land)
+      [31.93, 35.22], // 5. Bethel & Ai (Pitching tent & altar of Yahweh)
+      [31.777, 35.234], // Jerusalem / Salem (Melchizedek & Mount Moriah)
+      [31.53, 35.1], // 6. Hebron / Mamre (Oaks of Mamre & Machpelah)
+      [31.25, 34.79], // Beersheba (The South / Negev)
+      [31.0, 33.5], // Way of Shur
+      [30.796, 31.83], // 7. Goshen / Lower Egypt (Famine journey)
+      [29.845, 31.25], // Memphis (Court of Pharaoh)
+      [30.796, 31.83], // Return via Goshen
+      [31.25, 34.79], // 8. Beersheba (Tamarisk tree & Covenant of Oath)
+      [31.777, 35.234], // Mount Moriah (Offering of Isaac - Yahweh Yireh)
+      [31.53, 35.1], // Hebron (Cave of Machpelah - Resting place of Patriarchs)
+    ],
+  },
+
+  // =========================================================================
+  // 2. MOSES' EXODUS & 40 YEARS WILDERNESS WANDERINGS
+  // =========================================================================
+  {
+    id: "exodus-route",
+    name: "Moses' Exodus & 40 Years Wilderness Wanderings",
+    arabicName: "مسار خروج موسى وتيه الـ 40 سنة في البرية",
+    type: "exodus",
+    coords: [
+      [30.796, 31.83], // 1. Rameses / Goshen (Passover night departure)
+      [30.552, 32.098], // 2. Pithom / Succoth (First encampment)
+      [30.1, 32.5], // Etham at edge of wilderness (Pillar of cloud & fire)
+      [29.97, 32.55], // 3. Pi-Hahiroth / Red Sea Crossing (Yam Suph)
+      [29.75, 32.7], // Wilderness of Shur
+      [29.566, 32.883], // 4. Marah (Bitter waters made sweet)
+      [29.283, 32.966], // 5. Elim (12 springs of water & 70 palm trees)
+      [28.95, 33.15], // Wilderness of Sin (Manna & quail given)
+      [28.85, 33.3], // Encampment by the Red Sea
+      [28.78, 33.45], // Dophkah & Alush
+      [28.716, 33.616], // 6. Rephidim (Water from the Rock, victory over Amalek)
+      [28.5394, 33.975], // 7. Mount Sinai / Horeb (Giving of the Law & Tabernacle)
+      [28.7, 34.1], // Taberah (Fire of the Lord)
+      [28.8, 34.2], // Kibroth-Hattaavah (Graves of craving)
+      [29.0, 34.4], // Hazeroth (Miriam & Aaron)
+      [29.25, 34.7], // Wilderness of Paran
+      [29.55, 34.95], // Ezion-Geber / Gulf of Aqaba
+      [30.647, 34.417], // 8. Kadesh-Barnea (12 Spies dispatched, 38 years wandering)
+      [30.317, 35.405], // 9. Mount Hor (Death of Aaron the High Priest)
+      [29.65, 35.05], // Compass around the land of Edom
+      [30.65, 35.6], // 10. Punon (Fiery serpents & Bronze Serpent lifted up)
+      [30.85, 35.65], // Oboth
+      [31.05, 35.75], // Iye-Abarim (Border of Moab)
+      [31.25, 35.8], // Valley of Zered (38-year milestone)
+      [31.45, 35.75], // 11. Arnon River Gorge (Border of Moab & Amorites)
+      [31.5, 35.78], // Dibon-Gad
+      [31.765, 35.725], // 12. Mount Nebo / Pisgah (Moses views Promised Land)
+      [31.84, 35.65], // 13. Plains of Moab / Shittim (Final encampment before Jordan)
+    ],
+  },
+
+  {
+    id: "fertile-crescent-royal-road",
+    name: "Mesopotamian Highway & Persian Royal Road",
+    arabicName: "طريق الفرات الملكي وقوافل ما بين النهرين",
+    type: "royal",
+    coords: [
+      [30.962, 46.104], // Ur of the Chaldees
+      [31.326, 45.637], // Erech (Uruk)
+      [32.12, 45.23], // Nippur
+      [32.536, 44.42], // Babylon
+      [33.32, 44.42], // Baghdad / Opis
+      [34.2, 43.88], // Samarra
+      [35.458, 43.256], // Assur
+      [36.1, 43.33], // Calah (Nimrud)
+      [36.367, 43.15], // Nineveh
+      [36.864, 39.031], // Haran (Paddan-Aram)
+      [36.83, 37.93], // Carchemish
+      [36.916, 34.895], // Tarsus / Cilician Gates
+    ],
+  },
   {
     id: "via-maris",
     name: "Way of the Sea (Via Maris)",
@@ -956,47 +1365,6 @@ export const ANCIENT_ROUTES: AncientRoute[] = [
       [32.28, 35.9], // Ramoth-Gilead
       [32.7, 36.1], // Ashtaroth (Bashan)
       [33.51, 36.29], // Damascus
-    ],
-  },
-  {
-    id: "exodus-route",
-    name: "Route of the Exodus & Wilderness Wanderings",
-    arabicName: "مسار الخروج وتيه بني إسرائيل في سيناء",
-    type: "exodus",
-    coords: [
-      [30.796, 31.83], // Rameses / Goshen
-      [30.552, 32.098], // Pithom / Succoth
-      [30.1, 32.5], // Etham at edge of wilderness
-      [29.97, 32.55], // Pi-Hahiroth / Red Sea Crossing
-      [29.566, 32.883], // Marah (Bitter Waters)
-      [29.283, 32.966], // Elim (12 springs & 70 palms)
-      [28.85, 33.3], // Encampment by the Red Sea
-      [28.716, 33.616], // Rephidim (Water from the Rock)
-      [28.5394, 33.975], // Mount Sinai (Giving of the Law)
-      [28.8, 34.2], // Kibroth-Hattaavah
-      [29.0, 34.4], // Hazeroth
-      [29.55, 34.95], // Ezion-Geber
-      [30.647, 34.417], // Kadesh-Barnea (38 years wanderings)
-    ],
-  },
-  {
-    id: "fertile-crescent-royal-road",
-    name: "Mesopotamian Highway & Persian Royal Road",
-    arabicName: "طريق الفرات الملكي وقوافل ما بين النهرين",
-    type: "royal",
-    coords: [
-      [30.962, 46.104], // Ur of the Chaldees
-      [31.326, 45.637], // Erech (Uruk)
-      [32.12, 45.23], // Nippur
-      [32.536, 44.42], // Babylon
-      [33.32, 44.42], // Baghdad / Opis
-      [34.2, 43.88], // Samarra
-      [35.458, 43.256], // Assur
-      [36.1, 43.33], // Calah (Nimrud)
-      [36.367, 43.15], // Nineveh
-      [36.864, 39.031], // Haran (Paddan-Aram)
-      [36.83, 37.93], // Carchemish
-      [36.916, 34.895], // Tarsus / Cilician Gates
     ],
   },
 ];

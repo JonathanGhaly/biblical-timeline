@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   MapPin,
   ZoomIn,
@@ -26,12 +26,17 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import type { Person, BiblicalEvent, Language, BiblicalLocation } from "../types/genealogy";
 import { BIBLICAL_LOCATIONS } from "../data/biblicalLocations";
 import { MAP_WIDTH, MAP_HEIGHT, geoToPixel } from "../data/mapGeography";
 import { BiblicalWorldSvgMap, type MapLayerVisibility } from "../components/BiblicalWorldSvgMap";
+import { BiblicalMapLegendModal } from "../components/BiblicalMapLegendModal";
+import type { RouteStation } from "../data/mapGeography";
 import { useMapScaleTransformer } from "../utils/mapScaleTransformer";
+import { localizeBiblicalReference, matchesBiblicalSearch } from "../utils/i18n";
 
 // Clean primary historical name helper for collision-free map labels
 function getMapPinName(name: string): string {
@@ -65,25 +70,42 @@ export default function OldTestamentMapPage({
     showRivers: true,
     showMountains: true,
     showRoutes: true,
+    showAbrahamRoute: true,
+    showExodusRoute: true,
     showFertileCrescent: true,
     showGraticule: true,
     showRegionLabels: true,
   });
   const [showLayersMenu, setShowLayersMenu] = useState(false);
+  const [showLegendModal, setShowLegendModal] = useState(false);
+  const [selectedStation, setSelectedStation] = useState<RouteStation | null>(null);
+
+  const handleToggleLayer = useCallback((layerKey: keyof MapLayerVisibility) => {
+    setLayers((prev) => ({
+      ...prev,
+      [layerKey]: !prev[layerKey],
+    }));
+  }, []);
 
   // Mobile Bottom Sheet Collapse State (collapsed peek header vs 55% sheet)
   const [isMobileDrawerCollapsed, setIsMobileDrawerCollapsed] = useState(false);
   // Sidebar Visibility State (Desktop sidebar and Mobile drawer toggle)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Pan & Zoom Engine State
+  // Pan & Zoom Engine State (strictly synchronized with transformRef and boundary-clamped)
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const mapViewportRef = useRef<HTMLDivElement>(null);
   const touchDistanceRef = useRef<number | null>(null);
+  const transformRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } });
+  const isInteractingRef = useRef(false);
+  const wheelTimeoutRef = useRef<number | null>(null);
+  const animTimeoutRef = useRef<number | null>(null);
+  const isInitialMount = useRef(true);
 
   const isRTL = lang === "ar";
   const scaleFactors = useMapScaleTransformer(zoom);
@@ -178,7 +200,9 @@ export default function OldTestamentMapPage({
           loc.description.toLowerCase().includes(q) ||
           loc.arabicDescription.toLowerCase().includes(q) ||
           loc.region.toLowerCase().includes(q) ||
-          loc.biblicalReferences.some((ref) => ref.toLowerCase().includes(q));
+          loc.biblicalReferences.some((ref) =>
+            matchesBiblicalSearch(ref, q)
+          );
 
         if (!matchesName) return false;
       }
@@ -274,12 +298,15 @@ export default function OldTestamentMapPage({
     []
   );
 
+  // State for Fullscreen Mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   // NON-OVERLAPPING PLACED PINS & LABELS COMPUTATION (Relaxation + Collision Avoidance)
   const placedPins = useMemo(() => {
     // Counter-scaling via dynamic scale transformer:
-    const { markerScale, pinLabelScale, minPinDistance, lodTier } = scaleFactors;
-    const R = 13 * markerScale; // circle radius in map coords
-    const minDistance = minPinDistance; // dynamic collision spacing
+    const { markerScale, pinLabelScale, minPinDistance } = scaleFactors;
+    const R = 12 * markerScale; // circle radius in map coords
+    const minDistance = Math.max(minPinDistance, 30 * markerScale); // dynamic collision spacing
 
     // 1. Initial pin coordinates with geographic cluster separation offsets
     const pins = filteredLocations.map((loc) => {
@@ -300,7 +327,11 @@ export default function OldTestamentMapPage({
           | "top"
           | "bottom"
           | "left"
-          | "right",
+          | "right"
+          | "top-right"
+          | "top-left"
+          | "bottom-right"
+          | "bottom-left",
         showLabel: true,
         totalActivity,
         isSelected: selectedLocation?.id === loc.id,
@@ -308,7 +339,7 @@ export default function OldTestamentMapPage({
     });
 
     // 2. Iterative Relaxation to push points apart so pins NEVER overlap
-    for (let iter = 0; iter < 35; iter++) {
+    for (let iter = 0; iter < 40; iter++) {
       for (let i = 0; i < pins.length; i++) {
         for (let j = i + 1; j < pins.length; j++) {
           let dx = pins[j].x - pins[i].x;
@@ -331,19 +362,20 @@ export default function OldTestamentMapPage({
           }
         }
       }
-      // Gentle constraint towards origin that preserves minimum separation
+      // Gentle spring back towards origin that preserves minimum separation
       for (const p of pins) {
-        p.x += (p.origX - p.x) * 0.02;
-        p.y += (p.origY - p.y) * 0.02;
+        p.x += (p.origX - p.x) * 0.025;
+        p.y += (p.origY - p.y) * 0.025;
       }
     }
 
     // 3. Mark displaced pins (for drawing leader line & ground dot)
     for (const p of pins) {
-      p.isDisplaced = Math.hypot(p.x - p.origX, p.y - p.origY) > 5;
+      p.isDisplaced = Math.hypot(p.x - p.origX, p.y - p.origY) > 4;
     }
 
     // 4. Collision-Free Label Direction & Bounding Box Placement
+    // Sort priority: Selected > Major Centers > Total Activity > Name
     const sortedIndices = [...pins.keys()].sort((a, b) => {
       if (pins[a].isSelected) return -1;
       if (pins[b].isSelected) return 1;
@@ -353,7 +385,96 @@ export default function OldTestamentMapPage({
       return pins[b].totalActivity - pins[a].totalActivity;
     });
 
+    type LabelDir =
+      | "top"
+      | "bottom"
+      | "left"
+      | "right"
+      | "top-right"
+      | "top-left"
+      | "bottom-right"
+      | "bottom-left";
+
+    const allDirs: LabelDir[] = [
+      "right",
+      "left",
+      "top",
+      "bottom",
+      "top-right",
+      "top-left",
+      "bottom-right",
+      "bottom-left",
+    ];
+
     const placedBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+
+    // Helper to compute bounding box for a given pin, direction, and center offset
+    const computeBox = (
+      px: number,
+      py: number,
+      dir: LabelDir,
+      labelW: number,
+      labelH: number
+    ): { x1: number; y1: number; x2: number; y2: number } => {
+      switch (dir) {
+        case "left":
+          return {
+            x1: px - R - 4 - labelW,
+            y1: py - labelH / 2,
+            x2: px - R - 4,
+            y2: py + labelH / 2,
+          };
+        case "right":
+          return {
+            x1: px + R + 4,
+            y1: py - labelH / 2,
+            x2: px + R + 4 + labelW,
+            y2: py + labelH / 2,
+          };
+        case "top":
+          return {
+            x1: px - labelW / 2,
+            y1: py - R - 4 - labelH,
+            x2: px + labelW / 2,
+            y2: py - R - 4,
+          };
+        case "bottom":
+          return {
+            x1: px - labelW / 2,
+            y1: py + R + 4,
+            x2: px + labelW / 2,
+            y2: py + R + 4 + labelH,
+          };
+        case "top-right":
+          return {
+            x1: px + R * 0.7 + 2,
+            y1: py - R * 0.7 - labelH,
+            x2: px + R * 0.7 + 2 + labelW,
+            y2: py - R * 0.7,
+          };
+        case "top-left":
+          return {
+            x1: px - R * 0.7 - 2 - labelW,
+            y1: py - R * 0.7 - labelH,
+            x2: px - R * 0.7 - 2,
+            y2: py - R * 0.7,
+          };
+        case "bottom-right":
+          return {
+            x1: px + R * 0.7 + 2,
+            y1: py + R * 0.7,
+            x2: px + R * 0.7 + 2 + labelW,
+            y2: py + R * 0.7 + labelH,
+          };
+        case "bottom-left":
+          return {
+            x1: px - R * 0.7 - 2 - labelW,
+            y1: py + R * 0.7,
+            x2: px - R * 0.7 - 2,
+            y2: py + R * 0.7 + labelH,
+          };
+      }
+    };
 
     sortedIndices.forEach((idx) => {
       const p = pins[idx];
@@ -361,97 +482,83 @@ export default function OldTestamentMapPage({
       const labelW = (cleanName.length * (isRTL ? 7.6 : 7.0) + 16) * pinLabelScale;
       const labelH = 22 * pinLabelScale;
 
-      const prefDir =
-        PREFERRED_DIRECTIONS[p.loc.id] || (p.loc.coordinates[1] < 35.2 ? "left" : "right");
-      const allDirs: Array<"top" | "bottom" | "left" | "right"> = [
-        "left",
-        "right",
-        "top",
-        "bottom",
-      ];
+      const prefDir = (PREFERRED_DIRECTIONS[p.loc.id] ||
+        (p.loc.coordinates[1] < 35.2 ? "left" : "right")) as LabelDir;
       const candidateDirs = [prefDir, ...allDirs.filter((d) => d !== prefDir)];
 
-      let chosenDir: "top" | "bottom" | "left" | "right" | null = null;
+      let chosenDir: LabelDir | null = null;
       let chosenBox: { x1: number; y1: number; x2: number; y2: number } | null = null;
 
-      for (const dir of candidateDirs) {
-        let b: { x1: number; y1: number; x2: number; y2: number };
-        if (dir === "left") {
-          b = {
-            x1: p.x - R - 4 - labelW,
-            y1: p.y - labelH / 2,
-            x2: p.x - R - 4,
-            y2: p.y + labelH / 2,
-          };
-        } else if (dir === "right") {
-          b = {
-            x1: p.x + R + 4,
-            y1: p.y - labelH / 2,
-            x2: p.x + R + 4 + labelW,
-            y2: p.y + labelH / 2,
-          };
-        } else if (dir === "top") {
-          b = {
-            x1: p.x - labelW / 2,
-            y1: p.y - R - 4 - labelH,
-            x2: p.x + labelW / 2,
-            y2: p.y - R - 4,
-          };
-        } else {
-          b = {
-            x1: p.x - labelW / 2,
-            y1: p.y + R + 4,
-            x2: p.x + labelW / 2,
-            y2: p.y + R + 4 + labelH,
-          };
-        }
-
-        // Check collision with already placed labels
-        const boxCollision = placedBoxes.some(
-          (o) => !(b.x2 < o.x1 || b.x1 > o.x2 || b.y2 < o.y1 || b.y1 > o.y2)
+      // Check collision with already placed labels (with 3px padding margin)
+      const collidesWithBoxes = (b: { x1: number; y1: number; x2: number; y2: number }) => {
+        return placedBoxes.some(
+          (o) => !(b.x2 < o.x1 - 3 || b.x1 > o.x2 + 3 || b.y2 < o.y1 - 3 || b.y1 > o.y2 + 3)
         );
+      };
 
-        // Check collision with other pin circles
-        const pinCollision = pins.some((other) => {
+      // Check collision with other pin circles
+      const collidesWithPins = (
+        b: { x1: number; y1: number; x2: number; y2: number }
+      ) => {
+        return pins.some((other) => {
           if (other.loc.id === p.loc.id) return false;
           const cx = Math.max(b.x1, Math.min(other.x, b.x2));
           const cy = Math.max(b.y1, Math.min(other.y, b.y2));
-          return Math.hypot(other.x - cx, other.y - cy) < R + 1;
+          return Math.hypot(other.x - cx, other.y - cy) < R + 2;
         });
+      };
 
-        if (!boxCollision && !pinCollision) {
+      // 1. Try candidate directions in place
+      for (const dir of candidateDirs) {
+        const b = computeBox(p.x, p.y, dir, labelW, labelH);
+        if (!collidesWithBoxes(b) && !collidesWithPins(b)) {
           chosenDir = dir;
           chosenBox = b;
           break;
         }
       }
 
-      if (chosenDir && chosenBox) {
-        p.labelDirection = chosenDir;
-        p.showLabel = true;
-        placedBoxes.push(chosenBox);
-      } else {
-        if (p.isSelected || (MAJOR_CENTERS.has(p.loc.id) && zoom >= 1.3)) {
-          p.labelDirection = prefDir;
-          p.showLabel = true;
-        } else {
-          p.labelDirection = prefDir;
-          p.showLabel = false;
+      // 2. If crowded in place, displace the pin slightly along free radial vectors
+      if (!chosenDir) {
+        const displacementAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+        const stepDistances = [18, 28, 38];
+
+        searchLoop: for (const dist of stepDistances) {
+          for (const deg of displacementAngles) {
+            const rad = (deg * Math.PI) / 180;
+            const candX = p.x + Math.cos(rad) * dist;
+            const candY = p.y + Math.sin(rad) * dist;
+
+            for (const dir of candidateDirs) {
+              const b = computeBox(candX, candY, dir, labelW, labelH);
+              if (!collidesWithBoxes(b) && !collidesWithPins(b)) {
+                p.x = candX;
+                p.y = candY;
+                p.isDisplaced = true;
+                chosenDir = dir;
+                chosenBox = b;
+                break searchLoop;
+              }
+            }
+          }
         }
       }
 
-      // Level of Detail 1 (Wide macro overview):
-      // Keep minor sites with no historical events quiet until hovered to keep map pristine
-      if (lodTier === 1 && !p.isSelected && !MAJOR_CENTERS.has(p.loc.id) && p.totalActivity === 0) {
-        p.showLabel = false;
+      // Fallback: If still tight, use preferred direction and record box
+      if (!chosenDir || !chosenBox) {
+        chosenDir = prefDir;
+        chosenBox = computeBox(p.x, p.y, prefDir, labelW, labelH);
       }
+
+      p.labelDirection = chosenDir;
+      p.showLabel = true; // ALWAYS show label so user sees point + name
+      placedBoxes.push(chosenBox);
     });
 
     return pins;
   }, [
     filteredLocations,
     scaleFactors,
-    zoom,
     selectedLocation,
     eventsByLocation,
     peopleByLocation,
@@ -461,7 +568,284 @@ export default function OldTestamentMapPage({
     CANAAN_OFFSETS,
   ]);
 
-  // Smoothly center the map on a given location
+  // Helper to trigger smooth CSS animation for programmatic navigations
+  const triggerAnimation = useCallback((durationMs = 300) => {
+    setIsAnimating(true);
+    if (animTimeoutRef.current) {
+      window.clearTimeout(animTimeoutRef.current);
+    }
+    animTimeoutRef.current = window.setTimeout(() => {
+      setIsAnimating(false);
+    }, durationMs);
+  }, []);
+
+  // Clamp Pan to ensure the map strictly covers the viewport (NO empty or black space anywhere)
+  const clampPan = useCallback((panX: number, panY: number, curZoom: number, vWidth: number, vHeight: number) => {
+    const mapW = MAP_WIDTH * curZoom;
+    const mapH = MAP_HEIGHT * curZoom;
+
+    let x: number;
+    if (mapW <= vWidth) {
+      x = (vWidth - mapW) / 2;
+    } else {
+      const minX = vWidth - mapW; // negative offset
+      const maxX = 0;
+      x = Math.min(maxX, Math.max(minX, panX));
+    }
+
+    let y: number;
+    if (mapH <= vHeight) {
+      y = (vHeight - mapH) / 2;
+    } else {
+      const minY = vHeight - mapH; // negative offset
+      const maxY = 0;
+      y = Math.min(maxY, Math.max(minY, panY));
+    }
+
+    return { x, y };
+  }, []);
+
+  // FIT MAP TO WINDOW: Fills 100% of the viewport with NO black borders or spaces
+  const fitToWindow = useCallback(() => {
+    if (!mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    if (w <= 0 || h <= 0) return;
+
+    // Minimum zoom so the map completely covers the viewport
+    const fitZoom = Math.max(w / MAP_WIDTH, h / MAP_HEIGHT);
+    const fitPanX = (w - MAP_WIDTH * fitZoom) / 2;
+    const fitPanY = (h - MAP_HEIGHT * fitZoom) / 2;
+    const clamped = clampPan(fitPanX, fitPanY, fitZoom, w, h);
+
+    triggerAnimation(300);
+    transformRef.current = { zoom: fitZoom, pan: clamped };
+    setZoom(fitZoom);
+    setPan(clamped);
+  }, [clampPan, triggerAnimation]);
+
+  // Automatic Viewport Observer: Fits on initial load, and preserves/clamps view on resize
+  useEffect(() => {
+    const el = mapViewportRef.current;
+    if (!el) return;
+
+    const handleResize = () => {
+      const rect = el.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      if (w <= 0 || h <= 0) return;
+
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+        fitToWindow();
+        return;
+      }
+
+      // On subsequent resize (e.g. sidebar toggle or window resize):
+      // Ensure zoom >= minZoom and pan is clamped to avoid any black gaps
+      const minZoom = Math.max(w / MAP_WIDTH, h / MAP_HEIGHT);
+      const cur = transformRef.current;
+      const nextZoom = Math.max(cur.zoom, minZoom);
+      const clamped = clampPan(cur.pan.x, cur.pan.y, nextZoom, w, h);
+
+      transformRef.current = { zoom: nextZoom, pan: clamped };
+      setZoom(nextZoom);
+      setPan(clamped);
+    };
+
+    handleResize();
+
+    const ro = new ResizeObserver(() => {
+      handleResize();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fitToWindow, clampPan]);
+
+  // Non-passive wheel zoom listener: Perfectly pins zoom to pointer coordinate with NO drift and NO black spaces
+  useEffect(() => {
+    const el = mapViewportRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      // Immediately cancel any active CSS transition during interactive wheel scroll
+      isInteractingRef.current = true;
+      setIsAnimating(false);
+      if (wheelTimeoutRef.current) {
+        window.clearTimeout(wheelTimeoutRef.current);
+      }
+      wheelTimeoutRef.current = window.setTimeout(() => {
+        isInteractingRef.current = false;
+      }, 150);
+
+      const rect = el.getBoundingClientRect();
+      const vWidth = rect.width;
+      const vHeight = rect.height;
+      if (vWidth <= 0 || vHeight <= 0) return;
+
+      // Pointer coordinate relative to the viewport
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const curZoom = transformRef.current.zoom;
+      const curPan = transformRef.current.pan;
+
+      // Exact map coordinate currently under the cursor
+      const mapX = (mouseX - curPan.x) / curZoom;
+      const mapY = (mouseY - curPan.y) / curZoom;
+
+      // Smooth zoom factor handling both trackpad pinch gestures (e.ctrlKey) and stepped mouse wheel
+      let zoomFactor: number;
+      if (e.ctrlKey) {
+        zoomFactor = Math.exp(-e.deltaY * 0.015);
+      } else {
+        const delta = Math.max(-120, Math.min(120, e.deltaY));
+        zoomFactor = delta < 0 ? 1.15 : 0.87;
+      }
+
+      // Map must ALWAYS cover the viewport (zero black space)
+      const minZoom = Math.max(vWidth / MAP_WIDTH, vHeight / MAP_HEIGHT);
+      const maxZoom = 6.0;
+      const nextZoom = Math.min(Math.max(curZoom * zoomFactor, minZoom), maxZoom);
+
+      if (nextZoom === curZoom) return;
+
+      // Calculate new pan so (mapX, mapY) remains precisely under (mouseX, mouseY)
+      const targetPanX = mouseX - mapX * nextZoom;
+      const targetPanY = mouseY - mapY * nextZoom;
+
+      // Clamp so edges never leak black void
+      const clampedPan = clampPan(targetPanX, targetPanY, nextZoom, vWidth, vHeight);
+
+      transformRef.current = { zoom: nextZoom, pan: clampedPan };
+      setZoom(nextZoom);
+      setPan(clampedPan);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (wheelTimeoutRef.current) {
+        window.clearTimeout(wheelTimeoutRef.current);
+      }
+    };
+  }, [clampPan]);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  // Toggle Fullscreen handler
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+
+  // Directional Pan function (for on-screen D-Pad & Keyboard navigation) with boundary clamping
+  const panDirection = useCallback((dir: "north" | "south" | "east" | "west") => {
+    if (!mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const step = 150;
+    const curPan = transformRef.current.pan;
+    const curZoom = transformRef.current.zoom;
+
+    let targetX = curPan.x;
+    let targetY = curPan.y;
+    switch (dir) {
+      case "north": targetY += step; break;
+      case "south": targetY -= step; break;
+      case "east":  targetX -= step; break;
+      case "west":  targetX += step; break;
+    }
+
+    const clamped = clampPan(targetX, targetY, curZoom, rect.width, rect.height);
+    triggerAnimation(200);
+    transformRef.current.pan = clamped;
+    setPan(clamped);
+  }, [clampPan, triggerAnimation]);
+
+  // Center-aware Zoom In
+  const zoomIn = useCallback(() => {
+    if (!mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const vWidth = rect.width;
+    const vHeight = rect.height;
+    const centerX = vWidth / 2;
+    const centerY = vHeight / 2;
+
+    const curZoom = transformRef.current.zoom;
+    const curPan = transformRef.current.pan;
+    const mapX = (centerX - curPan.x) / curZoom;
+    const mapY = (centerY - curPan.y) / curZoom;
+
+    const minZoom = Math.max(vWidth / MAP_WIDTH, vHeight / MAP_HEIGHT);
+    const nextZoom = Math.min(Math.max(curZoom * 1.3, minZoom), 6);
+    if (nextZoom === curZoom) return;
+
+    const targetPanX = centerX - mapX * nextZoom;
+    const targetPanY = centerY - mapY * nextZoom;
+    const clamped = clampPan(targetPanX, targetPanY, nextZoom, vWidth, vHeight);
+
+    triggerAnimation(250);
+    transformRef.current = { zoom: nextZoom, pan: clamped };
+    setZoom(nextZoom);
+    setPan(clamped);
+  }, [clampPan, triggerAnimation]);
+
+  // Center-aware Zoom Out (clamped to minZoom so NO black space is ever revealed)
+  const zoomOut = useCallback(() => {
+    if (!mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const vWidth = rect.width;
+    const vHeight = rect.height;
+    const centerX = vWidth / 2;
+    const centerY = vHeight / 2;
+
+    const curZoom = transformRef.current.zoom;
+    const curPan = transformRef.current.pan;
+    const mapX = (centerX - curPan.x) / curZoom;
+    const mapY = (centerY - curPan.y) / curZoom;
+
+    const minZoom = Math.max(vWidth / MAP_WIDTH, vHeight / MAP_HEIGHT);
+    const nextZoom = Math.max(curZoom / 1.3, minZoom);
+    if (nextZoom === curZoom) return;
+
+    const targetPanX = centerX - mapX * nextZoom;
+    const targetPanY = centerY - mapY * nextZoom;
+    const clamped = clampPan(targetPanX, targetPanY, nextZoom, vWidth, vHeight);
+
+    triggerAnimation(250);
+    transformRef.current = { zoom: nextZoom, pan: clamped };
+    setZoom(nextZoom);
+    setPan(clamped);
+  }, [clampPan, triggerAnimation]);
+
+  // Keyboard navigation for arrow keys and +/-
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === "ArrowUp") { e.preventDefault(); panDirection("north"); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); panDirection("south"); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); panDirection("west"); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); panDirection("east"); }
+      else if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomIn(); }
+      else if (e.key === "-") { e.preventDefault(); zoomOut(); }
+      else if (e.key === "0" || e.key === "f" || e.key === "F") { e.preventDefault(); fitToWindow(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [panDirection, zoomIn, zoomOut, fitToWindow]);
+
+  // Smoothly center the map on a given location with boundary clamping
   const centerOnLocation = useCallback((lat: number, lon: number, targetZoom = 2.4) => {
     const { x, y } = geoToPixel(lat, lon);
     if (!mapViewportRef.current) return;
@@ -469,13 +853,34 @@ export default function OldTestamentMapPage({
     const rect = mapViewportRef.current.getBoundingClientRect();
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
+    const minZoom = Math.max(rect.width / MAP_WIDTH, rect.height / MAP_HEIGHT);
+    const actualZoom = Math.max(targetZoom, minZoom);
 
-    const newPanX = centerX - x * targetZoom;
-    const newPanY = centerY - y * targetZoom;
+    const newPanX = centerX - x * actualZoom;
+    const newPanY = centerY - y * actualZoom;
+    const clamped = clampPan(newPanX, newPanY, actualZoom, rect.width, rect.height);
 
-    setZoom(targetZoom);
-    setPan({ x: newPanX, y: newPanY });
-  }, []);
+    triggerAnimation(350);
+    transformRef.current = { zoom: actualZoom, pan: clamped };
+    setZoom(actualZoom);
+    setPan(clamped);
+  }, [clampPan, triggerAnimation]);
+
+  // Focus bounding box for Abraham's journey (Ur -> Haran -> Shechem -> Hebron -> Egypt)
+  const focusAbrahamRoute = useCallback(() => {
+    centerOnLocation(33.5, 39.5, 1.4);
+  }, [centerOnLocation]);
+
+  // Focus bounding box for Moses' Exodus (Rameses -> Red Sea -> Sinai -> Kadesh -> Nebo)
+  const focusExodusRoute = useCallback(() => {
+    centerOnLocation(29.8, 33.8, 2.3);
+  }, [centerOnLocation]);
+
+  // Handler for station click (from map marker or legend)
+  const handleStationClick = useCallback((station: RouteStation) => {
+    setSelectedStation(station);
+    centerOnLocation(station.coords[0], station.coords[1], 2.8);
+  }, [centerOnLocation]);
 
   const handleSelectLocation = (loc: BiblicalLocation) => {
     setSelectedLocation(loc);
@@ -485,48 +890,68 @@ export default function OldTestamentMapPage({
     setIsMobileDrawerCollapsed(false);
   };
 
-  // Zoom and Pan Handlers
-  const handleWheel = (e: React.WheelEvent) => {
-    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-    const newZoom = Math.min(Math.max(zoom * zoomFactor, 1), 6);
+  // Double click to zoom in at mouse position
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (!mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const vWidth = rect.width;
+    const vHeight = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    if (newZoom === zoom) return;
+    const curZoom = transformRef.current.zoom;
+    const curPan = transformRef.current.pan;
+    const mapX = (mouseX - curPan.x) / curZoom;
+    const mapY = (mouseY - curPan.y) / curZoom;
 
-    if (mapViewportRef.current) {
-      const rect = mapViewportRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+    const minZoom = Math.max(vWidth / MAP_WIDTH, vHeight / MAP_HEIGHT);
+    const targetZoom = e.shiftKey
+      ? Math.max(curZoom / 1.5, minZoom)
+      : Math.min(curZoom * 1.5, 6);
 
-      const newPanX = mouseX - (mouseX - pan.x) * (newZoom / zoom);
-      const newPanY = mouseY - (mouseY - pan.y) * (newZoom / zoom);
+    const targetPanX = mouseX - mapX * targetZoom;
+    const targetPanY = mouseY - mapY * targetZoom;
+    const clamped = clampPan(targetPanX, targetPanY, targetZoom, vWidth, vHeight);
 
-      setZoom(newZoom);
-      setPan({ x: newPanX, y: newPanY });
-    }
+    triggerAnimation(300);
+    transformRef.current = { zoom: targetZoom, pan: clamped };
+    setZoom(targetZoom);
+    setPan(clamped);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    setIsAnimating(false);
+    isInteractingRef.current = true;
+    const curPan = transformRef.current.pan;
+    setDragStart({ x: e.clientX - curPan.x, y: e.clientY - curPan.y });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setPan({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
+    if (!isDragging || !mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const rawX = e.clientX - dragStart.x;
+    const rawY = e.clientY - dragStart.y;
+    const clamped = clampPan(rawX, rawY, transformRef.current.zoom, rect.width, rect.height);
+    transformRef.current.pan = clamped;
+    setPan(clamped);
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    isInteractingRef.current = false;
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    setIsAnimating(false);
+    isInteractingRef.current = true;
     if (e.touches.length === 1) {
       setIsDragging(true);
+      const curPan = transformRef.current.pan;
       setDragStart({
-        x: e.touches[0].clientX - pan.x,
-        y: e.touches[0].clientY - pan.y,
+        x: e.touches[0].clientX - curPan.x,
+        y: e.touches[0].clientY - curPan.y,
       });
     } else if (e.touches.length === 2) {
       setIsDragging(false);
@@ -539,11 +964,17 @@ export default function OldTestamentMapPage({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!mapViewportRef.current) return;
+    const rect = mapViewportRef.current.getBoundingClientRect();
+    const vWidth = rect.width;
+    const vHeight = rect.height;
+
     if (e.touches.length === 1 && isDragging) {
-      setPan({
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y,
-      });
+      const rawX = e.touches[0].clientX - dragStart.x;
+      const rawY = e.touches[0].clientY - dragStart.y;
+      const clamped = clampPan(rawX, rawY, transformRef.current.zoom, vWidth, vHeight);
+      transformRef.current.pan = clamped;
+      setPan(clamped);
     } else if (e.touches.length === 2 && touchDistanceRef.current !== null) {
       const newDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
@@ -552,42 +983,34 @@ export default function OldTestamentMapPage({
       const factor = newDist / touchDistanceRef.current;
       touchDistanceRef.current = newDist;
 
-      if (mapViewportRef.current) {
-        const rect = mapViewportRef.current.getBoundingClientRect();
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
-        const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
+      const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
 
-        setZoom((prevZoom) => {
-          const nextZoom = Math.min(Math.max(prevZoom * factor, 1), 6);
-          const zoomRatio = nextZoom / prevZoom;
-          setPan((prevPan) => ({
-            x: centerX - (centerX - prevPan.x) * zoomRatio,
-            y: centerY - (centerY - prevPan.y) * zoomRatio,
-          }));
-          return nextZoom;
-        });
+      const curZoom = transformRef.current.zoom;
+      const curPan = transformRef.current.pan;
+      const mapX = (centerX - curPan.x) / curZoom;
+      const mapY = (centerY - curPan.y) / curZoom;
+
+      const minZoom = Math.max(vWidth / MAP_WIDTH, vHeight / MAP_HEIGHT);
+      const nextZoom = Math.min(Math.max(curZoom * factor, minZoom), 6);
+
+      if (nextZoom !== curZoom) {
+        const targetPanX = centerX - mapX * nextZoom;
+        const targetPanY = centerY - mapY * nextZoom;
+        const clamped = clampPan(targetPanX, targetPanY, nextZoom, vWidth, vHeight);
+        transformRef.current = { zoom: nextZoom, pan: clamped };
+        setZoom(nextZoom);
+        setPan(clamped);
       }
     }
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
+    isInteractingRef.current = false;
     touchDistanceRef.current = null;
-  };
-
-  const zoomIn = () => setZoom((prev) => Math.min(prev * 1.3, 6));
-  const zoomOut = () => {
-    setZoom((prev) => {
-      const next = Math.max(prev / 1.3, 1);
-      if (next === 1) setPan({ x: 0, y: 0 });
-      return next;
-    });
-  };
-  const resetView = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
   };
 
   // Active details for the selected location
@@ -1074,7 +1497,7 @@ export default function OldTestamentMapPage({
                             key={ref}
                             className="px-2.5 py-1 rounded-md bg-[#FEF3C7] text-[#78350F] text-xs font-semibold border border-[#FDE68A]"
                           >
-                            {ref}
+                            {localizeBiblicalReference(ref, lang)}
                           </span>
                         ))}
                       </div>
@@ -1182,7 +1605,7 @@ export default function OldTestamentMapPage({
                               {event.biblicalReferences && event.biblicalReferences.length > 0 && (
                                 <div className="text-[10px] text-[#854D0E] font-semibold pt-1 flex items-center gap-1">
                                   <Sparkles className="w-3 h-3" />
-                                  <span>{event.biblicalReferences[0]}</span>
+                                  <span>{localizeBiblicalReference(event.biblicalReferences[0], lang)}</span>
                                 </div>
                               )}
                             </div>
@@ -1273,7 +1696,7 @@ export default function OldTestamentMapPage({
 
                             {event.biblicalReferences && event.biblicalReferences.length > 0 && (
                               <span className="text-[10px] text-[#854D0E] font-medium font-sans">
-                                {event.biblicalReferences[0]}
+                                {localizeBiblicalReference(event.biblicalReferences[0], lang)}
                               </span>
                             )}
                           </div>
@@ -1369,7 +1792,7 @@ export default function OldTestamentMapPage({
           id="map-main-stage"
           dir="ltr"
           className={`
-            relative overflow-hidden bg-[#1C1917] select-none transition-all duration-300 flex-1
+            relative overflow-hidden bg-[#EBDCB9] select-none transition-all duration-300 flex-1
             ${/* Mobile: Top 45% when sheet is open, or 100%-56px when collapsed, or 100% when sidebar is hidden */ ""}
             ${
               !isSidebarOpen
@@ -1385,7 +1808,7 @@ export default function OldTestamentMapPage({
           <div
             ref={mapViewportRef}
             id="ancient-map-viewport"
-            onWheel={handleWheel}
+            onDoubleClick={handleDoubleClick}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -1393,7 +1816,7 @@ export default function OldTestamentMapPage({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="w-full h-full relative cursor-grab active:cursor-grabbing overflow-hidden touch-none"
+            className="w-full h-full relative cursor-grab active:cursor-grabbing overflow-hidden touch-none bg-[#EBDCB9]"
           >
             {/* FLOATING SHOW SIDEBAR BUTTON (When sidebar is hidden) */}
             {!isSidebarOpen && (
@@ -1417,17 +1840,17 @@ export default function OldTestamentMapPage({
               </button>
             )}
 
-            {/* FLOATING ZOOM & LAYER CONTROLS (Top right or top left based on RTL) */}
+            {/* FLOATING ZOOM, COMPASS D-PAD & LAYER CONTROLS */}
             <div
               className={`absolute top-3 ${
                 isRTL ? "left-3" : "right-3"
-              } z-40 flex flex-col gap-1.5 bg-[#FDFBF7]/95 p-1 rounded-xl shadow-md border border-[#D4AF37]/50 backdrop-blur-xs`}
+              } z-40 flex flex-col gap-1.5 bg-[#FDFBF7]/95 p-1.5 rounded-2xl shadow-xl border border-[#D4AF37]/60 backdrop-blur-xs`}
             >
               {/* Toggle Sidebar Button in Floating Controls */}
               <button
                 id="map-sidebar-toggle-btn"
                 onClick={() => setIsSidebarOpen((prev) => !prev)}
-                className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition font-bold shadow-xs border active:scale-95 cursor-pointer ${
+                className={`w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition font-bold shadow-xs border active:scale-95 cursor-pointer ${
                   isSidebarOpen
                     ? "bg-white text-stone-800 hover:bg-[#F5E8CA] border-stone-200"
                     : "bg-[#800020] text-[#D4AF37] border-[#800020] ring-2 ring-[#D4AF37]/60"
@@ -1440,46 +1863,117 @@ export default function OldTestamentMapPage({
                 aria-label="Toggle Map Sidebar"
               >
                 {isSidebarOpen ? (
-                  <PanelLeftClose className="w-5 h-5 text-[#800020]" />
+                  <PanelLeftClose className="w-4 h-4 text-[#800020]" />
                 ) : (
-                  <PanelLeftOpen className="w-5 h-5 text-[#D4AF37]" />
+                  <PanelLeftOpen className="w-4 h-4 text-[#D4AF37]" />
                 )}
               </button>
 
+              {/* Fullscreen Toggle Button */}
+              <button
+                id="map-fullscreen-toggle-btn"
+                onClick={toggleFullscreen}
+                className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white text-stone-800 hover:bg-[#F5E8CA] active:scale-95 transition font-bold shadow-xs border border-stone-200 cursor-pointer"
+                title={isFullscreen ? (isRTL ? "إنهاء ملء الشاشة" : "Exit Fullscreen") : (isRTL ? "ملء الشاشة" : "Fullscreen Map")}
+                aria-label="Toggle Fullscreen"
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-4 h-4 text-[#800020]" />
+                ) : (
+                  <Maximize2 className="w-4 h-4 text-[#800020]" />
+                )}
+              </button>
+
+              {/* Map Legend & Routes Guide Button */}
+              <button
+                id="map-open-legend-btn"
+                onClick={() => setShowLegendModal(true)}
+                className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-amber-50 text-[#800020] hover:bg-[#F5E8CA] active:scale-95 transition font-bold shadow-xs border border-[#D4AF37] cursor-pointer"
+                title={isRTL ? "مفتاح الخريطة ودليل المسارات (إبراهيم وموسى)" : "Comprehensive Map Legend & Holy Routes Guide"}
+                aria-label="Map Legend & Routes Guide"
+              >
+                <Compass className="w-4 h-4 text-[#800020]" />
+              </button>
+
+              {/* Zoom Controls */}
               <button
                 id="map-zoom-in-btn"
                 onClick={zoomIn}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-white text-stone-800 hover:bg-[#F5E8CA] active:scale-95 transition font-bold shadow-xs border border-stone-200 cursor-pointer"
-                title="Zoom In"
+                className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white text-stone-800 hover:bg-[#F5E8CA] active:scale-95 transition font-bold shadow-xs border border-stone-200 cursor-pointer"
+                title="Zoom In (+)"
                 aria-label="Zoom In"
               >
-                <ZoomIn className="w-5 h-5 text-[#800020]" />
+                <ZoomIn className="w-4 h-4 text-[#800020]" />
               </button>
               <button
                 id="map-zoom-out-btn"
                 onClick={zoomOut}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-white text-stone-800 hover:bg-[#F5E8CA] active:scale-95 transition font-bold shadow-xs border border-stone-200 cursor-pointer"
-                title="Zoom Out"
+                className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white text-stone-800 hover:bg-[#F5E8CA] active:scale-95 transition font-bold shadow-xs border border-stone-200 cursor-pointer"
+                title="Zoom Out (-)"
                 aria-label="Zoom Out"
               >
-                <ZoomOut className="w-5 h-5 text-[#800020]" />
+                <ZoomOut className="w-4 h-4 text-[#800020]" />
               </button>
-              <button
-                id="map-reset-btn"
-                onClick={resetView}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-[#F5E8CA] text-[#451A03] hover:bg-[#EBDCB9] active:scale-95 transition font-bold shadow-xs border border-[#D4AF37]/40 cursor-pointer"
-                title="Reset View"
-                aria-label="Reset View"
+
+              {/* COMPASS D-PAD PANNING CONTROLS */}
+              <div
+                className="p-1 bg-[#F5E8CA]/50 rounded-xl border border-[#D4AF37]/40 flex flex-col items-center gap-0.5"
+                title={isRTL ? "لوحة الاتجاهات والتحريك" : "Navigation Compass Pad"}
               >
-                <RotateCcw className="w-4 h-4 text-[#854D0E]" />
-              </button>
+                <button
+                  onClick={() => panDirection("north")}
+                  className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-[#F5E8CA] text-stone-700 active:scale-90 transition border border-stone-200 cursor-pointer"
+                  title={isRTL ? "تحريك للشمال" : "Pan North"}
+                  aria-label="Pan North"
+                >
+                  <ChevronUp className="w-4 h-4 text-[#800020]" />
+                </button>
+
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => panDirection("west")}
+                    className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-[#F5E8CA] text-stone-700 active:scale-90 transition border border-stone-200 cursor-pointer"
+                    title={isRTL ? "تحريك للغرب" : "Pan West"}
+                    aria-label="Pan West"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-[#800020]" />
+                  </button>
+
+                  <button
+                    onClick={fitToWindow}
+                    className="w-7 h-7 flex items-center justify-center rounded-md bg-[#800020] text-[#D4AF37] hover:bg-[#991B1B] active:scale-90 transition font-bold cursor-pointer"
+                    title={isRTL ? "ملاءمة الخريطة للشاشة (F)" : "Fit to Screen (F)"}
+                    aria-label="Fit to Screen"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => panDirection("east")}
+                    className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-[#F5E8CA] text-stone-700 active:scale-90 transition border border-stone-200 cursor-pointer"
+                    title={isRTL ? "تحريك للشرق" : "Pan East"}
+                    aria-label="Pan East"
+                  >
+                    <ChevronRight className="w-4 h-4 text-[#800020]" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => panDirection("south")}
+                  className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-[#F5E8CA] text-stone-700 active:scale-90 transition border border-stone-200 cursor-pointer"
+                  title={isRTL ? "تحريك للجنوب" : "Pan South"}
+                  aria-label="Pan South"
+                >
+                  <ChevronDown className="w-4 h-4 text-[#800020]" />
+                </button>
+              </div>
 
               {/* Layer Visibility Toggle Button */}
               <div className="relative">
                 <button
                   id="map-layers-toggle-btn"
                   onClick={() => setShowLayersMenu((prev) => !prev)}
-                  className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition font-bold shadow-xs border cursor-pointer ${
+                  className={`w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl transition font-bold shadow-xs border cursor-pointer ${
                     showLayersMenu
                       ? "bg-[#800020] text-[#D4AF37] border-[#800020]"
                       : "bg-white text-stone-800 hover:bg-[#F5E8CA] border-stone-200"
@@ -1487,7 +1981,7 @@ export default function OldTestamentMapPage({
                   title={isRTL ? "طبقات الخريطة" : "Map Cartographic Layers"}
                   aria-label="Map Layers"
                 >
-                  <Layers className="w-5 h-5" />
+                  <Layers className="w-4 h-4" />
                 </button>
 
                 {/* Dropdown Menu for Layers */}
@@ -1540,9 +2034,33 @@ export default function OldTestamentMapPage({
                       >
                         <span className="flex items-center gap-2">
                           <Route className="w-3.5 h-3.5 text-[#991B1B]" />
-                          {isRTL ? "طرق التجارة ومسار الخروج" : "Ancient & Exodus Routes"}
+                          {isRTL ? "طرق التجارة والقوافل القديمة" : "Ancient Caravan Routes"}
                         </span>
                         {layers.showRoutes && <Check className="w-3.5 h-3.5 text-[#800020]" />}
+                      </button>
+
+                      {/* Abraham's Journey Route */}
+                      <button
+                        onClick={() => handleToggleLayer("showAbrahamRoute")}
+                        className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]" />
+                          {isRTL ? "مسار رحلة إبراهيم (أور - كنعان - مصر)" : "Abraham's Journey of Faith"}
+                        </span>
+                        {layers.showAbrahamRoute !== false && <Check className="w-3.5 h-3.5 text-[#800020]" />}
+                      </button>
+
+                      {/* Moses' Exodus Route */}
+                      <button
+                        onClick={() => handleToggleLayer("showExodusRoute")}
+                        className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />
+                          {isRTL ? "مسار خروج موسى وتيه سيناء (40 سنة)" : "Moses' Exodus & 40-Yr Route"}
+                        </span>
+                        {layers.showExodusRoute !== false && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                       </button>
 
                       <button
@@ -1583,7 +2101,7 @@ export default function OldTestamentMapPage({
               </div>
             </div>
 
-            {/* TRANSFORM CONTAINER (Pan & Zoom Applied Here) */}
+            {/* TRANSFORM CONTAINER (Pan & Zoom Applied Here - Crisp Vector Rendering) */}
             <div
               id="map-transform-layer"
               style={{
@@ -1593,7 +2111,10 @@ export default function OldTestamentMapPage({
                 background: "#EBDCB9",
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 transformOrigin: "0 0",
-                transition: isDragging ? "none" : "transform 0.12s ease-out",
+                transition: isAnimating ? "transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)" : "none",
+                backfaceVisibility: "visible",
+                WebkitBackfaceVisibility: "visible",
+                transformStyle: "flat",
               }}
             >
               {/* HISTORICAL CARTOGRAPHY SVG LAYER (Geographically Accurate) */}
@@ -1601,6 +2122,9 @@ export default function OldTestamentMapPage({
                 zoom={zoom}
                 isRTL={isRTL}
                 layers={layers}
+                onOpenLegend={() => setShowLegendModal(true)}
+                onStationClick={handleStationClick}
+                selectedStationId={selectedStation?.id}
               />
 
               {/* ========================================================= */}
@@ -1610,6 +2134,12 @@ export default function OldTestamentMapPage({
                 id="map-ground-anchors-layer"
                 className="absolute inset-0 pointer-events-none w-full h-full z-20"
                 viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+                shapeRendering="geometricPrecision"
+                textRendering="geometricPrecision"
+                style={{
+                  shapeRendering: "geometricPrecision",
+                  textRendering: "geometricPrecision",
+                }}
               >
                 {placedPins.map((p) => {
                   return (
@@ -1652,7 +2182,7 @@ export default function OldTestamentMapPage({
                 const isHovered = hoveredLocationId === p.loc.id;
                 const showLabel = p.showLabel || isHovered || isSelected;
 
-                // Directional positioning classes for the label pill
+                // Directional positioning classes for the label pill across 8 directions
                 let labelPositionClass = "mt-1.5 top-full left-1/2 -translate-x-1/2";
                 if (p.labelDirection === "left") {
                   labelPositionClass = "mr-2 right-full top-1/2 -translate-y-1/2";
@@ -1660,6 +2190,14 @@ export default function OldTestamentMapPage({
                   labelPositionClass = "ml-2 left-full top-1/2 -translate-y-1/2";
                 } else if (p.labelDirection === "top") {
                   labelPositionClass = "mb-1.5 bottom-full left-1/2 -translate-x-1/2";
+                } else if (p.labelDirection === "top-right") {
+                  labelPositionClass = "mb-1 ml-2 bottom-1/2 left-full";
+                } else if (p.labelDirection === "top-left") {
+                  labelPositionClass = "mb-1 mr-2 bottom-1/2 right-full";
+                } else if (p.labelDirection === "bottom-right") {
+                  labelPositionClass = "mt-1 ml-2 top-1/2 left-full";
+                } else if (p.labelDirection === "bottom-left") {
+                  labelPositionClass = "mt-1 mr-2 top-1/2 right-full";
                 }
 
                 return (
@@ -1722,7 +2260,7 @@ export default function OldTestamentMapPage({
                     <div
                       dir={isRTL ? "rtl" : "ltr"}
                       className={`
-                        map-label-contained absolute px-2.5 py-0.5 rounded-md text-[11px] font-bold whitespace-nowrap shadow-md pointer-events-none transition-all duration-150
+                        map-label-contained absolute px-2 py-0.5 rounded-md text-[11px] font-bold whitespace-nowrap shadow-md pointer-events-none transition-all duration-150
                         ${labelPositionClass}
                         ${
                           showLabel
@@ -1731,10 +2269,10 @@ export default function OldTestamentMapPage({
                         }
                         ${
                           isSelected
-                            ? "bg-[#800020] text-[#FEF3C7] border-2 border-[#D4AF37] scale-105 z-50 shadow-lg"
+                            ? "bg-[#800020] text-[#FEF3C7] border-2 border-[#D4AF37] scale-105 z-50 shadow-lg ring-2 ring-[#D4AF37]/50"
                             : isHovered
-                            ? "bg-[#800020] text-[#D4AF37] border border-[#D4AF37] z-50 shadow-md"
-                            : "bg-[#1C1917]/90 text-[#FDFBF7] border border-stone-700/60"
+                            ? "bg-[#800020] text-[#FEF3C7] border border-[#D4AF37] z-50 shadow-md scale-105"
+                            : "bg-[#FDFBF7]/95 text-[#800020] border border-[#D4AF37]/80 shadow-xs"
                         }
                       `}
                       style={{
@@ -1748,6 +2286,53 @@ export default function OldTestamentMapPage({
                   </div>
                 );
               })}
+            </div>
+
+            {/* QUICK REGION BOOKMARK FOCUS PILLS (Bottom Center) */}
+            <div
+              id="map-quick-region-bookmarks"
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#FDFBF7]/95 border border-[#D4AF37]/60 shadow-lg backdrop-blur-xs max-w-[94%] overflow-x-auto scrollbar-none"
+            >
+              <button
+                onClick={() => fitToWindow()}
+                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#800020] text-[#D4AF37] hover:bg-[#991B1B] active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                title={isRTL ? "ملاءمة الخريطة للنافذة بالكامل" : "Fit Map to Window"}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{isRTL ? "كامل الخريطة" : "Fit Window"}</span>
+              </button>
+
+              <button
+                onClick={() => centerOnLocation(31.8, 35.2, 2.6)}
+                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+              >
+                <span>🕊️</span>
+                <span>{isRTL ? "أرض كنعان" : "Canaan"}</span>
+              </button>
+
+              <button
+                onClick={() => centerOnLocation(29.8, 32.2, 2.4)}
+                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+              >
+                <span>🌊</span>
+                <span>{isRTL ? "مصر وسيناء" : "Egypt & Sinai"}</span>
+              </button>
+
+              <button
+                onClick={() => centerOnLocation(33.5, 43.8, 2.2)}
+                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+              >
+                <span>🏺</span>
+                <span>{isRTL ? "بلاد الرافدين" : "Mesopotamia"}</span>
+              </button>
+
+              <button
+                onClick={() => centerOnLocation(38.5, 39.5, 2.2)}
+                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+              >
+                <span>⛰️</span>
+                <span>{isRTL ? "الأناضول وأرارات" : "Anatolia"}</span>
+              </button>
             </div>
           </div>
         </main>
@@ -1838,7 +2423,7 @@ export default function OldTestamentMapPage({
                       key={ref}
                       className="px-2.5 py-1 rounded bg-[#FEF3C7] text-[#78350F] font-semibold border border-[#FDE68A]"
                     >
-                      {ref}
+                      {localizeBiblicalReference(ref, lang)}
                     </span>
                   ))}
                 </div>
@@ -1857,6 +2442,90 @@ export default function OldTestamentMapPage({
           </div>
         </div>
       )}
+
+      {/* FLOATING ROUTE STATION QUICK PREVIEW CARD */}
+      {selectedStation && (
+        <div
+          id="selected-station-card"
+          className={`absolute bottom-4 ${
+            isRTL ? "left-4 sm:left-6" : "right-4 sm:right-6"
+          } z-40 max-w-sm w-[calc(100%-2rem)] bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 ${
+            selectedStation.routeType === "abraham" ? "border-[#D97706]" : "border-[#DC2626]"
+          } p-4 font-sans text-xs animate-in fade-in slide-in-from-bottom-3 duration-200`}
+        >
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[11px] shrink-0 shadow-xs ${
+                  selectedStation.routeType === "abraham" ? "bg-[#D97706]" : "bg-[#DC2626]"
+                }`}
+              >
+                {selectedStation.stationNumber}
+              </span>
+              <div>
+                <h4 className="font-serif font-bold text-sm text-[#800020] leading-tight">
+                  {isRTL ? selectedStation.arabicTitle : selectedStation.title}
+                </h4>
+                <p className="text-[11px] text-stone-500">
+                  {isRTL ? selectedStation.title : selectedStation.arabicTitle}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedStation(null)}
+              className="p-1 rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition cursor-pointer"
+              title={isRTL ? "إغلاق" : "Close"}
+              aria-label="Close station preview"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {selectedStation.stageName && (
+            <span
+              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mb-2 ${
+                selectedStation.routeType === "abraham"
+                  ? "bg-amber-100 text-amber-900 border border-amber-300"
+                  : "bg-red-100 text-red-900 border border-red-300"
+              }`}
+            >
+              {isRTL ? selectedStation.stageArabicName || selectedStation.stageName : selectedStation.stageName}
+            </span>
+          )}
+
+          <p className="text-stone-700 text-[11.5px] leading-relaxed mb-2.5">
+            {isRTL ? selectedStation.arabicDescription : selectedStation.description}
+          </p>
+
+          <div className="flex items-center justify-between pt-2 border-t border-stone-200">
+            <span className="font-semibold text-[#800020] bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10.5px]">
+              {localizeBiblicalReference(selectedStation.scripture, lang)}
+            </span>
+            <button
+              onClick={() => setShowLegendModal(true)}
+              className="text-[#800020] hover:text-[#991B1B] font-bold text-[11px] hover:underline cursor-pointer"
+            >
+              {isRTL ? "عرض الدليل الكامل ←" : "View Full Route Guide →"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* BIBLICAL MAP LEGEND & HOLY ROUTES MODAL */}
+      <BiblicalMapLegendModal
+        isOpen={showLegendModal}
+        onClose={() => setShowLegendModal(false)}
+        isRTL={isRTL}
+        lang={lang}
+        layers={layers}
+        onToggleLayer={handleToggleLayer}
+        onFocusLocation={(lat, lon, z) => centerOnLocation(lat, lon, z)}
+        onFocusAbrahamRoute={focusAbrahamRoute}
+        onFocusExodusRoute={focusExodusRoute}
+        selectedStationId={selectedStation?.id}
+        onSelectStation={(st) => handleStationClick(st)}
+      />
     </div>
   );
 }

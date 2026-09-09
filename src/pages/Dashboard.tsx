@@ -15,6 +15,7 @@ import {
   getEventDisplayTitle,
   getEventDisplayDescription,
   formatYearDisplay,
+  localizeBiblicalReferences,
 } from "../utils/i18n";
 import { getStoredGistId } from "../services/gistService";
 
@@ -285,7 +286,11 @@ export default function Dashboard({
                 {event.biblicalReferences && event.biblicalReferences.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center gap-1.5 text-[11px] text-[#8C6F12] dark:text-[#C5A028] font-medium">
                     <BookOpen size={12} />
-                    <span>{event.biblicalReferences.join(", ")}</span>
+                    <span>
+                      {localizeBiblicalReferences(event.biblicalReferences, lang).join(
+                        lang === "ar" ? "، " : ", "
+                      )}
+                    </span>
                   </div>
                 )}
               </div>

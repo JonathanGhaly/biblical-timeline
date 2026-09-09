@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useMapScaleTransformer } from "../utils/mapScaleTransformer";
+import { localizeBiblicalReference } from "../utils/i18n";
 import {
   MAP_WIDTH,
   MAP_HEIGHT,
@@ -35,12 +36,17 @@ import {
   BIBLICAL_MOUNTAIN_RANGES,
   ANCIENT_ROUTES,
   FERTILE_CRESCENT_POLYGON,
+  ABRAHAM_STATIONS,
+  EXODUS_STATIONS,
+  type RouteStation,
 } from "../data/mapGeography";
 
 export interface MapLayerVisibility {
   showRivers: boolean;
   showMountains: boolean;
   showRoutes: boolean;
+  showAbrahamRoute?: boolean;
+  showExodusRoute?: boolean;
   showFertileCrescent: boolean;
   showGraticule: boolean;
   showRegionLabels: boolean;
@@ -51,17 +57,26 @@ interface BiblicalWorldSvgMapProps {
   isRTL: boolean;
   layers?: Partial<MapLayerVisibility>;
   onLocationClick?: (locId: string) => void;
+  onStationClick?: (station: RouteStation) => void;
+  onOpenLegend?: () => void;
+  selectedStationId?: string | null;
 }
 
 export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
   zoom,
   isRTL,
   layers,
+  onLocationClick: _onLocationClick,
+  onStationClick,
+  onOpenLegend,
+  selectedStationId,
 }) => {
   const layerState: MapLayerVisibility = {
     showRivers: true,
     showMountains: true,
     showRoutes: true,
+    showAbrahamRoute: true,
+    showExodusRoute: true,
     showFertileCrescent: true,
     showGraticule: true,
     showRegionLabels: true,
@@ -135,12 +150,34 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
     }));
   }, []);
 
+  // Precomputed pixel locations for biblical journey stations
+  const abrahamStationPixels = useMemo(() => {
+    return ABRAHAM_STATIONS.map((s) => ({
+      ...s,
+      pixel: geoToPixel(s.coords[0], s.coords[1]),
+    }));
+  }, []);
+
+  const exodusStationPixels = useMemo(() => {
+    return EXODUS_STATIONS.map((s) => ({
+      ...s,
+      pixel: geoToPixel(s.coords[0], s.coords[1]),
+    }));
+  }, []);
+
   return (
     <svg
       id="biblical-world-map-svg"
       viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
       className="w-full h-full block select-none pointer-events-none"
-      style={{ overflow: "visible", direction: "ltr" }}
+      shapeRendering="geometricPrecision"
+      textRendering="geometricPrecision"
+      style={{
+        overflow: "visible",
+        direction: "ltr",
+        shapeRendering: "geometricPrecision",
+        textRendering: "geometricPrecision",
+      }}
     >
       <defs>
         {/* Parchment Base Texture & Gradients */}
@@ -176,22 +213,6 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
           <stop offset="100%" stopColor="#FFFBF0" stopOpacity="0" />
         </linearGradient>
 
-        {/* Paper Grain Noise Filter */}
-        <filter id="parchmentGrain" x="0%" y="0%" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
-          <feColorMatrix
-            type="matrix"
-            values="0 0 0 0 0.8  0 0 0 0 0.7  0 0 0 0 0.5  0 0 0 0.07 0"
-            result="coloredNoise"
-          />
-          <feComposite in="SourceGraphic" in2="coloredNoise" operator="over" />
-        </filter>
-
-        {/* Map Label Drop Shadow */}
-        <filter id="antiqueLabelShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="1" dy="1" stdDeviation="1" floodColor="#FFF7ED" floodOpacity="0.9" />
-        </filter>
-
         {/* Dune Pattern for Deserts */}
         <pattern id="desertDunes" width="30" height="15" patternUnits="userSpaceOnUse">
           <path
@@ -211,7 +232,6 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
         width={MAP_WIDTH}
         height={MAP_HEIGHT}
         fill="url(#antiqueParchment)"
-        filter="url(#parchmentGrain)"
       />
 
       {/* ============================================================= */}
@@ -433,12 +453,15 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
           {/* Mountain Peak Text Labels (Scaled down as zoom increases) */}
           <g
             fill="#573A18"
+            stroke="#FFF8EE"
+            strokeWidth={Math.max(0.8, 1.8 * scale.mountainLabelScale)}
+            strokeLinejoin="round"
+            paintOrder="stroke fill"
             fontFamily={isRTL ? "'Amiri', 'Cairo', serif" : "'Cinzel', Georgia, serif"}
             fontSize={Math.max(3.2, 10 * scale.mountainLabelScale)}
             fontStyle="italic"
             fontWeight="600"
             textAnchor="middle"
-            filter="url(#antiqueLabelShadow)"
           >
             {mountainPaths.flatMap((m) =>
               m.peaks.map((peak) => {
@@ -468,31 +491,189 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
       )}
 
       {/* ============================================================= */}
-      {/* 8. ANCIENT TRADE ROUTES & EXODUS ITINERARY                    */}
+      {/* 8. ANCIENT TRADE ROUTES, ABRAHAM'S PATH & EXODUS ITINERARY     */}
       {/* ============================================================= */}
-      {layerState.showRoutes && (
-        <g id="ancient-routes" fill="none">
-          {routePaths.map((route) => {
-            const isExodus = route.type === "exodus";
-            const isRoyal = route.type === "royal";
-            const strokeColor = isExodus ? "#991B1B" : isRoyal ? "#7E22CE" : "#854D0E";
-            const strokeDash = isExodus ? "5,3" : isRoyal ? "6,4" : "3,3";
-            const strokeWidth = (isExodus ? 2.5 : 2.0) * scale.routeStrokeScale;
+      <g id="ancient-routes" fill="none">
+        {/* Ancient Caravan & Trade Highways (Via Maris, King's Highway, etc.) */}
+        {layerState.showRoutes &&
+          routePaths
+            .filter((r) => r.type !== "abraham" && r.type !== "exodus")
+            .map((route) => {
+              const isRoyal = route.type === "royal";
+              const strokeColor = isRoyal ? "#7E22CE" : "#854D0E";
+              const strokeDash = isRoyal ? "6,4" : "3,3";
+              const strokeWidth = 2.0 * scale.routeStrokeScale;
+              return (
+                <g key={route.id} opacity="0.65">
+                  <path
+                    d={route.path}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={strokeDash}
+                    strokeLinecap="round"
+                  />
+                </g>
+              );
+            })}
 
-            return (
-              <g key={route.id} opacity="0.65">
-                <path
-                  d={route.path}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={strokeDash}
-                  strokeLinecap="round"
-                />
-              </g>
-            );
-          })}
-        </g>
-      )}
+        {/* ABRAHAM'S JOURNEY OF FAITH (Ur -> Haran -> Shechem -> Bethel -> Hebron -> Egypt -> Beersheba -> Moriah) */}
+        {layerState.showAbrahamRoute !== false && (
+          <g id="abraham-path-layer">
+            {routePaths
+              .filter((r) => r.type === "abraham")
+              .map((route) => (
+                <g key={route.id}>
+                  {/* Subtle warm amber halo */}
+                  <path
+                    d={route.path}
+                    stroke="#F59E0B"
+                    strokeWidth={5.5 * scale.routeStrokeScale}
+                    strokeOpacity={0.28}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Distinctive dash-dot amber path */}
+                  <path
+                    d={route.path}
+                    stroke="#D97706"
+                    strokeWidth={2.6 * scale.routeStrokeScale}
+                    strokeDasharray="8,3,2,3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+              ))}
+
+            {/* Abraham's Journey Stations & Milestones */}
+            <g id="abraham-stations" pointerEvents="auto">
+              {abrahamStationPixels.map((station) => {
+                const isSelected = selectedStationId === station.id;
+                const radius = Math.max(5, (isSelected ? 9 : 7) * scale.markerScale);
+                return (
+                  <g
+                    key={`abraham-station-${station.id}`}
+                    transform={`translate(${station.pixel.x}, ${station.pixel.y})`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStationClick?.(station);
+                    }}
+                    cursor="pointer"
+                    className="group"
+                  >
+                    <title>{`${station.stationNumber}. ${isRTL ? station.arabicTitle : station.title} - ${localizeBiblicalReference(station.scripture, isRTL ? "ar" : "en")}: ${isRTL ? station.arabicDescription : station.description}`}</title>
+                    {/* Pulsing selection aura */}
+                    {isSelected && (
+                      <circle
+                        r={radius * 1.8}
+                        fill="none"
+                        stroke="#F59E0B"
+                        strokeWidth="2"
+                        strokeDasharray="3 2"
+                        opacity="0.8"
+                      />
+                    )}
+                    {/* Station milestone badge */}
+                    <circle
+                      r={radius}
+                      fill="#D97706"
+                      stroke="#FEF3C7"
+                      strokeWidth={Math.max(1, 1.8 * scale.markerScale)}
+                    />
+                    <text
+                      y={radius * 0.35}
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize={Math.max(7, 9 * scale.markerScale)}
+                      fontFamily="sans-serif"
+                      fontWeight="bold"
+                    >
+                      {station.stationNumber}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          </g>
+        )}
+
+        {/* MOSES' EXODUS & SINAI 40-YEAR WILDERNESS ROUTE */}
+        {layerState.showExodusRoute !== false && (
+          <g id="exodus-path-layer">
+            {routePaths
+              .filter((r) => r.type === "exodus")
+              .map((route) => (
+                <g key={route.id}>
+                  {/* Subtle red halo */}
+                  <path
+                    d={route.path}
+                    stroke="#EF4444"
+                    strokeWidth={6.5 * scale.routeStrokeScale}
+                    strokeOpacity={0.28}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Rich crimson dashed line */}
+                  <path
+                    d={route.path}
+                    stroke="#DC2626"
+                    strokeWidth={3.0 * scale.routeStrokeScale}
+                    strokeDasharray="6,3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+              ))}
+
+            {/* Exodus Stations & Milestones */}
+            <g id="exodus-stations" pointerEvents="auto">
+              {exodusStationPixels.map((station) => {
+                const isSelected = selectedStationId === station.id;
+                const radius = Math.max(5, (isSelected ? 9 : 7) * scale.markerScale);
+                return (
+                  <g
+                    key={`exodus-station-${station.id}`}
+                    transform={`translate(${station.pixel.x}, ${station.pixel.y})`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStationClick?.(station);
+                    }}
+                    cursor="pointer"
+                    className="group"
+                  >
+                    <title>{`${station.stationNumber}. ${isRTL ? station.arabicTitle : station.title} - ${localizeBiblicalReference(station.scripture, isRTL ? "ar" : "en")}: ${isRTL ? station.arabicDescription : station.description}`}</title>
+                    {isSelected && (
+                      <circle
+                        r={radius * 1.8}
+                        fill="none"
+                        stroke="#DC2626"
+                        strokeWidth="2"
+                        strokeDasharray="3 2"
+                        opacity="0.8"
+                      />
+                    )}
+                    <circle
+                      r={radius}
+                      fill="#DC2626"
+                      stroke="#FEE2E2"
+                      strokeWidth={Math.max(1, 1.8 * scale.markerScale)}
+                    />
+                    <text
+                      y={radius * 0.35}
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize={Math.max(7, 9 * scale.markerScale)}
+                      fontFamily="sans-serif"
+                      fontWeight="bold"
+                    >
+                      {station.stationNumber}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          </g>
+        )}
+      </g>
 
       {/* ============================================================= */}
       {/* 9. CARTOGRAPHIC GRATICULE GRID (Latitude & Longitude)         */}
@@ -576,10 +757,13 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
         <g
           id="regional-realm-labels"
           fill="#451A03"
+          stroke="#FFF8EE"
+          strokeWidth={Math.max(1.2, 3.0 * scale.regionLabelScale)}
+          strokeLinejoin="round"
+          paintOrder="stroke fill"
           fontFamily={isRTL ? "'Amiri', 'Cairo', serif" : "'Cinzel', Georgia, serif"}
           fontWeight="bold"
           textAnchor="middle"
-          filter="url(#antiqueLabelShadow)"
           style={{
             opacity: scale.regionLabelOpacity,
             transition: "opacity 0.25s ease",
@@ -720,7 +904,16 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
         textAnchor="middle"
       >
         {/* Mediterranean Sea */}
-        <text x="310" y="325" fontSize={Math.max(5.2, 18 * scale.waterLabelScale)} letterSpacing={isRTL ? "0" : `${2 * scale.waterLabelScale}px`} filter="url(#antiqueLabelShadow)">
+        <text
+          x="310"
+          y="325"
+          fontSize={Math.max(5.2, 18 * scale.waterLabelScale)}
+          letterSpacing={isRTL ? "0" : `${2 * scale.waterLabelScale}px`}
+          stroke="#0A1926"
+          strokeWidth={Math.max(1.0, 2.5 * scale.waterLabelScale)}
+          strokeLinejoin="round"
+          paintOrder="stroke fill"
+        >
           {isRTL ? "البحر الكبير (البحر الأبيض المتوسط)" : "THE GREAT SEA (MEDITERRANEAN)"}
         </text>
         <text x="310" y={325 + Math.max(6, 21 * scale.waterLabelScale)} fontSize={Math.max(3.6, 12 * scale.waterLabelScale)} fontStyle="italic" fill="#E2E8F0">
@@ -749,7 +942,10 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
             y="0"
             fontSize={Math.max(4.5, 15 * scale.waterLabelScale)}
             letterSpacing={isRTL ? "0" : `${2 * scale.waterLabelScale}px`}
-            filter="url(#antiqueLabelShadow)"
+            stroke="#0A1926"
+            strokeWidth={Math.max(1.0, 2.5 * scale.waterLabelScale)}
+            strokeLinejoin="round"
+            paintOrder="stroke fill"
           >
             {isRTL ? "بحر سوف (البحر الأحمر)" : "RED SEA (YAM SUPH)"}
           </text>
@@ -819,97 +1015,153 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
       </g>
 
       {/* ============================================================= */}
-      {/* 14. GRAPHICAL ATLAS SCALE BAR (Miles & Kilometers)           */}
+      {/* 14. HISTORICAL CARTOUCHE & DETAILED MAP LEGEND               */}
       {/* ============================================================= */}
-      <g id="cartographic-scale-bar" transform="translate(1420, 940)">
-        <rect width="320" height="42" rx="4" fill="#FEF3C7" stroke="#800020" strokeWidth="1.2" opacity="0.95" />
-        <text x="160" y="14" textAnchor="middle" fill="#800020" fontFamily="Georgia, serif" fontSize="10" fontWeight="bold">
-          {isRTL ? "مقياس الرسم الجغرافي (أميال وكيلومترات)" : "GRAPHIC SCALE OF MILES & KILOMETERS"}
-        </text>
-
-        {/* 1 degree lon at 32°N ≈ 94 km ≈ 53 px per 100 km */}
-        {/* Scale bar with subdivisions */}
-        <g transform="translate(25, 20)">
-          {/* Black & white alternating bar segments */}
-          <rect x="0" y="0" width="67" height="6" fill="#800020" stroke="#451A03" strokeWidth="0.5" />
-          <rect x="67" y="0" width="67" height="6" fill="#FDFBF7" stroke="#451A03" strokeWidth="0.5" />
-          <rect x="134" y="0" width="67" height="6" fill="#800020" stroke="#451A03" strokeWidth="0.5" />
-          <rect x="201" y="0" width="67" height="6" fill="#FDFBF7" stroke="#451A03" strokeWidth="0.5" />
-
-          {/* Scale Ticks & Labels */}
-          <text x="0" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">0</text>
-          <text x="67" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">100</text>
-          <text x="134" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">200</text>
-          <text x="201" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">300</text>
-          <text x="268" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">400 mi</text>
-        </g>
-      </g>
-
-      {/* ============================================================= */}
-      {/* 15. HISTORICAL CARTOUCHE TITLE BOX                            */}
-      {/* ============================================================= */}
-      <g id="historical-cartouche" transform="translate(1420, 805)">
+      <g
+        id="historical-cartouche"
+        transform="translate(1380, 715)"
+        pointerEvents="auto"
+        cursor="pointer"
+        onClick={onOpenLegend}
+        className="group"
+      >
+        <title>{isRTL ? "انقر لفتح دليل وشواهد المسارات ومفتاح الخريطة" : "Click to open comprehensive Route Guide & Map Legend"}</title>
         <rect
-          width="320"
-          height="120"
-          rx="6"
+          width="360"
+          height="215"
+          rx="8"
           fill="#FEF3C7"
           stroke="#800020"
           strokeWidth="2"
-          opacity="0.95"
+          opacity="0.97"
+          className="transition-all group-hover:stroke-[#D4AF37]"
         />
         {/* Inner gold border */}
         <rect
           x="4"
           y="4"
-          width="312"
-          height="112"
-          rx="4"
+          width="352"
+          height="207"
+          rx="6"
           fill="none"
           stroke="#D4AF37"
           strokeWidth="1"
         />
 
         <text
-          x="160"
-          y="28"
+          x="180"
+          y="26"
           textAnchor="middle"
           fill="#800020"
           fontFamily="Georgia, serif"
-          fontSize="15"
+          fontSize="14"
           fontWeight="bold"
           letterSpacing="1"
         >
           {isRTL ? "عَالَم العَهْد القَدِيم" : "THE OLD TESTAMENT WORLD"}
         </text>
         <text
-          x="160"
-          y="46"
+          x="180"
+          y="42"
           textAnchor="middle"
           fill="#78350F"
           fontFamily="sans-serif"
-          fontSize="10"
+          fontSize="10.5"
+          fontWeight="600"
         >
-          {isRTL ? "خريطة تاريخية جغرافية تفصيلية دقيقة" : "Accurate Historical & Biblical Geography"}
+          {isRTL ? "مفتاح الخريطة والمسارات المقدسة" : "Cartographic Legend & Holy Biblical Routes"}
         </text>
 
-        <line x1="25" y1="56" x2="295" y2="56" stroke="#D4AF37" strokeWidth="1" />
+        <line x1="20" y1="50" x2="340" y2="50" stroke="#D4AF37" strokeWidth="1" />
 
-        {/* Legend Symbols */}
-        <circle cx="35" cy="74" r="6" fill="#800020" stroke="#D4AF37" strokeWidth="1.5" />
-        <text x="50" y="78" fill="#451A03" fontFamily="sans-serif" fontSize="10" fontWeight="600">
-          {isRTL ? "موقع كتابي تاريخي موثق" : "Biblical Historical City / Site"}
+        {/* Legend Row 1: Historical City */}
+        <circle cx="32" cy="66" r="5" fill="#800020" stroke="#D4AF37" strokeWidth="1.5" />
+        <text x="48" y="70" fill="#451A03" fontFamily="sans-serif" fontSize="10" fontWeight="600">
+          {isRTL ? "موقع كتابي تاريخي موثق أثرياً" : "Biblical Historical City / Archaeological Site"}
         </text>
 
-        <polygon points="30,96 35,87 40,96" fill="#FDE68A" stroke="#451A03" strokeWidth="0.8" />
-        <text x="50" y="96" fill="#451A03" fontFamily="sans-serif" fontSize="10" fontWeight="600">
-          {isRTL ? "سلاسل الجبال وقمم التضاريس" : "Topographical Mountain Summits"}
+        {/* Legend Row 2: Mountain Summits */}
+        <polygon points="26,90 32,80 38,90" fill="#CA8A04" stroke="#78350F" strokeWidth="0.8" />
+        <text x="48" y="88" fill="#451A03" fontFamily="sans-serif" fontSize="10" fontWeight="600">
+          {isRTL ? "سلاسل الجبال والقمم (سيناء، أرارات، نيبو)" : "Topographical Mountain Summits & Ridges"}
         </text>
 
-        <line x1="25" y1="108" x2="45" y2="108" stroke="#991B1B" strokeWidth="2" strokeDasharray="3,2" />
-        <text x="50" y="112" fill="#451A03" fontFamily="sans-serif" fontSize="10" fontWeight="600">
-          {isRTL ? "مسارات التجارة والارتحال التاريخية" : "Ancient Caravan & Exodus Routes"}
+        {/* Legend Row 3: Abraham's Path */}
+        <line x1="18" y1="106" x2="46" y2="106" stroke="#D97706" strokeWidth="2.5" strokeDasharray="6,2,2,2" />
+        <circle cx="32" cy="106" r="4.5" fill="#D97706" stroke="#FEF3C7" strokeWidth="1" />
+        <text x="48" y="109" fill="#92400E" fontFamily="sans-serif" fontSize="10" fontWeight="bold">
+          {isRTL ? "مسار رحلة إبراهيم (أور إلى كنعان ومصر)" : "Abraham's Journey of Faith (Ur to Canaan & Egypt)"}
         </text>
+
+        {/* Legend Row 4: Moses' Exodus */}
+        <line x1="18" y1="126" x2="46" y2="126" stroke="#DC2626" strokeWidth="2.5" strokeDasharray="5,2.5" />
+        <circle cx="32" cy="126" r="4.5" fill="#DC2626" stroke="#FEE2E2" strokeWidth="1" />
+        <text x="48" y="129" fill="#991B1B" fontFamily="sans-serif" fontSize="10" fontWeight="bold">
+          {isRTL ? "مسار خروج موسى وتيه سيناء (40 سنة)" : "Moses' Exodus & 40-Yr Wilderness Route"}
+        </text>
+
+        {/* Legend Row 5: Ancient Trade Caravan Routes */}
+        <line x1="18" y1="146" x2="46" y2="146" stroke="#854D0E" strokeWidth="1.8" strokeDasharray="3,3" />
+        <text x="48" y="149" fill="#573A18" fontFamily="sans-serif" fontSize="9.5" fontWeight="600">
+          {isRTL ? "طرق التجارة والقوافل (طريق البحر ودرب الملك)" : "Ancient Trade Caravan Routes (Via Maris & King's Hwy)"}
+        </text>
+
+        {/* Legend Row 6: Fertile Crescent & Waterways */}
+        <rect x="24" y="160" width="16" height="9" rx="2" fill="#65A30D" fillOpacity="0.3" stroke="#65A30D" strokeWidth="0.8" />
+        <text x="48" y="168" fill="#365314" fontFamily="sans-serif" fontSize="9.5" fontWeight="600">
+          {isRTL ? "الهلال الخصيب والأنهار المقدسة (النيل، الأردن، الفرات)" : "Fertile Crescent & Sacred Rivers (Nile, Jordan, Euphrates)"}
+        </text>
+
+        {/* Interactive Prompt Button at bottom of Cartouche */}
+        <rect
+          x="16"
+          y="182"
+          width="328"
+          height="24"
+          rx="6"
+          fill="#800020"
+          fillOpacity="0.08"
+          stroke="#800020"
+          strokeWidth="0.8"
+          className="group-hover:fill-opacity-15"
+        />
+        <text
+          x="180"
+          y="198"
+          textAnchor="middle"
+          fill="#800020"
+          fontFamily="sans-serif"
+          fontSize="10"
+          fontWeight="bold"
+        >
+          {isRTL ? "📖 انقر هنا لفتح الدليل والشواهد والمحطات الكاملة" : "📖 Click to open interactive Route Guide & Stations"}
+        </text>
+      </g>
+
+      {/* ============================================================= */}
+      {/* 15. GRAPHICAL ATLAS SCALE BAR (Miles & Kilometers)           */}
+      {/* ============================================================= */}
+      <g id="cartographic-scale-bar" transform="translate(1380, 936)">
+        <rect width="360" height="46" rx="6" fill="#FEF3C7" stroke="#800020" strokeWidth="1.2" opacity="0.97" />
+        <text x="180" y="15" textAnchor="middle" fill="#800020" fontFamily="Georgia, serif" fontSize="10" fontWeight="bold">
+          {isRTL ? "مقياس الرسم الجغرافي (أميال وكيلومترات)" : "GRAPHIC SCALE OF MILES & KILOMETERS"}
+        </text>
+
+        {/* 1 degree lon at 32°N ≈ 94 km ≈ 53 px per 100 km */}
+        <g transform="translate(45, 22)">
+          {/* Black & white alternating bar segments */}
+          <rect x="0" y="0" width="67.5" height="6" fill="#800020" stroke="#451A03" strokeWidth="0.5" />
+          <rect x="67.5" y="0" width="67.5" height="6" fill="#FDFBF7" stroke="#451A03" strokeWidth="0.5" />
+          <rect x="135" y="0" width="67.5" height="6" fill="#800020" stroke="#451A03" strokeWidth="0.5" />
+          <rect x="202.5" y="0" width="67.5" height="6" fill="#FDFBF7" stroke="#451A03" strokeWidth="0.5" />
+
+          {/* Scale Ticks & Labels */}
+          <text x="0" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">0</text>
+          <text x="67.5" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">100</text>
+          <text x="135" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">200</text>
+          <text x="202.5" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">300</text>
+          <text x="270" y="15" textAnchor="middle" fill="#573A18" fontSize="8" fontFamily="sans-serif">400 mi</text>
+        </g>
       </g>
 
       {/* ============================================================= */}
