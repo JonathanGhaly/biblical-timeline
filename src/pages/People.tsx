@@ -106,7 +106,7 @@ export default function People({
 
       {/* People Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredPeople.map((person) => {
+        {filteredPeople.map((person, index) => {
           const displayName = getPersonDisplayName(person, lang);
           const displayNotes = getPersonDisplayNotes(person, lang);
           const secondaryName =
@@ -116,7 +116,7 @@ export default function People({
 
           return (
             <div
-              key={person.id}
+              key={`person_${person.id}_${index}`}
               className="relative flex flex-col justify-between p-5 rounded-2xl border-2 border-[#D4AF37]/50 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-lg hover:border-[#D4AF37] transition-all transform hover:-translate-y-0.5"
             >
               <div className="space-y-3">

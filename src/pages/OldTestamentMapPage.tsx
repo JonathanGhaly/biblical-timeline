@@ -1515,9 +1515,9 @@ export default function OldTestamentMapPage({
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {activePeople.map((person) => (
+                        {activePeople.map((person, idx) => (
                           <span
-                            key={person.id}
+                            key={`act_p_${person.id}_${idx}`}
                             className="px-2.5 py-1 rounded-md bg-stone-100 text-stone-800 text-xs font-medium border border-stone-200"
                           >
                             👤 {person.name}
@@ -1580,9 +1580,9 @@ export default function OldTestamentMapPage({
                       <div className="space-y-2">
                         {/* Only up to 5 events visible simultaneously, scrollable container */}
                         <div className="space-y-2.5 max-h-[460px] md:max-h-[480px] overflow-y-auto pr-1.5 scrollbar-thin">
-                          {activeEvents.map((event) => (
+                          {activeEvents.map((event, idx) => (
                             <div
-                              key={event.id}
+                              key={`act_ev_${event.id}_${idx}`}
                               id={`event-card-${event.id}`}
                               onClick={() => setSelectedEvent(event)}
                               className="p-3 rounded-xl border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1.5"

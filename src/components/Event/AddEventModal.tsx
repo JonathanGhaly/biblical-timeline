@@ -3,6 +3,7 @@ import type { BiblicalEvent, DateInfo, Person, Language } from "../../types/gene
 import { CopticCross } from "../Coptic/CopticCross";
 import { UI_TRANSLATIONS } from "../../utils/i18n";
 import { X, MapPin, BookOpen } from "lucide-react";
+import { PersonSelector } from "./PersonSelector";
 
 type AddEventModalProps = {
   existingPeople: Person[];
@@ -66,6 +67,7 @@ export default function AddEventModal({
   lang = "en",
 }: AddEventModalProps) {
   const [dateType, setDateType] = useState<"direct" | "anchor">("direct");
+  const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     arabicTitle: "",
@@ -104,6 +106,7 @@ export default function AddEventModal({
         dateType === "anchor" && formData.anchorAge
           ? Number(formData.anchorAge)
           : undefined,
+      personIds: selectedPersonIds.length > 0 ? selectedPersonIds : undefined,
       location: formData.location || undefined,
       description: formData.description || undefined,
       arabicDescription: formData.arabicDescription || undefined,
@@ -296,6 +299,16 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
                 className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
+          </div>
+
+          {/* Included Persons for Event */}
+          <div className="p-3.5 rounded-xl border border-[#D4AF37]/35 bg-[#D4AF37]/5 space-y-2">
+            <PersonSelector
+              people={existingPeople}
+              selectedPersonIds={selectedPersonIds}
+              onChange={setSelectedPersonIds}
+              lang={lang}
+            />
           </div>
 
           {/* Bilingual Descriptions */}

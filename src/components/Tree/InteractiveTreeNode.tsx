@@ -195,9 +195,9 @@ export const InteractiveTreeNode: React.FC<InteractiveTreeNodeProps> = ({
               : "ml-3.5 pl-5 border-l-2 border-[#D4AF37]/50"
           }`}
         >
-          {children.map((childNode) => (
+          {children.map((childNode, cIdx) => (
             <InteractiveTreeNode
-              key={childNode.person.id}
+              key={`${childNode.person.id}_${cIdx}`}
               node={childNode}
               lang={lang}
               expandedIds={expandedIds}

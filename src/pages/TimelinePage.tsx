@@ -661,7 +661,7 @@ export default function TimelinePage({
                           key={`lane_${laneIdx}`}
                           className="relative h-7 w-full rounded-md hover:bg-[#D4AF37]/5 transition-colors"
                         >
-                          {lane.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, fatherName }) => {
+                          {lane.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, fatherName }, pIdx) => {
                             const displayName = getPersonDisplayName(person, lang);
                             const pos = getPosPx(birthYear);
                             const widthPx = getWidthPx(duration);
@@ -673,7 +673,7 @@ export default function TimelinePage({
 
                             return (
                               <div
-                                key={person.id}
+                                key={`lane_${laneIdx}_p_${person.id}_${pIdx}`}
                                 id={`timeline-person-${person.id}`}
                                 onClick={() =>
                                   setSelectedItem({
@@ -748,7 +748,7 @@ export default function TimelinePage({
                   ) : (
                     /* MODE B: EXPANDED ROWS VIEW (1 row per person with lineage tags under father) */
                     <div className="space-y-1.5">
-                      {filteredPeople.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, fatherName }) => {
+                      {filteredPeople.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, fatherName }, index) => {
                         const displayName = getPersonDisplayName(person, lang);
                         const pos = getPosPx(birthYear);
                         const widthPx = getWidthPx(duration);
@@ -759,7 +759,7 @@ export default function TimelinePage({
 
                         return (
                           <div
-                            key={person.id}
+                            key={`exp_p_${person.id}_${index}`}
                             className={`flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer group ${
                               term && !matched ? "opacity-35 hover:opacity-100" : ""
                             }`}
@@ -849,13 +849,13 @@ export default function TimelinePage({
                     >
                       {packedMarriagesLanes.map((lane, laneIdx) => (
                         <div key={`m_lane_${laneIdx}`} className="relative h-6 w-full">
-                          {lane.map((marriage) => {
+                          {lane.map((marriage, mIdx) => {
                             const pos = getPosPx(marriage.year);
                             const title = isRTL ? marriage.arabicTitle : marriage.title;
 
                             return (
                               <div
-                                key={marriage.id}
+                                key={`m_${marriage.id}_${mIdx}`}
                                 id={`timeline-marriage-${marriage.id}`}
                                 onClick={() => setSelectedItem({ type: "marriage", data: marriage })}
                                 className="absolute top-0 bottom-0 px-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#121110] text-[10px] font-bold flex items-center gap-1 shadow-xs hover:shadow-md hover:scale-105 transition-all cursor-pointer border border-[#8C6F12] whitespace-nowrap"
@@ -872,13 +872,13 @@ export default function TimelinePage({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {filteredMarriages.map((marriage) => {
+                      {filteredMarriages.map((marriage, mIdx) => {
                         const title = isRTL ? marriage.arabicTitle : marriage.title;
                         const pos = getPosPx(marriage.year);
 
                         return (
                           <div
-                            key={marriage.id}
+                            key={`exp_m_${marriage.id}_${mIdx}`}
                             className="flex items-center h-6 hover:bg-[#800020]/10 rounded-lg transition-colors cursor-pointer"
                             onClick={() => setSelectedItem({ type: "marriage", data: marriage })}
                           >
@@ -927,13 +927,13 @@ export default function TimelinePage({
                     >
                       {packedEventsLanes.map((lane, laneIdx) => (
                         <div key={`e_lane_${laneIdx}`} className="relative h-6 w-full">
-                          {lane.map(({ event, year }) => {
+                          {lane.map(({ event, year }, eIdx) => {
                             const pos = getPosPx(year);
                             const displayTitle = getEventDisplayTitle(event, lang);
 
                             return (
                               <div
-                                key={event.id}
+                                key={`e_${event.id}_${eIdx}`}
                                 id={`timeline-event-${event.id}`}
                                 onClick={() => setSelectedItem({ type: "event", data: event })}
                                 className="absolute top-0 bottom-0 px-2.5 rounded-full bg-gradient-to-r from-[#1A365D] via-[#244b7d] to-[#1A365D] text-white text-[10px] font-bold flex items-center gap-1.5 shadow-xs hover:shadow-md hover:scale-105 transition-all cursor-pointer border border-[#D4AF37] whitespace-nowrap"
@@ -953,13 +953,13 @@ export default function TimelinePage({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {filteredEvents.map(({ event, year }) => {
+                      {filteredEvents.map(({ event, year }, eIdx) => {
                         const displayTitle = getEventDisplayTitle(event, lang);
                         const pos = getPosPx(year);
 
                         return (
                           <div
-                            key={event.id}
+                            key={`exp_e_${event.id}_${eIdx}`}
                             className="flex items-center h-6 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
                             onClick={() => setSelectedItem({ type: "event", data: event })}
                           >

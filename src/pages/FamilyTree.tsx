@@ -388,9 +388,9 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
         <div className="p-6 rounded-2xl border-2 border-[#D4AF37]/60 bg-white/50 dark:bg-[#161412]/50 shadow-md overflow-x-auto min-h-[500px]">
           <div className="space-y-6 min-w-[320px]">
             {displayedRoots.length > 0 ? (
-              displayedRoots.map((rootNode) => (
+              displayedRoots.map((rootNode, rIdx) => (
                 <InteractiveTreeNode
-                  key={rootNode.person.id}
+                  key={`${rootNode.person.id}_${rIdx}`}
                   node={rootNode}
                   lang={lang}
                   expandedIds={expandedIds}
@@ -422,7 +422,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
           </div>
 
           <div className="space-y-6">
-            {displayedSequentialNodes.map((node) => {
+            {displayedSequentialNodes.map((node, nIdx) => {
               const husband = node.person;
               const husbandDisplayName = getPersonDisplayName(husband, lang);
               const husbandSubName =
@@ -450,7 +450,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
 
               return (
                 <div
-                  key={husband.id}
+                  key={`seq_${husband.id}_${nIdx}`}
                   className="relative overflow-hidden rounded-2xl border-2 border-[#D4AF37] bg-white/80 dark:bg-[#1C1A17] p-6 shadow-md transition-all space-y-5"
                 >
                   {/* Top Illuminated Accents */}
@@ -580,14 +580,14 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
                         </div>
 
                         {wives.length > 0 ? (
-                          wives.map((wife) => {
+                          wives.map((wife, wIdx) => {
                             const wifeDisplayName = getPersonDisplayName(
                               wife,
                               lang
                             );
                             return (
                               <div
-                                key={wife.id}
+                                key={`wife_${wife.id}_${wIdx}`}
                                 onClick={() => setSelectedPersonForModal(wife)}
                                 className="space-y-1 cursor-pointer hover:bg-pink-50 dark:hover:bg-pink-950/40 p-1.5 rounded-lg transition-colors"
                               >
@@ -631,7 +631,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
 
                     {children.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {children.map((child) => {
+                        {children.map((child, chIdx) => {
                           const childDisplayName = getPersonDisplayName(
                             child,
                             lang
@@ -647,7 +647,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
 
                           return (
                             <button
-                              key={child.id}
+                              key={`child_${child.id}_${chIdx}`}
                               onClick={() => setSelectedPersonForModal(child)}
                               className="p-3 rounded-xl border border-[#D4AF37]/40 bg-white/50 dark:bg-[#121110]/50 space-y-1 hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors text-start"
                             >

@@ -5,11 +5,13 @@ import {
   getEventDisplayTitle,
   getEventDisplayDescription,
   formatYearDisplay,
+  getPersonDisplayName,
   localizeBiblicalReferences,
   matchesBiblicalSearch,
 } from "../utils/i18n";
-import { MapPin, BookOpen, Edit3, X } from "lucide-react";
+import { MapPin, BookOpen, Edit3, X, Users } from "lucide-react";
 import { CopticCross } from "../components/Coptic/CopticCross";
+import { PersonSelector } from "../components/Event/PersonSelector";
 
 type TimelineProps = {
   people: Person[];
@@ -121,14 +123,14 @@ export default function Timeline({
 
       {/* Vertical Timeline Track */}
       <div className="relative border-s-2 border-[#D4AF37]/60 ms-6 sm:ms-44 ps-6 sm:ps-8 py-4 space-y-8">
-        {filteredEvents.map((event) => {
+        {filteredEvents.map((event, index) => {
           const displayTitle = getEventDisplayTitle(event, lang);
           const displayDesc = getEventDisplayDescription(event, lang);
           const formattedYear = formatYearDisplay(event.date?.year, lang);
           const secondaryTitle = lang === "ar" ? event.title : event.arabicTitle;
 
           return (
-            <div key={event.id} className="relative group">
+            <div key={`tl_ev_${event.id}_${index}`} className="relative group">
               {/* Timeline Gold Rosette Node */}
               <div
                 className={`absolute -start-[31px] sm:-start-[45px] top-1.5 w-6 h-6 rounded-full border-2 border-[#D4AF37] bg-white dark:bg-[#121110] flex items-center justify-center shadow-md group-hover:scale-125 transition-transform z-10`}
@@ -184,7 +186,7 @@ export default function Timeline({
                 {/* Associated People Chips */}
                 {event.personIds && event.personIds.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    {event.personIds.map((id) => {
+                    {event.personIds.map((id, pIdx) => {
                       const p = people.find((person) => person.id === id);
                       const pName = p
                         ? lang === "ar" && p.arabicName
@@ -193,7 +195,7 @@ export default function Timeline({
                         : id;
                       return (
                         <span
-                          key={id}
+                          key={`ev_p_${id}_${pIdx}`}
                           className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#800020]/10 text-[#800020] dark:text-[#F3E5AB] border border-[#D4AF37]/30"
                         >
                           👤 {pName}
@@ -298,6 +300,15 @@ export default function Timeline({
                   />
                 </div>
 
+                <div className="p-2.5 rounded-xl border border-[#D4AF37]/35 bg-[#D4AF37]/5">
+                  <PersonSelector
+                    people={people}
+                    selectedPersonIds={editForm.personIds || []}
+                    onChange={(personIds) => setEditForm({ ...editForm, personIds })}
+                    lang={lang}
+                  />
+                </div>
+
                 <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
@@ -332,6 +343,32 @@ export default function Timeline({
                   <p className="leading-relaxed bg-[#D4AF37]/10 p-3 rounded-xl border border-[#D4AF37]/20">
                     {getEventDisplayDescription(selectedEvent, lang)}
                   </p>
+                )}
+
+                {selectedEvent.personIds && selectedEvent.personIds.length > 0 && (
+                  <div className="p-2.5 bg-white/60 dark:bg-[#141210] rounded-xl border border-[#D4AF37]/30 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-[#800020] dark:text-[#D4AF37]">
+                      <Users size={13} />
+                      <span>{t.associatedPeople}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#800020]/15 dark:bg-[#D4AF37]/25 font-semibold">
+                        {selectedEvent.personIds.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedEvent.personIds.map((id, pIdx) => {
+                        const p = people.find((person) => person.id === id);
+                        const name = p ? getPersonDisplayName(p, lang) : id;
+                        return (
+                          <span
+                            key={`sel_ev_p_${id}_${pIdx}`}
+                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#1A365D]/10 dark:bg-[#1A365D]/30 border border-[#1A365D]/25 text-[#1A365D] dark:text-[#90CDF4]"
+                          >
+                            {name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (

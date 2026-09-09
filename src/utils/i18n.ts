@@ -171,6 +171,24 @@ export const UI_TRANSLATIONS = {
     location: "Location",
     associatedPeople: "Associated People",
     
+    // Events Millennium Summary & Tab Filtering
+    eventsSummaryTitle: "Events Chronology Dashboard",
+    eventsSummarySubtitle: "Chronological breakdown and distribution across historical millennia",
+    totalRecordedEvents: "Total Recorded Events",
+    eventsPerMillennium: "Events per Millennium",
+    allMillenniaTab: "All Millennia",
+    filterPeopleSwitch: "Filter People in this Tab",
+    filterPeopleActive: "Person filter active",
+    filterPeopleInactive: "Person filter off",
+    filterPeopleHint: "Select biblical figures below to filter events in this tab",
+    filterOnlyLinkedPeople: "Only events with linked figures",
+    clearPeopleFilter: "Clear Selection",
+    selectAllPeople: "Select All",
+    noEventsInMillennium: "No events recorded in this millennium yet.",
+    showingEventsCount: "Showing",
+    ofEvents: "of",
+    eventsWord: "events",
+    
     // Tree & Timeline
     treeTitle: "Sacred Lineage & Family Tree",
     treeSubtitle: "Hierarchical view ordered from father to sons with interactive expandable branches.",
@@ -331,6 +349,24 @@ export const UI_TRANSLATIONS = {
     ad: "م",
     location: "المكان",
     associatedPeople: "الشخصيات المرتبطة",
+    
+    // Events Millennium Summary & Tab Filtering
+    eventsSummaryTitle: "لوحة ملخص الأحداث الكتابية",
+    eventsSummarySubtitle: "التوزيع الزمني للأحداث عبر الألفيات التاريخية",
+    totalRecordedEvents: "إجمالي الأحداث المسجلة",
+    eventsPerMillennium: "الأحداث لكل ألفية",
+    allMillenniaTab: "جميع الألفيات",
+    filterPeopleSwitch: "تصفية بالشخصيات في هذا التبويب",
+    filterPeopleActive: "تصفية الشخصيات مفعلة",
+    filterPeopleInactive: "تصفية الشخصيات معطلة",
+    filterPeopleHint: "اختر شخصيات من القائمة لتصفية أحداث هذا التبويب",
+    filterOnlyLinkedPeople: "فقط الأحداث ذات الشخصيات المرتبطة",
+    clearPeopleFilter: "إلغاء التحديد",
+    selectAllPeople: "تحديد الكل",
+    noEventsInMillennium: "لا توجد أحداث مسجلة في هذه الألفية بعد.",
+    showingEventsCount: "عرض",
+    ofEvents: "من",
+    eventsWord: "أحداث",
     
     // Tree & Timeline
     treeTitle: "سلسلة الأنساب وشجرة العائلة المقدسة",

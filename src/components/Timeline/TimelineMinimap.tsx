@@ -83,13 +83,13 @@ export const TimelineMinimap: React.FC<TimelineMinimapProps> = ({
         onClick={handleClick}
       >
         {/* Person Density Sparks */}
-        {people.map(({ person, birthYear, duration }) => {
+        {people.map(({ person, birthYear, duration }, index) => {
           const ratio = getFullRatio(birthYear);
           const widthRatio = Math.max(0.005, duration / fullSpan);
 
           return (
             <div
-              key={`mini_${person.id}`}
+              key={`mini_${person.id}_${index}`}
               className="absolute top-1 bottom-1 rounded-sm opacity-50 transition-opacity hover:opacity-100"
               style={{
                 [isRTL ? "right" : "left"]: `${ratio * 100}%`,

@@ -254,14 +254,14 @@ export default function Dashboard({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.events.slice(0, 6).map((event) => {
+          {data.events.slice(0, 6).map((event, index) => {
             const displayTitle = getEventDisplayTitle(event, lang);
             const displayDesc = getEventDisplayDescription(event, lang);
             const formattedYear = formatYearDisplay(event.date?.year, lang);
 
             return (
               <div
-                key={event.id}
+                key={`dash_ev_${event.id}_${index}`}
                 className="group relative rounded-2xl p-5 border border-[#D4AF37]/40 bg-white/60 dark:bg-[#1C1A17] hover:border-[#D4AF37] shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div className="space-y-2">

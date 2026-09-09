@@ -18,8 +18,10 @@ import {
   X,
   Edit3,
   Trash2,
+  Users,
 } from "lucide-react";
 import { CopticCross } from "../components/Coptic/CopticCross";
+import { PersonSelector } from "../components/Event/PersonSelector";
 
 type EventsProps = {
   events: BiblicalEvent[];
@@ -103,7 +105,15 @@ export default function Events({
     const refMatch = (event.biblicalReferences || []).some((r) =>
       matchesBiblicalSearch(r, term)
     );
-    return titleMatch || arTitleMatch || descMatch || arDescMatch || locMatch || refMatch;
+    const personMatch = (event.personIds || []).some((id) => {
+      const p = people.find((person) => person.id === id);
+      if (!p) return id.toLowerCase().includes(term);
+      return (
+        p.name.toLowerCase().includes(term) ||
+        (p.arabicName || "").toLowerCase().includes(term)
+      );
+    });
+    return titleMatch || arTitleMatch || descMatch || arDescMatch || locMatch || refMatch || personMatch;
   });
 
   const getPersonName = (id?: string) => {
@@ -196,7 +206,7 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
 
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredEvents.map((event) => {
+        {filteredEvents.map((event, index) => {
           const displayTitle = getEventDisplayTitle(event, lang);
           const displayDesc = getEventDisplayDescription(event, lang);
           const formattedYear = formatYearDisplay(event.date?.year, lang);
@@ -204,7 +214,7 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
 
           return (
             <div
-              key={event.id}
+              key={`event_${event.id}_${index}`}
               onClick={() => handleOpenModal(event)}
               className="cursor-pointer relative flex flex-col justify-between p-5 rounded-2xl border-2 border-[#D4AF37]/50 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-lg hover:border-[#D4AF37] transition-all transform hover:-translate-y-0.5"
             >
@@ -243,6 +253,20 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
                   <p className="text-xs text-[#4A3E31] dark:text-[#C5BBAE] leading-relaxed line-clamp-3">
                     {displayDesc}
                   </p>
+                )}
+
+                {event.personIds && event.personIds.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 mt-2">
+                    <Users size={12} className="text-[#800020] dark:text-[#D4AF37] shrink-0" />
+                    {event.personIds.map((id, pIdx) => (
+                      <span
+                        key={`ev_pid_${id}_${pIdx}`}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#1A365D]/10 dark:bg-[#1A365D]/30 border border-[#1A365D]/20 text-[#1A365D] dark:text-[#90CDF4]"
+                      >
+                        {getPersonName(id)}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -411,6 +435,16 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
                   />
                 </div>
 
+                {/* Included Persons Selector */}
+                <div className="p-3.5 rounded-xl border border-[#D4AF37]/35 bg-[#D4AF37]/5 space-y-2">
+                  <PersonSelector
+                    people={people}
+                    selectedPersonIds={editForm.personIds || []}
+                    onChange={(personIds) => setEditForm({ ...editForm, personIds })}
+                    lang={lang}
+                  />
+                </div>
+
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#D4AF37]/30">
                   <button
                     type="button"
@@ -445,6 +479,28 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
                   <p className="text-sm leading-relaxed text-[#4A3E31] dark:text-[#C5BBAE] bg-[#D4AF37]/10 p-4 rounded-xl border border-[#D4AF37]/25">
                     {getEventDisplayDescription(selectedEvent, lang)}
                   </p>
+                )}
+
+                {selectedEvent.personIds && selectedEvent.personIds.length > 0 && (
+                  <div className="p-3 bg-white/60 dark:bg-[#141210] rounded-xl border border-[#D4AF37]/30 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                      <Users size={14} />
+                      <span>{t.associatedPeople}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#800020]/15 dark:bg-[#D4AF37]/25 font-semibold">
+                        {selectedEvent.personIds.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedEvent.personIds.map((id, pIdx) => (
+                        <span
+                          key={`sel_ev_pid_${id}_${pIdx}`}
+                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#1A365D]/10 dark:bg-[#1A365D]/30 border border-[#1A365D]/25 text-[#1A365D] dark:text-[#90CDF4] shadow-xs"
+                        >
+                          {getPersonName(id)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
