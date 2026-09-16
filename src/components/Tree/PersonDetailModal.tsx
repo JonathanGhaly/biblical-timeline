@@ -17,6 +17,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { CopticCross } from "../Coptic/CopticCross";
+import { PrecisionIndicator } from "../Common/PrecisionIndicator";
 
 interface PersonDetailModalProps {
   person: ComputedPerson | null;
@@ -149,14 +150,28 @@ export const PersonDetailModal: React.FC<PersonDetailModalProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {/* Lifespan */}
           <div className="p-3 rounded-xl border border-[#D4AF37]/40 bg-white/80 dark:bg-[#121110] space-y-1">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-[#800020] dark:text-[#D4AF37]">
-              <Calendar size={13} />
-              <span>{t.lifespan}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-[#800020] dark:text-[#D4AF37]">
+                <Calendar size={13} />
+                <span>{t.lifespan}</span>
+              </div>
+              <PrecisionIndicator
+                precision={
+                  person.birth?.precision ??
+                  (person.anchorAgeUsed !== undefined || person.fatherAgeAtBirth !== undefined
+                    ? "calculated"
+                    : "approximate")
+                }
+                lang={lang}
+                size="sm"
+              />
             </div>
             <div className="text-base font-bold text-[#2C241E] dark:text-[#F3E5AB]">
               {person.yearsLived !== undefined
                 ? `${person.yearsLived} ${t.years}`
-                : t.unspecified}
+                : isRTL
+                ? "العمر: غير معروف"
+                : "Unknown age"}
             </div>
           </div>
 
@@ -178,7 +193,11 @@ export const PersonDetailModal: React.FC<PersonDetailModalProps> = ({
               <span>{t.death}</span>
             </div>
             <div className="text-sm font-semibold text-[#2C241E] dark:text-[#F3E5AB]">
-              {formatYearDisplay(person.deathYearBC, lang)}
+              {person.deathYearBC !== undefined
+                ? formatYearDisplay(person.deathYearBC, lang)
+                : isRTL
+                ? "غير معروف"
+                : "Unknown"}
             </div>
           </div>
 

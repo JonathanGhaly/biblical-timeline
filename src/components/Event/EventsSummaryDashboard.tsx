@@ -57,8 +57,10 @@ export const EventsSummaryDashboard: React.FC<EventsSummaryDashboardProps> = ({
   const isRTL = lang === "ar";
 
   // Compute all millennia summaries and event mapping
-  const { totalEvents, summaries, eventMillenniumMap } =
-    computeMillenniumSummaries(events, people);
+  const { totalEvents, summaries, eventMillenniumMap } = React.useMemo(
+    () => computeMillenniumSummaries(events, people),
+    [events, people]
+  );
 
   // Active filter for the currently selected tab
   const activeTabFilter: TabPeopleFilterState = tabFilters[selectedTab] || {
@@ -67,10 +69,12 @@ export const EventsSummaryDashboard: React.FC<EventsSummaryDashboardProps> = ({
   };
 
   // Events belonging to the currently selected tab (before people filtering)
-  const eventsInCurrentTab = events.filter((ev) => {
-    if (selectedTab === "all") return true;
-    return eventMillenniumMap.get(ev.id) === selectedTab;
-  });
+  const eventsInCurrentTab = React.useMemo(() => {
+    return events.filter((ev) => {
+      if (selectedTab === "all") return true;
+      return eventMillenniumMap.get(ev.id) === selectedTab;
+    });
+  }, [events, selectedTab, eventMillenniumMap]);
 
   // Figures involved in this tab's events, sorted by event count descending
   const figuresInCurrentTab = React.useMemo(() => {

@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import type { Person, Language } from "../../types/genealogy";
 import { CopticCross } from "../Coptic/CopticCross";
 import { UI_TRANSLATIONS, BIBLICAL_NAMES_ARABIC } from "../../utils/i18n";
-import { X, User, BookOpen, MapPin, Calendar, Heart } from "lucide-react";
+import { BIBLICAL_COUNTRIES, BIBLICAL_CITIES } from "../../data/biblicalLands";
+import { X, User, BookOpen, MapPin, Calendar, Heart, Globe } from "lucide-react";
 
 type CityRegion =
   | "Egypt & Sinai"
@@ -82,6 +83,7 @@ export default function EditPersonModal({
       person?.arabicName ||
       (person?.id ? BIBLICAL_NAMES_ARABIC[person.id.toLowerCase()] || "" : ""),
     gender: person?.gender || ("male" as "male" | "female"),
+    country: person?.country || "",
     placeOfBirth: person?.placeOfBirth || "",
     fatherId: person?.fatherId || "",
     motherId: person?.motherId || "",
@@ -136,6 +138,7 @@ export default function EditPersonModal({
       name: formData.name,
       arabicName: formData.arabicName || undefined,
       gender: formData.gender,
+      country: formData.country || undefined,
       placeOfBirth: formData.placeOfBirth || undefined,
       fatherId: formData.fatherId || undefined,
       motherId: formData.motherId || undefined,
@@ -345,6 +348,28 @@ export default function EditPersonModal({
             </div>
           </div>
 
+          {/* Country / Biblical Land */}
+          <div className="space-y-1">
+            <label className="flex items-center gap-1.5 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+              <Globe size={14} />
+              {t.countryLabel || (lang === "ar" ? "الدولة / الإقليم" : "Country / Land")}
+            </label>
+            <select
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+            >
+              <option value="">
+                {t.selectCountryPlaceholder || (lang === "ar" ? "— اختر الدولة (مثل: كنعان، مصر...) —" : "— Select Country (e.g. Egypt, Canaan...) —")}
+              </option>
+              {BIBLICAL_COUNTRIES.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {lang === "ar" ? `${c.arabicName} (${c.name})` : `${c.name} (${c.arabicName})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Place of Birth */}
           <div className="space-y-1">
             <label className="flex items-center gap-1.5 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
@@ -359,9 +384,9 @@ export default function EditPersonModal({
               <option value="">{lang === "ar" ? "— اختر مدينة العهد القديم —" : "— Select Biblical City —"}</option>
               {regions.map((region) => (
                 <optgroup key={region} label={region}>
-                  {OT_CITIES.filter((c) => c.region === region).map((city) => (
+                  {BIBLICAL_CITIES.filter((c) => c.region === region).map((city) => (
                     <option key={city.id} value={city.name}>
-                      {city.name}
+                      {lang === "ar" ? `${city.arabicName} (${city.name})` : `${city.name} (${city.arabicName})`}
                     </option>
                   ))}
                 </optgroup>

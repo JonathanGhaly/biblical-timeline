@@ -1,5 +1,5 @@
 import type { BiblicalEvent, Person, Language } from "../types/genealogy";
-import { computeAllDates } from "./chronology";
+import { resolveEventYear } from "./chronology";
 
 export type MillenniumId =
   | "all"
@@ -94,19 +94,7 @@ export function getEventEffectiveYear(
   event: BiblicalEvent,
   people: Person[]
 ): number | undefined {
-  if (event.date?.year !== undefined) {
-    return event.date.year;
-  }
-  if (event.anchorPersonId) {
-    const computed = computeAllDates(people);
-    const anchor = computed.find((p) => p.id === event.anchorPersonId);
-    if (anchor && anchor.birthYearBC !== undefined) {
-      const age = event.anchorAge ?? event.anchorPersonAgeAtEvent ?? 0;
-      // In timeline BC coordinates: birthYearBC is positive BC, so historical year is -(birthYearBC - age)
-      return -(anchor.birthYearBC - age);
-    }
-  }
-  return undefined;
+  return resolveEventYear(event, people);
 }
 
 /**

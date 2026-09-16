@@ -55,32 +55,204 @@ export const BIBLICAL_NAMES_ARABIC: Record<string, string> = {
 
 export const BIBLICAL_EVENTS_ARABIC: Record<string, { title: string; description?: string }> = {
   creation: {
-    title: "الخلق",
+    title: "الخليقة والتكوين",
+    description: "قصة خلق العالم والإنسان في سفر التكوين.",
+  },
+  "the creation": {
+    title: "الخليقة وبدء التكوين",
     description: "قصة خلق العالم والإنسان في سفر التكوين.",
   },
   fall: {
-    title: "السقوط",
+    title: "السقوط والخروج من الجنة",
+    description: "أكل آدم وحواء من شجرة معرفة الخير والشر والخروج من الجنة.",
+  },
+  "the fall": {
+    title: "السقوط والخروج من الجنة",
     description: "أكل آدم وحواء من شجرة معرفة الخير والشر والخروج من الجنة.",
   },
   flood: {
+    title: "طوفان نوح العظيم",
+    description: "طوفان نوح وتجديد العهد الإلهي مع البشرية.",
+  },
+  "the flood": {
+    title: "طوفان نوح العظيم",
+    description: "طوفان نوح وتجديد العهد الإلهي مع البشرية.",
+  },
+  "great flood": {
     title: "الطوفان العظيم",
     description: "طوفان نوح وتجديد العهد الإلهي مع البشرية.",
   },
   "tower-of-babel": {
-    title: "برج بابل",
+    title: "برج بابل وتشتت الشعوب",
+    description: "بلبلة الألسن وتفرق الشعوب في الأرض.",
+  },
+  "tower of babel": {
+    title: "برج بابل وتشتت الشعوب",
     description: "بلبلة الألسن وتفرق الشعوب في الأرض.",
   },
   "call-of-abraham": {
-    title: "دعوة إبراهيم",
-    description: "دعوة الله لإبراهيم للخروج من أور الكلدانيين إلى أرض الموعد.",
+    title: "دعوة إبراهيم والخروج من أور",
+    description: "دعوة الله لإبراهيم للخروج من أور الكلدانيين إلى أرض الموعد كنعان.",
+  },
+  "call of abraham": {
+    title: "دعوة إبراهيم والخروج من أور",
+    description: "دعوة الله لإبراهيم للخروج من أور الكلدانيين إلى أرض الموعد كنعان.",
   },
   "abraham-covenant": {
-    title: "العهد مع إبراهيم",
+    title: "العهد الإلهي مع إبراهيم",
+    description: "تأسيس الله عهد النسل والبركة مع أبي الآباء إبراهيم.",
+  },
+  "covenant with abraham": {
+    title: "العهد الإلهي مع إبراهيم",
+    description: "تأسيس الله عهد النسل والبركة مع أبي الآباء إبراهيم.",
+  },
+  "covenant of abraham": {
+    title: "العهد الإلهي مع إبراهيم",
     description: "تأسيس الله عهد النسل والبركة مع أبي الآباء إبراهيم.",
   },
   "isaac-birth": {
-    title: "ميلاد إسحاق",
+    title: "ميلاد إسحاق ابن الموعد",
     description: "ولادة ابن الموعد إسحاق لإبراهيم وسارة في شيخوختهما.",
+  },
+  "birth of isaac": {
+    title: "ميلاد إسحاق ابن الموعد",
+    description: "ولادة ابن الموعد إسحاق لإبراهيم وسارة في شيخوختهما.",
+  },
+  "sacrifice-of-isaac": {
+    title: "ذبيحة إسحاق على جبل المريا",
+    description: "امتحان إيمان إبراهيم بتقديم إسحاق ذبيحة وفداء الله له بكبش محرقة.",
+  },
+  "offering of isaac": {
+    title: "ذبيحة إسحاق على جبل المريا",
+    description: "امتحان إيمان إبراهيم بتقديم إسحاق ذبيحة وفداء الله له بكبش محرقة.",
+  },
+  "jacob-esau": {
+    title: "ميلاد يعقوب وعيسو",
+    description: "ولادة التوأم يعقوب وعيسو لإسحاق ورفقة وصراع البكورية.",
+  },
+  "birth of jacob and esau": {
+    title: "ميلاد يعقوب وعيسو",
+    description: "ولادة التوأم يعقوب وعيسو لإسحاق ورفقة وصراع البكورية.",
+  },
+  "jacob-ladder": {
+    title: "حلم يعقوب في بيت إيل (السلم)",
+    description: "رؤيا يعقوب للسلم الواصل بين السماء والأرض في بيت إيل.",
+  },
+  "jacob's ladder": {
+    title: "حلم يعقوب في بيت إيل (السلم)",
+    description: "رؤيا يعقوب للسلم الواصل بين السماء والأرض في بيت إيل.",
+  },
+  "joseph-sold": {
+    title: "بيع يوسف إلى مصر",
+    description: "إخوة يوسف يبيعونه لقافلة الإسماعيليين ليؤخذ عبداً إلى أرض مصر.",
+  },
+  "joseph sold into egypt": {
+    title: "بيع يوسف إلى مصر",
+    description: "إخوة يوسف يبيعونه لقافلة الإسماعيليين ليؤخذ عبداً إلى أرض مصر.",
+  },
+  "joseph sold to egypt": {
+    title: "بيع يوسف إلى مصر",
+    description: "إخوة يوسف يبيعونه لقافلة الإسماعيليين ليؤخذ عبداً إلى أرض مصر.",
+  },
+  "joseph-ruler": {
+    title: "يوسف وزيراً وسيداً على كل أرض مصر",
+    description: "تفسير يوسف لأحلام فرعون وتعيينه مدبراً لكل أرض مصر وتخزين القمح.",
+  },
+  "joseph ruler of egypt": {
+    title: "يوسف وزيراً وسيداً على كل أرض مصر",
+    description: "تفسير يوسف لأحلام فرعون وتعيينه مدبراً لكل أرض مصر وتخزين القمح.",
+  },
+  "birth-of-moses": {
+    title: "ميلاد موسى وانتشاله من النيل",
+    description: "ولادة موسى وإنقاذه في سفط من البردي بواسطة ابنة فرعون.",
+  },
+  "birth of moses": {
+    title: "ميلاد موسى وانتشاله من النيل",
+    description: "ولادة موسى وإنقاذه في سفط من البردي بواسطة ابنة فرعون.",
+  },
+  "burning-bush": {
+    title: "العليقة المتقدة في حوريب",
+    description: "ظهور الله لموسى في العليقة التي تتقد بالنار ولا تحترق وتكليفه بإخراج الشعب.",
+  },
+  "the burning bush": {
+    title: "العليقة المتقدة في حوريب",
+    description: "ظهور الله لموسى في العليقة التي تتقد بالنار ولا تحترق وتكليفه بإخراج الشعب.",
+  },
+  "exodus": {
+    title: "خروج بني إسرائيل من أرض مصر",
+    description: "خروج شعب الله من عبودية مصر بقيادة موسى بعد الضربات العشر والفصح.",
+  },
+  "the exodus": {
+    title: "خروج بني إسرائيل من أرض مصر",
+    description: "خروج شعب الله من عبودية مصر بقيادة موسى بعد الضربات العشر والفصح.",
+  },
+  "the exodus from egypt": {
+    title: "خروج بني إسرائيل من أرض مصر",
+    description: "خروج شعب الله من عبودية مصر بقيادة موسى بعد الضربات العشر والفصح.",
+  },
+  "crossing-red-sea": {
+    title: "عبور البحر الأحمر",
+    description: "شق البحر الأحمر وعبور الشعب على اليابسة وغرق جيش فرعون ومركباته.",
+  },
+  "crossing the red sea": {
+    title: "عبور البحر الأحمر",
+    description: "شق البحر الأحمر وعبور الشعب على اليابسة وغرق جيش فرعون ومركباته.",
+  },
+  "giving-of-law": {
+    title: "استلام لوحي الشريعة والوصايا في سيناء",
+    description: "إعطاء الله الشريعة والوصايا العشر لموسى على جبل سيناء.",
+  },
+  "giving of the law": {
+    title: "استلام لوحي الشريعة والوصايا في سيناء",
+    description: "إعطاء الله الشريعة والوصايا العشر لموسى على جبل سيناء.",
+  },
+  "the ten commandments": {
+    title: "إعطاء الوصايا العشر في سيناء",
+    description: "إعطاء الله الوصايا العشر لشعبه على جبل سيناء.",
+  },
+  "fall-of-jericho": {
+    title: "سقوط أسوار أريحا",
+    description: "سقوط أسوار مدينة أريحا أمام يشوع وبني إسرائيل بعد الدوران حولها بالتابوت.",
+  },
+  "fall of jericho": {
+    title: "سقوط أسوار أريحا",
+    description: "سقوط أسوار مدينة أريحا أمام يشوع وبني إسرائيل بعد الدوران حولها بالتابوت.",
+  },
+  "david-goliath": {
+    title: "داود ينتصر على جليات الجبار",
+    description: "انتصار الفتى داود على جليات الفلسطيني بالمقلاع والحصى في وادي البطم.",
+  },
+  "david and goliath": {
+    title: "داود ينتصر على جليات الجبار",
+    description: "انتصار الفتى داود على جليات الفلسطيني بالمقلاع والحصى في وادي البطم.",
+  },
+  "solomon-temple": {
+    title: "تدشين هيكل سليمان في أورشليم",
+    description: "بناء وتدشين هيكل الرب في أورشليم بواسطة الملك سليمان الحكيم.",
+  },
+  "building of the temple": {
+    title: "بناء وتدشين هيكل سليمان بأورشليم",
+    description: "بناء وتدشين هيكل الرب في أورشليم بواسطة الملك سليمان الحكيم.",
+  },
+  "solomon's temple": {
+    title: "تدشين هيكل سليمان في أورشليم",
+    description: "بناء وتدشين هيكل الرب في أورشليم بواسطة الملك سليمان الحكيم.",
+  },
+  "babylonian-exile": {
+    title: "السبي البابلي لأورشليم ويهوذا",
+    description: "سقوط أورشليم على يد نبوخذنصر وسبي بني إسرائيل إلى بابل.",
+  },
+  "babylonian captivity": {
+    title: "السبي البابلي لأورشليم ويهوذا",
+    description: "سقوط أورشليم على يد نبوخذنصر وسبي بني إسرائيل إلى بابل.",
+  },
+  "return-from-exile": {
+    title: "الرجوع من السبي وبناء الهيكل الثاني",
+    description: "صدور نداء كورش ملك فارس ورجوع المسبيين بقيادة زربابل وعزرا ونحميا.",
+  },
+  "return from exile": {
+    title: "الرجوع من السبي وبناء الهيكل الثاني",
+    description: "صدور نداء كورش ملك فارس ورجوع المسبيين بقيادة زربابل وعزرا ونحميا.",
   },
 };
 
@@ -152,6 +324,9 @@ export const UI_TRANSLATIONS = {
     anchorAgeLabel: "Age of Reference Person at Birth",
     yearsLivedLabel: "Total Lifespan (Years Lived)",
     placeOfBirthLabel: "Place of Birth / City",
+    countryLabel: "Country / Biblical Land",
+    selectCountryPlaceholder: "— Select Country (e.g. Canaan, Egypt) —",
+    unknown: "Unknown",
     cancel: "Cancel",
     save: "Save",
     
@@ -169,6 +344,15 @@ export const UI_TRANSLATIONS = {
     bc: "BC",
     ad: "AD",
     location: "Location",
+    multipleLocations: "Biblical Locations",
+    addLocation: "Add Location",
+    selectLocationPlaceholder: "— Select from Biblical Sites —",
+    customLocationPlaceholder: "Or type a custom location / route...",
+    calculatedEventYear: "Calculated Historical Date",
+    relativeToPerson: "Relative to Biblical Figure",
+    relativeFigureAgeAtEvent: "Age of Biblical Figure at Event",
+    calculationSuccessNotice: "Date calculated based on genealogical chronology",
+    noBirthYearForFigure: "Birth year for this figure could not be resolved",
     associatedPeople: "Associated People",
     
     // Events Millennium Summary & Tab Filtering
@@ -331,6 +515,9 @@ export const UI_TRANSLATIONS = {
     anchorAgeLabel: "عمر الأب/المرجع عند ولادته",
     yearsLivedLabel: "إجمالي سنوات العمر",
     placeOfBirthLabel: "مكان الميلاد / المدينة",
+    countryLabel: "البلد / الأرض الكتابية",
+    selectCountryPlaceholder: "— اختر البلد (مثل كنعان، مصر) —",
+    unknown: "غير معروف",
     cancel: "إلغاء",
     save: "حفظ",
     
@@ -348,6 +535,15 @@ export const UI_TRANSLATIONS = {
     bc: "ق.م",
     ad: "م",
     location: "المكان",
+    multipleLocations: "المواقع الكتابية",
+    addLocation: "إضافة موقع",
+    selectLocationPlaceholder: "— اختر من المواقع الكتابية —",
+    customLocationPlaceholder: "أو اكتب اسماً لموقع / مسار مخصص...",
+    calculatedEventYear: "التاريخ الزمني المحسوب",
+    relativeToPerson: "مرتبط بعمر شخصية كتابية",
+    relativeFigureAgeAtEvent: "عمر الشخصية الكتابية عند وقوع الحدث",
+    calculationSuccessNotice: "تم حساب السنة التاريخية بدقة استناداً للتسلسل الأنسابي",
+    noBirthYearForFigure: "سنة ميلاد هذه الشخصية غير محددة بعد في التسلسل",
     associatedPeople: "الشخصيات المرتبطة",
     
     // Events Millennium Summary & Tab Filtering
@@ -472,8 +668,15 @@ export function getEventDisplayTitle(event: BiblicalEvent, lang: Language): stri
     if (event.arabicTitle && event.arabicTitle.trim()) {
       return event.arabicTitle;
     }
-    const mapped = BIBLICAL_EVENTS_ARABIC[event.id.toLowerCase()];
-    if (mapped?.title) return mapped.title;
+    const idKey = (event.id || "").toLowerCase();
+    if (BIBLICAL_EVENTS_ARABIC[idKey]?.title) return BIBLICAL_EVENTS_ARABIC[idKey].title;
+
+    const titleKey = (event.title || "").trim().toLowerCase();
+    if (titleKey && BIBLICAL_EVENTS_ARABIC[titleKey]?.title) return BIBLICAL_EVENTS_ARABIC[titleKey].title;
+
+    const strippedId = idKey.replace(/[-_]/g, " ");
+    if (BIBLICAL_EVENTS_ARABIC[strippedId]?.title) return BIBLICAL_EVENTS_ARABIC[strippedId].title;
+
     return event.title;
   }
   return event.title;
@@ -484,8 +687,15 @@ export function getEventDisplayDescription(event: BiblicalEvent, lang: Language)
     if (event.arabicDescription && event.arabicDescription.trim()) {
       return event.arabicDescription;
     }
-    const mapped = BIBLICAL_EVENTS_ARABIC[event.id.toLowerCase()];
-    if (mapped?.description) return mapped.description;
+    const idKey = (event.id || "").toLowerCase();
+    if (BIBLICAL_EVENTS_ARABIC[idKey]?.description) return BIBLICAL_EVENTS_ARABIC[idKey].description;
+
+    const titleKey = (event.title || "").trim().toLowerCase();
+    if (titleKey && BIBLICAL_EVENTS_ARABIC[titleKey]?.description) return BIBLICAL_EVENTS_ARABIC[titleKey].description;
+
+    const strippedId = idKey.replace(/[-_]/g, " ");
+    if (BIBLICAL_EVENTS_ARABIC[strippedId]?.description) return BIBLICAL_EVENTS_ARABIC[strippedId].description;
+
     return event.description;
   }
   return event.description;

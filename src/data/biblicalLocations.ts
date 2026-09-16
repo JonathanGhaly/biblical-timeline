@@ -551,3 +551,72 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     biblicalReferences: ["Genesis 15:20", "Genesis 23:10", "Joshua 1:4"],
   },
 ];
+
+import { ALL_BIBLICAL_PLACES, type BiblicalPlace } from "./biblicalPlaces";
+
+export function convertBiblicalPlaceToLocation(place: BiblicalPlace): BiblicalLocation {
+  let region = "Canaan";
+  const r = (place.region || "").toLowerCase();
+  if (r.includes("mesopotamia") || r.includes("assyria") || r.includes("babylon")) {
+    region = "Mesopotamia";
+  } else if (r.includes("egypt")) {
+    region = "Egypt";
+  } else if (r.includes("sinai")) {
+    region = "Sinai";
+  } else if (r.includes("anatolia") || r.includes("asia minor")) {
+    region = "Anatolia";
+  } else if (r.includes("persia") || r.includes("media") || r.includes("elam")) {
+    region = "Persia & Media";
+  } else if (r.includes("arabia")) {
+    region = "Arabia";
+  } else {
+    region = "Canaan";
+  }
+
+  let era = "Patriarchal";
+  const refs = (place.biblicalReferences || []).join(" ").toLowerCase();
+  if (refs.includes("exodus") || refs.includes("numbers") || refs.includes("deuteronomy")) {
+    era = "Exodus";
+  } else if (refs.includes("samuel") || refs.includes("kings") || refs.includes("chronicles")) {
+    era = "United Monarchy";
+  }
+
+  return {
+    id: place.id,
+    name: place.name,
+    arabicName: place.arabicName || place.name,
+    modernName: place.modernName ? `${place.modernName}${place.modernCountry ? `, ${place.modernCountry}` : ""}` : place.name,
+    modernCountry: place.modernCountry,
+    coordinates: [place.latitude, place.longitude],
+    region,
+    biblicalEra: era,
+    keyEvents: place.keyEvents || [],
+    description: place.description || `Biblical site mentioned in Scripture.`,
+    arabicDescription: place.arabicDescription || place.description || "موقع كتابي ورد ذكره في الأسفار المقدسة.",
+    biblicalReferences: place.biblicalReferences || [],
+    placeType: place.type,
+    certainty: place.certainty,
+    aliases: place.aliases || [],
+  };
+}
+
+const seenMapIds = new Set<string>();
+
+export const ALL_MAP_LOCATIONS: BiblicalLocation[] = [
+  ...BIBLICAL_LOCATIONS.map((loc) => {
+    const matchedPlace = ALL_BIBLICAL_PLACES.find((p) => p.id.toLowerCase() === loc.id.toLowerCase());
+    return {
+      ...loc,
+      placeType: matchedPlace?.type || "city",
+      certainty: matchedPlace?.certainty || "certain",
+      aliases: matchedPlace?.aliases || [],
+    };
+  }),
+  ...ALL_BIBLICAL_PLACES.map(convertBiblicalPlaceToLocation),
+].filter((loc) => {
+  const normId = loc.id.toLowerCase();
+  if (seenMapIds.has(normId)) return false;
+  seenMapIds.add(normId);
+  return true;
+});
+

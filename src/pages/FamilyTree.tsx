@@ -59,7 +59,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
     roots.sort((a, b) => {
       if (a.id === "adam" || a.name.toLowerCase() === "adam") return -1;
       if (b.id === "adam" || b.name.toLowerCase() === "adam") return 1;
-      return (b.birthYearBC ?? 0) - (a.birthYearBC ?? 0);
+      return (a.birthYearBC ?? 0) - (b.birthYearBC ?? 0);
     });
 
     function buildNode(
@@ -89,7 +89,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
       directChildren.sort((a, b) => {
         if (a.gender === "male" && b.gender !== "male") return -1;
         if (a.gender !== "male" && b.gender === "male") return 1;
-        return (b.birthYearBC ?? 0) - (a.birthYearBC ?? 0);
+        return (a.birthYearBC ?? 0) - (b.birthYearBC ?? 0);
       });
 
       const spouses = computedPeople.filter(

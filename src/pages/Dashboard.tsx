@@ -17,6 +17,7 @@ import {
   formatYearDisplay,
   localizeBiblicalReferences,
 } from "../utils/i18n";
+import { resolveEventYear } from "../utils/chronology";
 import { getStoredGistId } from "../services/gistService";
 
 interface DashboardProps {
@@ -257,7 +258,8 @@ export default function Dashboard({
           {data.events.slice(0, 6).map((event, index) => {
             const displayTitle = getEventDisplayTitle(event, lang);
             const displayDesc = getEventDisplayDescription(event, lang);
-            const formattedYear = formatYearDisplay(event.date?.year, lang);
+            const effYear = resolveEventYear(event, data.people) ?? event.date?.year;
+            const formattedYear = formatYearDisplay(effYear, lang);
 
             return (
               <div
@@ -269,7 +271,7 @@ export default function Dashboard({
                     <h4 className="font-bold text-base text-[#800020] dark:text-[#F3E5AB] font-cinzel">
                       {displayTitle}
                     </h4>
-                    {event.date?.year !== undefined && (
+                    {effYear !== undefined && (
                       <span className="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
                         {formattedYear}
                       </span>

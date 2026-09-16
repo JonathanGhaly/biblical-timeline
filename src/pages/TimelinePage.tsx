@@ -8,6 +8,7 @@ import {
   localizeBiblicalReference,
 } from "../utils/i18n";
 import { Clock, Sparkles, Heart, Users } from "lucide-react";
+import { resolveEventYear } from "../utils/chronology";
 import { CopticCross } from "../components/Coptic/CopticCross";
 import {
   TimelineControls,
@@ -56,6 +57,9 @@ export default function TimelinePage({
   const [showMarriages, setShowMarriages] = useState<boolean>(true);
   const [showEvents, setShowEvents] = useState<boolean>(true);
 
+  // Hovered item focus state
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+
   // Hovered item tooltip state
   const [hoveredTooltip, setHoveredTooltip] = useState<{
     item: TimelineSelectedItem;
@@ -99,6 +103,11 @@ export default function TimelinePage({
       const birthYear = getBirthYear(person, people);
       const isEstimated = isBirthYearEstimated(person);
       const pAny = person as any;
+      const hasRecordedDeath =
+        person.yearsLived !== undefined ||
+        pAny.lifespan !== undefined ||
+        person.death?.year !== undefined;
+      const isDeathUnknown = !hasRecordedDeath;
       const duration =
         person.yearsLived ||
         pAny.lifespan ||
@@ -117,6 +126,7 @@ export default function TimelinePage({
         startYear: birthYear,
         endYear: deathYear,
         isEstimatedBirth: isEstimated,
+        isDeathUnknown,
         fatherId,
         fatherName,
       };
@@ -130,18 +140,21 @@ export default function TimelinePage({
     return deriveMarriages(people, peopleWithLifespans);
   }, [people, peopleWithLifespans]);
 
-  // 3. Process Events
+  // 3. Process Events (including relative-to-person anchor events)
   const validEvents = useMemo<TimelineEventItem[]>(() => {
     return events
-      .filter((e) => e.date?.year !== undefined)
-      .map((event) => ({
-        event,
-        year: event.date!.year!,
-        startYear: event.date!.year!,
-        endYear: event.date!.year! + 25,
-      }))
+      .map((event) => {
+        const resolvedYear = resolveEventYear(event, people) ?? event.date?.year;
+        return {
+          event,
+          year: resolvedYear as number,
+          startYear: resolvedYear as number,
+          endYear: (resolvedYear as number) + 25,
+        };
+      })
+      .filter((item) => item.year !== undefined && !isNaN(item.year))
       .sort((a, b) => a.year - b.year);
-  }, [events]);
+  }, [events, people]);
 
   // Determine full historical bounds
   const { fullMinYear, fullMaxYear } = useMemo(() => {
@@ -578,14 +591,22 @@ export default function TimelinePage({
                         <strong className="text-[#800020] dark:text-[#D4AF37]">
                           {t.lifespan}:
                         </strong>{" "}
-                        {hoveredTooltip.item.data.yearsLived || 70} {t.years}
+                        {hoveredTooltip.item.isDeathUnknown || !hoveredTooltip.item.data.yearsLived
+                          ? isRTL
+                            ? "العمر: غير معروف"
+                            : "Unknown age"
+                          : `${hoveredTooltip.item.data.yearsLived} ${t.years}`}
                       </p>
                       <p>
                         <strong className="text-[#800020] dark:text-[#D4AF37]">
                           {t.birth} — {t.death}:
                         </strong>{" "}
                         {formatYearDisplay(hoveredTooltip.item.birthYear, lang)} —{" "}
-                        {formatYearDisplay(hoveredTooltip.item.deathYear, lang)}
+                        {hoveredTooltip.item.isDeathUnknown || !hoveredTooltip.item.data.yearsLived
+                          ? isRTL
+                            ? "غير معروف"
+                            : "Unknown"
+                          : formatYearDisplay(hoveredTooltip.item.deathYear, lang)}
                       </p>
                       {hoveredTooltip.item.data.biblicalReferences?.[0] && (
                         <p className="italic pt-0.5 text-[10px] text-[#8C6F12] dark:text-[#D4AF37]">
@@ -601,7 +622,7 @@ export default function TimelinePage({
                         <strong className="text-[#1A365D] dark:text-[#90CDF4]">
                           {t.year}:
                         </strong>{" "}
-                        {formatYearDisplay(hoveredTooltip.item.data.date?.year, lang)}
+                        {formatYearDisplay(hoveredTooltip.item.year ?? hoveredTooltip.item.data.date?.year, lang)}
                       </p>
                       {hoveredTooltip.item.data.location && (
                         <p>📍 {hoveredTooltip.item.data.location}</p>
@@ -661,7 +682,7 @@ export default function TimelinePage({
                           key={`lane_${laneIdx}`}
                           className="relative h-7 w-full rounded-md hover:bg-[#D4AF37]/5 transition-colors"
                         >
-                          {lane.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, fatherName }, pIdx) => {
+                          {lane.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, isDeathUnknown, fatherName }, pIdx) => {
                             const displayName = getPersonDisplayName(person, lang);
                             const pos = getPosPx(birthYear);
                             const widthPx = getWidthPx(duration);
@@ -670,6 +691,8 @@ export default function TimelinePage({
                             const effectiveBarWidth = Math.max(widthPx, minNameWidthPx);
                             const matched = isMatch(person);
                             const isFemale = person.gender === "female";
+                            const isHovered = hoveredItemId === person.id;
+                            const isOtherHovered = Boolean(hoveredItemId && !isHovered);
 
                             return (
                               <div
@@ -682,12 +705,14 @@ export default function TimelinePage({
                                     birthYear,
                                     deathYear,
                                     isEstimatedBirth,
+                                    isDeathUnknown,
                                     fatherName,
                                   })
                                 }
                                 onMouseEnter={(e) => {
                                   const rect = e.currentTarget.getBoundingClientRect();
                                   const parentRect = trackRef.current?.getBoundingClientRect();
+                                  setHoveredItemId(person.id);
                                   if (!parentRect) return;
                                   setHoveredTooltip({
                                     item: {
@@ -696,19 +721,29 @@ export default function TimelinePage({
                                       birthYear,
                                       deathYear,
                                       isEstimatedBirth,
+                                      isDeathUnknown,
                                       fatherName,
                                     },
                                     x: pos,
                                     y: rect.top - parentRect.top,
                                   });
                                 }}
-                                onMouseLeave={() => setHoveredTooltip(null)}
-                                className={`absolute top-0.5 bottom-0.5 rounded-lg px-2 flex items-center justify-between text-[11px] font-bold cursor-pointer transition-all duration-150 shadow-xs hover:shadow-md hover:scale-[1.02] border ${
+                                onMouseLeave={() => {
+                                  setHoveredItemId(null);
+                                  setHoveredTooltip(null);
+                                }}
+                                className={`absolute top-0.5 bottom-0.5 rounded-lg px-2 flex items-center justify-between text-[11px] font-bold cursor-pointer transition-all duration-150 shadow-xs border ${
                                   matched
                                     ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] animate-pulse z-20"
                                     : ""
                                 } ${
-                                  term && !matched ? "opacity-35 hover:opacity-100" : ""
+                                  isHovered
+                                    ? "z-40 scale-[1.04] shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] brightness-110 !opacity-100"
+                                    : isOtherHovered
+                                    ? "opacity-35"
+                                    : term && !matched
+                                    ? "opacity-35 hover:opacity-100"
+                                    : "opacity-100"
                                 } ${
                                   isFemale
                                     ? "bg-gradient-to-r from-[#991B1B] via-[#BE185D] to-[#800020] text-white border-[#F472B6]"
@@ -719,7 +754,11 @@ export default function TimelinePage({
                                   width: `${effectiveBarWidth}px`,
                                   minWidth: `${minNameWidthPx}px`,
                                 }}
-                                title={`${displayName} (${duration} ${t.years})${fatherName ? ` - ${isRTL ? `ابن ${fatherName}` : `son of ${fatherName}`}` : ""}`}
+                                title={
+                                  isDeathUnknown || !person.yearsLived
+                                    ? `${displayName}${fatherName ? ` - ${isRTL ? `ابن ${fatherName}` : `son of ${fatherName}`}` : ""}`
+                                    : `${displayName} (${duration} ${t.years})${fatherName ? ` - ${isRTL ? `ابن ${fatherName}` : `son of ${fatherName}`}` : ""}`
+                                }
                               >
                                 <div className="flex items-center justify-between gap-1.5 w-full whitespace-nowrap overflow-hidden px-0.5">
                                   <div className="flex items-center gap-1 min-w-0">
@@ -735,9 +774,11 @@ export default function TimelinePage({
                                       {displayName}
                                     </span>
                                   </div>
-                                  <span className="text-[10px] opacity-85 font-mono shrink-0">
-                                    ({duration}y)
-                                  </span>
+                                  {!isDeathUnknown && person.yearsLived !== undefined && (
+                                    <span className="text-[10px] opacity-85 font-mono shrink-0">
+                                      ({duration}y)
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -748,7 +789,7 @@ export default function TimelinePage({
                   ) : (
                     /* MODE B: EXPANDED ROWS VIEW (1 row per person with lineage tags under father) */
                     <div className="space-y-1.5">
-                      {filteredPeople.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, fatherName }, index) => {
+                      {filteredPeople.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, isDeathUnknown, fatherName }, index) => {
                         const displayName = getPersonDisplayName(person, lang);
                         const pos = getPosPx(birthYear);
                         const widthPx = getWidthPx(duration);
@@ -756,13 +797,44 @@ export default function TimelinePage({
                         const effectiveBarWidth = Math.max(widthPx, minNameWidthPx);
                         const matched = isMatch(person);
                         const isFemale = person.gender === "female";
+                        const isHovered = hoveredItemId === person.id;
+                        const isOtherHovered = Boolean(hoveredItemId && !isHovered);
 
                         return (
                           <div
                             key={`exp_p_${person.id}_${index}`}
-                            className={`flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-colors cursor-pointer group ${
-                              term && !matched ? "opacity-35 hover:opacity-100" : ""
+                            className={`flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-all cursor-pointer group ${
+                              isHovered
+                                ? "scale-[1.01] brightness-110 z-30"
+                                : isOtherHovered
+                                ? "opacity-35"
+                                : term && !matched
+                                ? "opacity-35 hover:opacity-100"
+                                : "opacity-100"
                             }`}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const parentRect = trackRef.current?.getBoundingClientRect();
+                              setHoveredItemId(person.id);
+                              if (!parentRect) return;
+                              setHoveredTooltip({
+                                item: {
+                                  type: "person",
+                                  data: person,
+                                  birthYear,
+                                  deathYear,
+                                  isEstimatedBirth,
+                                  isDeathUnknown,
+                                  fatherName,
+                                },
+                                x: pos,
+                                y: rect.top - parentRect.top,
+                              });
+                            }}
+                            onMouseLeave={() => {
+                              setHoveredItemId(null);
+                              setHoveredTooltip(null);
+                            }}
                             onClick={() =>
                               setSelectedItem({
                                 type: "person",
@@ -770,6 +842,7 @@ export default function TimelinePage({
                                 birthYear,
                                 deathYear,
                                 isEstimatedBirth,
+                                isDeathUnknown,
                                 fatherName,
                               })
                             }
@@ -792,7 +865,7 @@ export default function TimelinePage({
                                 )}
                               </div>
                               <span className="text-[10px] font-mono text-[#8C6F12] dark:text-[#D4AF37] shrink-0">
-                                {duration}y
+                                {isDeathUnknown || !person.yearsLived ? t.unknown : `${duration}y`}
                               </span>
                             </div>
 
@@ -803,6 +876,8 @@ export default function TimelinePage({
                                   matched
                                     ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020]"
                                     : ""
+                                } ${
+                                  isHovered ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] shadow-xl" : ""
                                 } ${
                                   isFemale
                                     ? "bg-gradient-to-r from-[#991B1B] via-[#BE185D] to-[#800020] text-white border-[#F472B6]"
@@ -815,7 +890,10 @@ export default function TimelinePage({
                                 }}
                               >
                                 <span className="truncate pe-1 font-cinzel">
-                                  {displayName} ({duration} {t.years})
+                                  {displayName}
+                                  {!isDeathUnknown && person.yearsLived !== undefined
+                                    ? ` (${duration} ${t.years})`
+                                    : ""}
                                 </span>
                                 <span className="hidden sm:inline text-[9px] font-mono opacity-85 shrink-0">
                                   {formatYearDisplay(birthYear, lang)}
@@ -852,13 +930,36 @@ export default function TimelinePage({
                           {lane.map((marriage, mIdx) => {
                             const pos = getPosPx(marriage.year);
                             const title = isRTL ? marriage.arabicTitle : marriage.title;
+                            const isHovered = hoveredItemId === marriage.id;
+                            const isOtherHovered = Boolean(hoveredItemId && !isHovered);
 
                             return (
                               <div
                                 key={`m_${marriage.id}_${mIdx}`}
                                 id={`timeline-marriage-${marriage.id}`}
                                 onClick={() => setSelectedItem({ type: "marriage", data: marriage })}
-                                className="absolute top-0 bottom-0 px-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#121110] text-[10px] font-bold flex items-center gap-1 shadow-xs hover:shadow-md hover:scale-105 transition-all cursor-pointer border border-[#8C6F12] whitespace-nowrap"
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const parentRect = trackRef.current?.getBoundingClientRect();
+                                  setHoveredItemId(marriage.id);
+                                  if (!parentRect) return;
+                                  setHoveredTooltip({
+                                    item: { type: "marriage", data: marriage },
+                                    x: pos,
+                                    y: rect.top - parentRect.top,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setHoveredItemId(null);
+                                  setHoveredTooltip(null);
+                                }}
+                                className={`absolute top-0 bottom-0 px-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#121110] text-[10px] font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer border border-[#8C6F12] whitespace-nowrap ${
+                                  isHovered
+                                    ? "z-40 scale-110 shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] brightness-110 !opacity-100"
+                                    : isOtherHovered
+                                    ? "opacity-35"
+                                    : "opacity-100"
+                                }`}
                                 style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                                 title={`${title} (${formatYearDisplay(marriage.year, lang)})`}
                               >
@@ -875,11 +976,34 @@ export default function TimelinePage({
                       {filteredMarriages.map((marriage, mIdx) => {
                         const title = isRTL ? marriage.arabicTitle : marriage.title;
                         const pos = getPosPx(marriage.year);
+                        const isHovered = hoveredItemId === marriage.id;
+                        const isOtherHovered = Boolean(hoveredItemId && !isHovered);
 
                         return (
                           <div
                             key={`exp_m_${marriage.id}_${mIdx}`}
-                            className="flex items-center h-6 hover:bg-[#800020]/10 rounded-lg transition-colors cursor-pointer"
+                            className={`flex items-center h-6 hover:bg-[#800020]/10 rounded-lg transition-all cursor-pointer ${
+                              isHovered
+                                ? "scale-[1.01] brightness-110 z-30"
+                                : isOtherHovered
+                                ? "opacity-35"
+                                : "opacity-100"
+                            }`}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const parentRect = trackRef.current?.getBoundingClientRect();
+                              setHoveredItemId(marriage.id);
+                              if (!parentRect) return;
+                              setHoveredTooltip({
+                                item: { type: "marriage", data: marriage },
+                                x: pos,
+                                y: rect.top - parentRect.top,
+                              });
+                            }}
+                            onMouseLeave={() => {
+                              setHoveredItemId(null);
+                              setHoveredTooltip(null);
+                            }}
                             onClick={() => setSelectedItem({ type: "marriage", data: marriage })}
                           >
                             <div
@@ -893,7 +1017,9 @@ export default function TimelinePage({
                             </div>
                             <div className="relative flex-1 h-full">
                               <div
-                                className="absolute top-0.5 bottom-0.5 px-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#121110] text-[10px] font-bold flex items-center gap-1 shadow-xs border border-[#8C6F12]"
+                                className={`absolute top-0.5 bottom-0.5 px-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#121110] text-[10px] font-bold flex items-center gap-1 shadow-xs border border-[#8C6F12] ${
+                                  isHovered ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020]" : ""
+                                }`}
                                 style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                               >
                                 <Heart size={9} className="fill-current text-[#800020]" />
@@ -930,13 +1056,36 @@ export default function TimelinePage({
                           {lane.map(({ event, year }, eIdx) => {
                             const pos = getPosPx(year);
                             const displayTitle = getEventDisplayTitle(event, lang);
+                            const isHovered = hoveredItemId === event.id;
+                            const isOtherHovered = Boolean(hoveredItemId && !isHovered);
 
                             return (
                               <div
                                 key={`e_${event.id}_${eIdx}`}
                                 id={`timeline-event-${event.id}`}
-                                onClick={() => setSelectedItem({ type: "event", data: event })}
-                                className="absolute top-0 bottom-0 px-2.5 rounded-full bg-gradient-to-r from-[#1A365D] via-[#244b7d] to-[#1A365D] text-white text-[10px] font-bold flex items-center gap-1.5 shadow-xs hover:shadow-md hover:scale-105 transition-all cursor-pointer border border-[#D4AF37] whitespace-nowrap"
+                                onClick={() => setSelectedItem({ type: "event", data: event, year })}
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const parentRect = trackRef.current?.getBoundingClientRect();
+                                  setHoveredItemId(event.id);
+                                  if (!parentRect) return;
+                                  setHoveredTooltip({
+                                    item: { type: "event", data: event, year },
+                                    x: pos,
+                                    y: rect.top - parentRect.top,
+                                  });
+                                }}
+                                onMouseLeave={() => {
+                                  setHoveredItemId(null);
+                                  setHoveredTooltip(null);
+                                }}
+                                className={`absolute top-0 bottom-0 px-2.5 rounded-full bg-gradient-to-r from-[#1A365D] via-[#244b7d] to-[#1A365D] text-white text-[10px] font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer border border-[#D4AF37] whitespace-nowrap ${
+                                  isHovered
+                                    ? "z-40 scale-110 shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#1A365D] brightness-110 !opacity-100"
+                                    : isOtherHovered
+                                    ? "opacity-35"
+                                    : "opacity-100"
+                                }`}
                                 style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                                 title={`${displayTitle} (${formatYearDisplay(year, lang)})`}
                               >
@@ -956,12 +1105,35 @@ export default function TimelinePage({
                       {filteredEvents.map(({ event, year }, eIdx) => {
                         const displayTitle = getEventDisplayTitle(event, lang);
                         const pos = getPosPx(year);
+                        const isHovered = hoveredItemId === event.id;
+                        const isOtherHovered = Boolean(hoveredItemId && !isHovered);
 
                         return (
                           <div
                             key={`exp_e_${event.id}_${eIdx}`}
-                            className="flex items-center h-6 hover:bg-[#1A365D]/10 rounded-lg transition-colors cursor-pointer"
-                            onClick={() => setSelectedItem({ type: "event", data: event })}
+                            className={`flex items-center h-6 hover:bg-[#1A365D]/10 rounded-lg transition-all cursor-pointer ${
+                              isHovered
+                                ? "scale-[1.01] brightness-110 z-30"
+                                : isOtherHovered
+                                ? "opacity-35"
+                                : "opacity-100"
+                            }`}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const parentRect = trackRef.current?.getBoundingClientRect();
+                              setHoveredItemId(event.id);
+                              if (!parentRect) return;
+                              setHoveredTooltip({
+                                item: { type: "event", data: event, year },
+                                x: pos,
+                                y: rect.top - parentRect.top,
+                              });
+                            }}
+                            onMouseLeave={() => {
+                              setHoveredItemId(null);
+                              setHoveredTooltip(null);
+                            }}
+                            onClick={() => setSelectedItem({ type: "event", data: event, year })}
                           >
                             <div
                               className={`sticky ${
@@ -974,7 +1146,9 @@ export default function TimelinePage({
                             </div>
                             <div className="relative flex-1 h-full">
                               <div
-                                className="absolute top-0.5 bottom-0.5 px-2 rounded-full bg-gradient-to-r from-[#1A365D] to-[#2B6CB0] text-white text-[10px] font-bold flex items-center gap-1 shadow-xs border border-[#D4AF37]"
+                                className={`absolute top-0.5 bottom-0.5 px-2 rounded-full bg-gradient-to-r from-[#1A365D] to-[#2B6CB0] text-white text-[10px] font-bold flex items-center gap-1 shadow-xs border border-[#D4AF37] ${
+                                  isHovered ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#1A365D]" : ""
+                                }`}
                                 style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                               >
                                 <Sparkles size={9} className="text-[#D4AF37]" />

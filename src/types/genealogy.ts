@@ -1,3 +1,6 @@
+import type { EventType } from "../data/biblicalEventTypes";
+export type { EventType };
+
 export type Gender = "male" | "female";
 
 export type DatePrecision = "exact" | "approximate" | "about" | "calculated";
@@ -26,6 +29,7 @@ export interface Person {
   birth?: { year?: number; precision?: DatePrecision };
   death?: { year?: number; precision?: DatePrecision };
   placeOfBirth?: string;
+  country?: string;
   notes?: string;
   arabicNotes?: string;
   biblicalReferences?: string[];
@@ -35,9 +39,15 @@ export interface BiblicalEvent {
   id: string;
   title: string;
   arabicTitle?: string;
+  eventType?: EventType;
   description?: string;
   arabicDescription?: string;
   location?: string;
+  locations?: string[];
+  locationId?: string;
+  coordinates?: [number, number];
+  country?: string;
+  countries?: string[];
   date?: { year?: number; precision?: DatePrecision };
   personIds?: string[];
   biblicalReferences?: string[];
@@ -62,11 +72,15 @@ export type BiblicalLocation = {
   name: string;
   arabicName: string;
   modernName: string; // e.g., "Tell el-Muqayyar, Iraq" for Ur
+  modernCountry?: string;
   coordinates: [number, number]; // [lat, lng]
-  region: "Mesopotamia" | "Canaan" | "Egypt" | "Sinai" | "Anatolia";
-  biblicalEra: "Patriarchal" | "Exodus" | "United Monarchy";
+  region: "Mesopotamia" | "Canaan" | "Egypt" | "Sinai" | "Anatolia" | string;
+  biblicalEra?: "Patriarchal" | "Exodus" | "United Monarchy" | string;
   keyEvents: string[]; // IDs linking to events in our Gist database
   description: string;
   arabicDescription: string;
   biblicalReferences: string[];
+  placeType?: string;
+  certainty?: string;
+  aliases?: string[];
 };

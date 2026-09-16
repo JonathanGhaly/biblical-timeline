@@ -9,6 +9,7 @@ export interface TimelinePersonItem {
   endYear: number;
   laneIndex?: number;
   isEstimatedBirth?: boolean;
+  isDeathUnknown?: boolean;
   fatherId?: string;
   fatherName?: string;
 }
@@ -39,9 +40,18 @@ export interface TimelineEventItem {
 }
 
 export type TimelineSelectedItem =
-  | { type: "person"; data: Person; birthYear: number; deathYear: number; isEstimatedBirth?: boolean; fatherName?: string }
+  | {
+      type: "person";
+      data: Person;
+      birthYear: number;
+      deathYear: number;
+      duration?: number;
+      isEstimatedBirth?: boolean;
+      isDeathUnknown?: boolean;
+      fatherName?: string;
+    }
   | { type: "marriage"; data: TimelineMarriageItem }
-  | { type: "event"; data: BiblicalEvent };
+  | { type: "event"; data: BiblicalEvent; year?: number };
 
 export type TimelineViewMode = "compact" | "expanded";
 

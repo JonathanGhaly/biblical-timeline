@@ -213,7 +213,9 @@ export default function App() {
           <Timeline
             people={people}
             events={events}
+            onAddEvent={handleAddEvent}
             onUpdateEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent}
             lang={lang}
           />
         );

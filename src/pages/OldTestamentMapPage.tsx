@@ -28,15 +28,27 @@ import {
   PanelRightOpen,
   Maximize2,
   Minimize2,
+  Crosshair,
 } from "lucide-react";
 import type { Person, BiblicalEvent, Language, BiblicalLocation } from "../types/genealogy";
-import { BIBLICAL_LOCATIONS } from "../data/biblicalLocations";
+import { ALL_MAP_LOCATIONS } from "../data/biblicalLocations";
+import { PLACE_TYPE_INFO, getCertaintyBadge, type PlaceType } from "../data/biblicalPlaces";
+import { getEventTypeLabel } from "../data/biblicalEventTypes";
+import { PrecisionIndicator } from "../components/Common/PrecisionIndicator";
 import { MAP_WIDTH, MAP_HEIGHT, geoToPixel } from "../data/mapGeography";
 import { BiblicalWorldSvgMap, type MapLayerVisibility } from "../components/BiblicalWorldSvgMap";
 import { BiblicalMapLegendModal } from "../components/BiblicalMapLegendModal";
 import type { RouteStation } from "../data/mapGeography";
 import { useMapScaleTransformer } from "../utils/mapScaleTransformer";
-import { localizeBiblicalReference, matchesBiblicalSearch } from "../utils/i18n";
+import {
+  localizeBiblicalReference,
+  matchesBiblicalSearch,
+  formatYearDisplay,
+  getEventDisplayTitle,
+  getEventDisplayDescription,
+  getPersonDisplayName,
+} from "../utils/i18n";
+import { resolveEventYear } from "../utils/chronology";
 
 // Clean primary historical name helper for collision-free map labels
 function getMapPinName(name: string): string {
@@ -62,6 +74,7 @@ export default function OldTestamentMapPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState<string>("All");
   const [selectedEra, setSelectedEra] = useState<string>("All");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const [sidebarView, setSidebarView] = useState<"events" | "directory">("events");
 
@@ -113,11 +126,13 @@ export default function OldTestamentMapPage({
   // Filter Categories
   const regions: { key: string; label: string; arabicLabel: string }[] = [
     { key: "All", label: "All Regions", arabicLabel: "جميع المناطق" },
-    { key: "Mesopotamia", label: "Mesopotamia", arabicLabel: "ما بين النهرين" },
-    { key: "Canaan", label: "Canaan", arabicLabel: "أرض كنعان" },
+    { key: "Canaan", label: "Canaan & Levant", arabicLabel: "كنعان وبلاد الشام" },
     { key: "Egypt", label: "Egypt", arabicLabel: "مصر القديمة" },
     { key: "Sinai", label: "Sinai", arabicLabel: "شبه جزيرة سيناء" },
+    { key: "Mesopotamia", label: "Mesopotamia", arabicLabel: "بلاد الرافدين" },
+    { key: "Persia", label: "Persia & Media", arabicLabel: "فارس وماداي" },
     { key: "Anatolia", label: "Anatolia", arabicLabel: "آسيا الصغرى (الأناضول)" },
+    { key: "Arabia", label: "Arabia", arabicLabel: "شبه الجزيرة العربية" },
   ];
 
   const eras: { key: string; label: string; arabicLabel: string }[] = [
@@ -126,6 +141,39 @@ export default function OldTestamentMapPage({
     { key: "Exodus", label: "Exodus", arabicLabel: "عصر الخروج" },
     { key: "United Monarchy", label: "United Monarchy", arabicLabel: "المملكة المتحدة" },
   ];
+
+  const placeTypes: { key: string; label: string; arabicLabel: string }[] = [
+    { key: "all", label: "All Types", arabicLabel: "جميع المعالم" },
+    { key: "city", label: "Cities & Towns", arabicLabel: "المدن والحواضر" },
+    { key: "mountain", label: "Mountains", arabicLabel: "الجبال والتلال" },
+    { key: "valley", label: "Valleys & Plains", arabicLabel: "الأودية والسهول" },
+    { key: "river", label: "Rivers & Waters", arabicLabel: "الأنهار والبحار" },
+    { key: "wilderness", label: "Wilderness", arabicLabel: "البراري والصحاري" },
+    { key: "camp", label: "Camps & Wells", arabicLabel: "المخيمات والآبار" },
+  ];
+
+  const matchesType = (locType?: string, filterType?: string): boolean => {
+    if (!filterType || filterType === "all") return true;
+    if (!locType) return filterType === "city";
+    const t = locType.toLowerCase();
+    if (filterType === "city") {
+      return (
+        t === "city" ||
+        t === "town" ||
+        t === "village" ||
+        t === "settlement" ||
+        t === "kingdom" ||
+        t === "country" ||
+        t === "region"
+      );
+    }
+    if (filterType === "mountain") return t === "mountain" || t === "hill";
+    if (filterType === "valley") return t === "valley" || t === "plain" || t === "pass";
+    if (filterType === "river") return t === "river" || t === "sea" || t === "lake";
+    if (filterType === "wilderness") return t === "wilderness" || t === "desert";
+    if (filterType === "camp") return t === "camp" || t === "well" || t === "spring";
+    return t === filterType;
+  };
 
   // Helper to match events with a biblical location
   const isLocationMatch = useCallback(
@@ -146,6 +194,11 @@ export default function OldTestamentMapPage({
         return true;
       }
 
+      // Check aliases if defined
+      if (loc.aliases && loc.aliases.some((a) => normalizedStr.includes(a.toLowerCase()))) {
+        return true;
+      }
+
       // Check common aliases
       if (loc.id === "ur" && (normalizedStr.includes("chaldees") || normalizedStr.includes("أور"))) return true;
       if (loc.id === "jerusalem" && (normalizedStr.includes("zion") || normalizedStr.includes("صهيون") || normalizedStr.includes("يبوس"))) return true;
@@ -159,14 +212,25 @@ export default function OldTestamentMapPage({
     []
   );
 
-  // Map events to biblical locations (both via keyEvents array and location text match)
+  // Map events to biblical locations (via keyEvents, locationId, coordinates, and text match)
   const eventsByLocation = useMemo(() => {
     const map = new Map<string, BiblicalEvent[]>();
-    BIBLICAL_LOCATIONS.forEach((loc) => {
+    ALL_MAP_LOCATIONS.forEach((loc) => {
       const matchedEvents = events.filter((event) => {
+        if (event.locationId && event.locationId.toLowerCase() === loc.id.toLowerCase()) return true;
+        if (
+          event.coordinates &&
+          Math.abs(event.coordinates[0] - loc.coordinates[0]) < 0.08 &&
+          Math.abs(event.coordinates[1] - loc.coordinates[1]) < 0.08
+        ) {
+          return true;
+        }
         const isKey = loc.keyEvents.includes(event.id);
         const isTextMatch = isLocationMatch(loc, event.location);
-        return isKey || isTextMatch;
+        const isMultiMatch = (event.locations || []).some((locName) =>
+          isLocationMatch(loc, locName)
+        );
+        return isKey || isTextMatch || isMultiMatch;
       });
       map.set(loc.id, matchedEvents);
     });
@@ -176,7 +240,7 @@ export default function OldTestamentMapPage({
   // Map people to locations by place of birth
   const peopleByLocation = useMemo(() => {
     const map = new Map<string, Person[]>();
-    BIBLICAL_LOCATIONS.forEach((loc) => {
+    ALL_MAP_LOCATIONS.forEach((loc) => {
       const matchedPeople = people.filter((person) =>
         isLocationMatch(loc, person.placeOfBirth)
       );
@@ -185,11 +249,16 @@ export default function OldTestamentMapPage({
     return map;
   }, [people, isLocationMatch]);
 
-  // Filtered Locations based on search, region, and era
+  // Filtered Locations based on search, region, era, and site type
   const filteredLocations = useMemo(() => {
-    return BIBLICAL_LOCATIONS.filter((loc) => {
-      if (selectedRegion !== "All" && loc.region !== selectedRegion) return false;
-      if (selectedEra !== "All" && loc.biblicalEra !== selectedEra) return false;
+    return ALL_MAP_LOCATIONS.filter((loc) => {
+      if (selectedRegion !== "All") {
+        const reg = (loc.region || "").toLowerCase();
+        const sel = selectedRegion.toLowerCase();
+        if (!reg.includes(sel) && !sel.includes(reg)) return false;
+      }
+      if (selectedEra !== "All" && loc.biblicalEra && loc.biblicalEra !== selectedEra) return false;
+      if (selectedType !== "all" && !matchesType(loc.placeType, selectedType)) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
@@ -197,9 +266,11 @@ export default function OldTestamentMapPage({
           loc.name.toLowerCase().includes(q) ||
           loc.arabicName.toLowerCase().includes(q) ||
           loc.modernName.toLowerCase().includes(q) ||
+          (loc.modernCountry && loc.modernCountry.toLowerCase().includes(q)) ||
           loc.description.toLowerCase().includes(q) ||
           loc.arabicDescription.toLowerCase().includes(q) ||
           loc.region.toLowerCase().includes(q) ||
+          (loc.aliases && loc.aliases.some((a) => a.toLowerCase().includes(q))) ||
           loc.biblicalReferences.some((ref) =>
             matchesBiblicalSearch(ref, q)
           );
@@ -209,26 +280,22 @@ export default function OldTestamentMapPage({
 
       return true;
     });
-  }, [selectedRegion, selectedEra, searchQuery]);
+  }, [selectedRegion, selectedEra, selectedType, searchQuery]);
 
   // Format BC/AD year label
   const formatYearLabel = (year?: number) => {
     if (year === undefined) return "";
-    const absYear = Math.abs(year);
-    if (lang === "ar") {
-      return year < 0 ? `${absYear} ق.م` : `${year} م`;
-    }
-    return year < 0 ? `${absYear} BC` : `${year} AD`;
+    return formatYearDisplay(year, lang);
   };
 
   // Chronological list of events
   const chronologicalEvents = useMemo(() => {
     return [...events].sort((a, b) => {
-      const ya = a.date?.year ?? 0;
-      const yb = b.date?.year ?? 0;
+      const ya = resolveEventYear(a, people) ?? a.date?.year ?? 0;
+      const yb = resolveEventYear(b, people) ?? b.date?.year ?? 0;
       return ya - yb;
     });
-  }, [events]);
+  }, [events, people]);
 
   // Major Biblical centers given priority for label visibility
   const MAJOR_CENTERS = useMemo(
@@ -1256,6 +1323,27 @@ export default function OldTestamentMapPage({
                   );
                 })}
               </div>
+
+              {/* Site / Place Type Filter Chips */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                {placeTypes.map((pt) => {
+                  const isActive = selectedType === pt.key;
+                  return (
+                    <button
+                      key={pt.key}
+                      id={`type-chip-${pt.key}`}
+                      onClick={() => setSelectedType(pt.key)}
+                      className={`min-h-[36px] px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition flex items-center justify-center shrink-0 border ${
+                        isActive
+                          ? "bg-[#065F46] text-white border-[#065F46] shadow-2xs font-semibold"
+                          : "bg-white text-stone-600 border-stone-200 hover:bg-emerald-50 hover:text-emerald-800"
+                      }`}
+                    >
+                      {isRTL ? pt.arabicLabel : pt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* PLACES TABS ROW (Horizontally Scrollable Left and Right) */}
@@ -1439,9 +1527,27 @@ export default function OldTestamentMapPage({
                       <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#800020] text-[#D4AF37]">
                         {selectedLocation.region}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#1A365D] text-white">
-                        {selectedLocation.biblicalEra}
-                      </span>
+                      {selectedLocation.biblicalEra && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#1A365D] text-white">
+                          {selectedLocation.biblicalEra}
+                        </span>
+                      )}
+                      {selectedLocation.placeType && selectedLocation.placeType in PLACE_TYPE_INFO && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          {isRTL
+                            ? PLACE_TYPE_INFO[selectedLocation.placeType as PlaceType].labelAr
+                            : PLACE_TYPE_INFO[selectedLocation.placeType as PlaceType].labelEn}
+                        </span>
+                      )}
+                      {selectedLocation.certainty && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            getCertaintyBadge(selectedLocation.certainty as any, lang).badgeClass
+                          }`}
+                        >
+                          {getCertaintyBadge(selectedLocation.certainty as any, lang).label}
+                        </span>
+                      )}
                     </div>
 
                     <h2 className={`text-xl font-bold text-[#800020] ${isRTL ? "font-['Amiri']" : "font-['Cinzel']"}`}>
@@ -1457,7 +1563,10 @@ export default function OldTestamentMapPage({
                         <span className="font-semibold text-stone-700">
                           {isRTL ? "الموقع الأثري الحديث:" : "Modern Archaeological Site:"}
                         </span>
-                        <span className="text-stone-800 font-medium">{selectedLocation.modernName}</span>
+                        <span className="text-stone-800 font-medium">
+                          {selectedLocation.modernName}
+                          {selectedLocation.modernCountry ? ` (${selectedLocation.modernCountry})` : ""}
+                        </span>
                       </div>
                       <div className="text-[11px] text-stone-500 font-mono">
                         {selectedLocation.coordinates[0].toFixed(4)}° N,{" "}
@@ -1551,65 +1660,75 @@ export default function OldTestamentMapPage({
                         </p>
                         {/* Fallback to relevant events from this era */}
                         <div className="space-y-2 pt-1">
-                          {chronologicalEvents.slice(0, 5).map((event) => (
-                            <div
-                              key={`era-ev-${event.id}`}
-                              onClick={() => setSelectedEvent(event)}
-                              className="p-2.5 bg-white rounded-lg border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition space-y-1"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="text-xs font-bold text-stone-900 leading-snug">
-                                  {event.title}
-                                </h4>
-                                {event.date?.year !== undefined && (
-                                  <span className="text-[11px] font-bold text-[#B91C1C] shrink-0">
-                                    {formatYearLabel(event.date.year)}
-                                  </span>
+                          {chronologicalEvents.slice(0, 5).map((event) => {
+                            const title = getEventDisplayTitle(event, lang);
+                            const desc = getEventDisplayDescription(event, lang);
+                            const effYear = resolveEventYear(event, people);
+                            return (
+                              <div
+                                key={`era-ev-${event.id}`}
+                                onClick={() => setSelectedEvent(event)}
+                                className="p-2.5 bg-white rounded-lg border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition space-y-1"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <h4 className="text-xs font-bold text-stone-900 leading-snug">
+                                    {title}
+                                  </h4>
+                                  {effYear !== undefined && (
+                                    <span className="text-[11px] font-bold text-[#B91C1C] shrink-0">
+                                      {formatYearLabel(effYear)}
+                                    </span>
+                                  )}
+                                </div>
+                                {desc && (
+                                  <p className="text-[11px] text-stone-600 line-clamp-2">
+                                    {desc}
+                                  </p>
                                 )}
                               </div>
-                              {event.description && (
-                                <p className="text-[11px] text-stone-600 line-clamp-2">
-                                  {event.description}
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {/* Only up to 5 events visible simultaneously, scrollable container */}
                         <div className="space-y-2.5 max-h-[460px] md:max-h-[480px] overflow-y-auto pr-1.5 scrollbar-thin">
-                          {activeEvents.map((event, idx) => (
-                            <div
-                              key={`act_ev_${event.id}_${idx}`}
-                              id={`event-card-${event.id}`}
-                              onClick={() => setSelectedEvent(event)}
-                              className="p-3 rounded-xl border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1.5"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="text-xs font-bold text-stone-900 group-hover:text-[#800020] leading-snug">
-                                  {event.title}
-                                </h4>
-                                {event.date?.year !== undefined && (
-                                  <span className="text-[11px] font-bold text-[#B91C1C] bg-red-50 px-2 py-0.5 rounded-full border border-red-100 shrink-0">
-                                    {formatYearLabel(event.date.year)}
-                                  </span>
+                          {activeEvents.map((event, idx) => {
+                            const title = getEventDisplayTitle(event, lang);
+                            const desc = getEventDisplayDescription(event, lang);
+                            const effYear = resolveEventYear(event, people);
+                            return (
+                              <div
+                                key={`act_ev_${event.id}_${idx}`}
+                                id={`event-card-${event.id}`}
+                                onClick={() => setSelectedEvent(event)}
+                                className="p-3 rounded-xl border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1.5"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <h4 className="text-xs font-bold text-stone-900 group-hover:text-[#800020] leading-snug">
+                                    {title}
+                                  </h4>
+                                  {effYear !== undefined && (
+                                    <span className="text-[11px] font-bold text-[#B91C1C] bg-red-50 px-2 py-0.5 rounded-full border border-red-100 shrink-0">
+                                      {formatYearLabel(effYear)}
+                                    </span>
+                                  )}
+                                </div>
+                                {desc && (
+                                  <p className="text-[11px] text-stone-600 line-clamp-2">
+                                    {desc}
+                                  </p>
+                                )}
+                                {event.biblicalReferences && event.biblicalReferences.length > 0 && (
+                                  <div className="text-[10px] text-[#854D0E] font-semibold pt-1 flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3" />
+                                    <span>{localizeBiblicalReference(event.biblicalReferences[0], lang)}</span>
+                                  </div>
                                 )}
                               </div>
-                              {event.description && (
-                                <p className="text-[11px] text-stone-600 line-clamp-2">
-                                  {event.description}
-                                </p>
-                              )}
-                              {event.biblicalReferences && event.biblicalReferences.length > 0 && (
-                                <div className="text-[10px] text-[#854D0E] font-semibold pt-1 flex items-center gap-1">
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>{localizeBiblicalReference(event.biblicalReferences[0], lang)}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         {activeEvents.length > 5 && (
                           <div className="text-center pt-1.5 text-[11px] font-medium text-stone-500 border-t border-stone-100 flex items-center justify-center gap-1">
@@ -1642,10 +1761,18 @@ export default function OldTestamentMapPage({
                   {/* Only 5 events visible maximum, scrollable stream */}
                   <div className="space-y-2.5 max-h-[460px] md:max-h-[480px] overflow-y-auto pr-1.5 scrollbar-thin">
                     {chronologicalEvents.map((event) => {
+                      const title = getEventDisplayTitle(event, lang);
+                      const desc = getEventDisplayDescription(event, lang);
+                      const effYear = resolveEventYear(event, people);
                       // Check if event has a matching biblical location on map
                       const matchedLoc = filteredLocations.find((loc) =>
-                        isLocationMatch(loc, event.location)
+                        isLocationMatch(loc, event.location) ||
+                        (event.locations || []).some((locName) => isLocationMatch(loc, locName))
                       );
+                      const locDisplay =
+                        event.locations && event.locations.length > 0
+                          ? event.locations.join(isRTL ? "، " : ", ")
+                          : event.location;
 
                       return (
                         <div
@@ -1656,18 +1783,18 @@ export default function OldTestamentMapPage({
                         >
                           <div className="flex items-start justify-between gap-2">
                             <h4 className="text-xs font-bold text-stone-900 group-hover:text-[#800020] leading-snug">
-                              {event.title}
+                              {title}
                             </h4>
-                            {event.date?.year !== undefined && (
+                            {effYear !== undefined && (
                               <span className="text-[11px] font-bold text-[#B91C1C] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-100 shrink-0">
-                                {formatYearLabel(event.date.year)}
+                                {formatYearLabel(effYear)}
                               </span>
                             )}
                           </div>
 
-                          {event.description && (
+                          {desc && (
                             <p className="text-[11px] text-stone-600 leading-relaxed line-clamp-2">
-                              {event.description}
+                              {desc}
                             </p>
                           )}
 
@@ -1685,10 +1812,10 @@ export default function OldTestamentMapPage({
                                 <MapPin className="w-3 h-3 text-[#800020]" />
                                 <span>{isRTL ? matchedLoc.arabicName : matchedLoc.name}</span>
                               </button>
-                            ) : event.location ? (
+                            ) : locDisplay ? (
                               <span className="text-stone-500 flex items-center gap-1">
                                 <MapPin className="w-3 h-3 text-stone-400" />
-                                <span>{event.location}</span>
+                                <span>{locDisplay}</span>
                               </span>
                             ) : (
                               <span />
@@ -1734,6 +1861,14 @@ export default function OldTestamentMapPage({
                   ) : (
                     filteredLocations.map((loc) => {
                       const eventCount = (eventsByLocation.get(loc.id) || []).length;
+                      const placeTypeInfo =
+                        loc.placeType && loc.placeType in PLACE_TYPE_INFO
+                          ? PLACE_TYPE_INFO[loc.placeType as PlaceType]
+                          : null;
+                      const certaintyBadge = loc.certainty
+                        ? getCertaintyBadge(loc.certainty as any, lang)
+                        : null;
+
                       return (
                         <div
                           key={loc.id}
@@ -1746,7 +1881,7 @@ export default function OldTestamentMapPage({
                               handleSelectLocation(loc);
                             }
                           }}
-                          className="p-3 bg-white rounded-xl border border-stone-200 hover:border-[#D4AF37] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1 min-h-[44px]"
+                          className="p-3 bg-white rounded-xl border border-stone-200 hover:border-[#D4AF37] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1.5 min-h-[44px]"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -1757,22 +1892,40 @@ export default function OldTestamentMapPage({
                                 {loc.arabicName}
                               </span>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F5E8CA] text-[#451A03] shrink-0">
-                              {loc.region}
-                            </span>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F5E8CA] text-[#451A03]">
+                                {loc.region}
+                              </span>
+                              {placeTypeInfo && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  {isRTL ? placeTypeInfo.labelAr : placeTypeInfo.labelEn}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          <p className="text-[11px] text-stone-500 truncate flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-stone-400 shrink-0" />
-                            {loc.modernName}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-stone-500">
+                            <p className="truncate flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-stone-400 shrink-0" />
+                              <span>{loc.modernName}{loc.modernCountry ? ` (${loc.modernCountry})` : ""}</span>
+                            </p>
+                            {certaintyBadge && (
+                              <span className={`px-1.5 py-0.5 text-[9px] font-semibold rounded border shrink-0 ${certaintyBadge.badgeClass}`}>
+                                {certaintyBadge.label}
+                              </span>
+                            )}
+                          </div>
 
                           <div className="flex items-center justify-between text-[10px] text-stone-400 pt-1 border-t border-stone-100 font-sans">
-                            <span>{loc.biblicalEra}</span>
-                            {eventCount > 0 && (
+                            <span className="font-mono text-stone-400 text-[10px]">
+                              {loc.coordinates[0].toFixed(2)}°N, {loc.coordinates[1].toFixed(2)}°E
+                            </span>
+                            {eventCount > 0 ? (
                               <span className="text-[#800020] font-semibold">
                                 {eventCount} {isRTL ? "أحداث مسجلة" : "events"}
                               </span>
+                            ) : (
+                              <span>{loc.biblicalEra || "Patriarchal"}</span>
                             )}
                           </div>
                         </div>
@@ -2354,15 +2507,38 @@ export default function OldTestamentMapPage({
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 border-b border-stone-200 pb-3">
-              <div>
-                <h3 className={`text-lg font-bold text-[#800020] ${isRTL ? "font-['Amiri']" : "font-['Cinzel']"}`}>
-                  {selectedEvent.title}
-                </h3>
-                {selectedEvent.date?.year !== undefined && (
-                  <span className="text-xs font-bold text-[#B91C1C]">
-                    {formatYearLabel(selectedEvent.date.year)}
-                  </span>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className={`text-lg font-bold text-[#800020] ${isRTL ? "font-['Amiri']" : "font-['Cinzel']"}`}>
+                    {getEventDisplayTitle(selectedEvent, lang)}
+                  </h3>
+                  {selectedEvent.eventType && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+                      {getEventTypeLabel(selectedEvent.eventType, lang)}
+                    </span>
+                  )}
+                </div>
+
+                {((lang === "ar" && selectedEvent.title) || (lang !== "ar" && selectedEvent.arabicTitle)) && (
+                  <p className="text-xs text-stone-500">
+                    {lang === "ar" ? selectedEvent.title : selectedEvent.arabicTitle}
+                  </p>
                 )}
+
+                <div className="flex items-center gap-2 pt-0.5">
+                  {resolveEventYear(selectedEvent, people) !== undefined && (
+                    <span className="text-xs font-bold text-[#B91C1C]">
+                      {formatYearLabel(resolveEventYear(selectedEvent, people))}
+                    </span>
+                  )}
+                  {selectedEvent.date?.precision && (
+                    <PrecisionIndicator
+                      precision={selectedEvent.date.precision}
+                      lang={lang}
+                      size="sm"
+                    />
+                  )}
+                </div>
               </div>
 
               <button
@@ -2375,25 +2551,65 @@ export default function OldTestamentMapPage({
             </div>
 
             {/* Description */}
-            {selectedEvent.description && (
+            {getEventDisplayDescription(selectedEvent, lang) && (
               <div className="space-y-1">
                 <span className="text-xs font-semibold text-stone-500 uppercase">
                   {isRTL ? "الوصف التاريخي" : "Historical Summary"}
                 </span>
                 <p className="text-stone-800 leading-relaxed text-xs bg-white p-3 rounded-lg border border-stone-200">
-                  {selectedEvent.description}
+                  {getEventDisplayDescription(selectedEvent, lang)}
                 </p>
               </div>
             )}
 
             {/* Location & Figures */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              {selectedEvent.location && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {((selectedEvent.locations && selectedEvent.locations.length > 0) || selectedEvent.location) && (
                 <div className="bg-stone-50 p-2.5 rounded-lg border border-stone-200">
-                  <span className="font-semibold text-stone-600 block mb-0.5">
-                    {isRTL ? "الموقع" : "Location"}
-                  </span>
-                  <span className="text-stone-800">{selectedEvent.location}</span>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="font-semibold text-stone-600 block">
+                      {isRTL ? "الموقع / الأماكن" : "Location(s)"}
+                    </span>
+                    {(selectedEvent.locationId || selectedEvent.coordinates || selectedEvent.location) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ev = selectedEvent;
+                          setSelectedEvent(null);
+                          let targetLoc: BiblicalLocation | undefined;
+                          if (ev.locationId) {
+                            targetLoc = ALL_MAP_LOCATIONS.find((l) => l.id.toLowerCase() === ev.locationId!.toLowerCase());
+                          }
+                          if (!targetLoc && ev.location) {
+                            targetLoc = ALL_MAP_LOCATIONS.find((l) => isLocationMatch(l, ev.location));
+                          }
+                          if (targetLoc) {
+                            handleSelectLocation(targetLoc);
+                          } else if (ev.coordinates) {
+                            centerOnLocation(ev.coordinates[0], ev.coordinates[1], 3.2);
+                          }
+                        }}
+                        className="text-[10px] text-[#800020] hover:text-[#991B1B] font-bold flex items-center gap-1 underline cursor-pointer"
+                      >
+                        <Crosshair className="w-3 h-3" />
+                        <span>{isRTL ? "عرض على الخريطة" : "View on Map"}</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedEvent.locations && selectedEvent.locations.length > 0 ? (
+                      selectedEvent.locations.map((loc, lIdx) => (
+                        <span
+                          key={`ev_modal_loc_${lIdx}`}
+                          className="px-2 py-0.5 rounded bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-stone-800 text-[11px] font-medium"
+                        >
+                          {loc}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-stone-800">{selectedEvent.location}</span>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -2402,10 +2618,13 @@ export default function OldTestamentMapPage({
                   <span className="font-semibold text-stone-600 block mb-0.5">
                     {isRTL ? "الشخصيات المرتبطة" : "Key Figures"}
                   </span>
-                  <span className="text-stone-800">
+                  <span className="text-stone-800 font-medium">
                     {(selectedEvent.personIds || [])
-                      .map((id) => people.find((p) => p.id === id)?.name || id)
-                      .join(", ")}
+                      .map((id) => {
+                        const p = people.find((person) => person.id === id);
+                        return p ? getPersonDisplayName(p, lang) : id;
+                      })
+                      .join(isRTL ? "، " : ", ")}
                   </span>
                 </div>
               )}
@@ -2431,7 +2650,32 @@ export default function OldTestamentMapPage({
             )}
 
             {/* Modal Actions */}
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex justify-between items-center">
+              {(selectedEvent.locationId || selectedEvent.coordinates || selectedEvent.location) ? (
+                <button
+                  onClick={() => {
+                    const ev = selectedEvent;
+                    setSelectedEvent(null);
+                    let targetLoc: BiblicalLocation | undefined;
+                    if (ev.locationId) {
+                      targetLoc = ALL_MAP_LOCATIONS.find((l) => l.id.toLowerCase() === ev.locationId!.toLowerCase());
+                    }
+                    if (!targetLoc && ev.location) {
+                      targetLoc = ALL_MAP_LOCATIONS.find((l) => isLocationMatch(l, ev.location));
+                    }
+                    if (targetLoc) {
+                      handleSelectLocation(targetLoc);
+                    } else if (ev.coordinates) {
+                      centerOnLocation(ev.coordinates[0], ev.coordinates[1], 3.2);
+                    }
+                  }}
+                  className="min-h-[44px] px-4 rounded-lg bg-[#F5E8CA] text-[#451A03] font-bold hover:bg-[#EBDCB9] transition shadow-xs flex items-center gap-1.5"
+                >
+                  <Crosshair className="w-4 h-4 text-[#800020]" />
+                  <span>{isRTL ? "تركيز على الخريطة" : "Focus on Map"}</span>
+                </button>
+              ) : <div />}
+
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="min-h-[44px] px-5 rounded-lg bg-[#800020] text-[#D4AF37] font-bold hover:bg-[#991B1B] transition shadow-xs"

@@ -157,39 +157,46 @@
     {
       "id": "creation",
       "title": "Creation",
+      "arabicTitle": "بدء الخليقة والتكوين",
       "date": {
         "year": -4000,
         "precision": "approximate"
       },
       "personIds": ["adam", "eve"],
       "description": "The creation narrative in Genesis.",
+      "arabicDescription": "قصة خلق العالم والإنسان في سفر التكوين.",
       "biblicalReferences": ["Genesis 1-2"]
     },
     {
       "id": "fall",
       "title": "The Fall",
+      "arabicTitle": "السقوط والخروج من الجنة",
       "date": {
         "year": -4000,
         "precision": "approximate"
       },
       "personIds": ["adam", "eve"],
       "description": "Adam and Eve eat from the tree of the knowledge of good and evil.",
+      "arabicDescription": "أكل آدم وحواء من شجرة معرفة الخير والشر والخروج من الجنة.",
       "biblicalReferences": ["Genesis 3"]
     },
     {
       "id": "flood",
       "title": "The Flood",
+      "arabicTitle": "طوفان نوح العظيم",
       "date": {
         "year": -2348,
         "precision": "approximate"
       },
       "personIds": ["noah"],
       "description": "The Flood narrative involving Noah and his family.",
+      "arabicDescription": "طوفان نوح وتجديد العهد الإلهي مع بني البشر.",
       "biblicalReferences": ["Genesis 6-9"]
     },
     {
       "id": "abraham-covenant",
       "title": "Covenant with Abraham",
+      "arabicTitle": "العهد الإلهي مع إبراهيم",
       "date": {
         "year": -2091,
         "precision": "approximate"
@@ -197,17 +204,20 @@
       "personIds": ["abraham"],
       "location": "Canaan",
       "description": "God establishes a covenant with Abraham.",
+      "arabicDescription": "تأسيس الله عهد النسل والبركة مع أبي الآباء إبراهيم في أرض كنعان.",
       "biblicalReferences": ["Genesis 12", "Genesis 15", "Genesis 17"]
     },
     {
       "id": "isaac-birth",
       "title": "Birth of Isaac",
+      "arabicTitle": "ميلاد إسحاق ابن الموعد",
       "date": {
         "year": -2066,
         "precision": "approximate"
       },
       "personIds": ["abraham", "sarah", "isaac"],
       "description": "Isaac is born to Abraham and Sarah.",
+      "arabicDescription": "ولادة ابن الموعد إسحاق لإبراهيم وسارة في شيخوختهما.",
       "biblicalReferences": ["Genesis 21"]
     }
   ]

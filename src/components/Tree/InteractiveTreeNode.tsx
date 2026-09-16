@@ -13,6 +13,7 @@ import {
   Heart,
   Calendar,
 } from "lucide-react";
+import { PrecisionIndicator } from "../Common/PrecisionIndicator";
 
 export interface TreeNodeData {
   person: ComputedPerson;
@@ -135,7 +136,7 @@ export const InteractiveTreeNode: React.FC<InteractiveTreeNodeProps> = ({
           </div>
 
           {/* Lifespan & Dates */}
-          <div className="flex items-center gap-2 text-xs text-[#5C5042] dark:text-[#C5BAA8]">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5042] dark:text-[#C5BAA8]">
             {person.yearsLived !== undefined && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#8C6F12] dark:text-[#F3E5AB]">
                 <Calendar size={10} />
@@ -143,13 +144,25 @@ export const InteractiveTreeNode: React.FC<InteractiveTreeNodeProps> = ({
               </span>
             )}
 
-            {(person.birthYearBC !== undefined || person.deathYearBC !== undefined) && (
-              <span className="text-[11px] text-[#7A6E5E] dark:text-[#A99F8D]">
+            {person.birthYearBC !== undefined && (
+              <span className="text-[11px] text-[#7A6E5E] dark:text-[#A99F8D] font-medium">
                 {formatYearDisplay(person.birthYearBC, lang)}
-                {" — "}
-                {formatYearDisplay(person.deathYearBC, lang)}
+                {person.deathYearBC !== undefined
+                  ? ` — ${formatYearDisplay(person.deathYearBC, lang)}`
+                  : ""}
               </span>
             )}
+
+            <PrecisionIndicator
+              precision={
+                person.birth?.precision ??
+                (person.anchorAgeUsed !== undefined || person.fatherAgeAtBirth !== undefined
+                  ? "calculated"
+                  : "approximate")
+              }
+              lang={lang}
+              size="sm"
+            />
           </div>
 
           {/* Spouses Pill */}

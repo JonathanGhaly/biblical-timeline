@@ -1,5 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import AddEventModal from "../components/Event/AddEventModal";
+import {
+  EventsSummaryDashboard,
+  type TabPeopleFilterState,
+} from "../components/Event/EventsSummaryDashboard";
+import {
+  computeMillenniumSummaries,
+  type MillenniumId,
+} from "../utils/millennium";
 import type { BiblicalEvent, Person, Language } from "../types/genealogy";
 import {
   UI_TRANSLATIONS,
@@ -10,6 +18,7 @@ import {
   localizeBiblicalReferences,
   matchesBiblicalSearch,
 } from "../utils/i18n";
+import { resolveEventYear } from "../utils/chronology";
 import {
   Search,
   Plus,
@@ -19,9 +28,9 @@ import {
   Edit3,
   Trash2,
   Users,
+  RotateCcw,
 } from "lucide-react";
 import { CopticCross } from "../components/Coptic/CopticCross";
-import { PersonSelector } from "../components/Event/PersonSelector";
 
 type EventsProps = {
   events: BiblicalEvent[];
@@ -31,54 +40,7 @@ type EventsProps = {
   onDeleteEvent?: (eventId: string) => void;
   lang?: Language;
 };
-type CityRegion =
-  | "Egypt & Sinai"
-  | "Canaan & Levant"
-  | "Mesopotamia & Assyria"
-  | "Babylonia"
-  | "Arabia"
-  | "Persia & Media";
 
-type CityOption = {
-  id: string;
-  name: string;
-  region: CityRegion;
-};
-
-const OT_LOCATIONS: CityOption[] = [
-  { id: "thebes", name: "Thebes (No-Amon)", region: "Egypt & Sinai" },
-  { id: "memphis", name: "Memphis (Noph)", region: "Egypt & Sinai" },
-  { id: "rameses", name: "Rameses (Goshen)", region: "Egypt & Sinai" },
-  { id: "sinai", name: "Mt. Sinai (Horeb)", region: "Egypt & Sinai" },
-  { id: "eziongeber", name: "Ezion-Geber", region: "Egypt & Sinai" },
-  { id: "gaza", name: "Gaza", region: "Canaan & Levant" },
-  { id: "beersheba", name: "Beersheba", region: "Canaan & Levant" },
-  { id: "kirhareseth", name: "Kir-hareseth (Moab)", region: "Canaan & Levant" },
-  { id: "hebron", name: "Hebron", region: "Canaan & Levant" },
-  { id: "jerusalem", name: "Jerusalem", region: "Canaan & Levant" },
-  { id: "jericho", name: "Jericho", region: "Canaan & Levant" },
-  { id: "rabbah", name: "Rabbah (Ammon)", region: "Canaan & Levant" },
-  { id: "joppa", name: "Joppa", region: "Canaan & Levant" },
-  { id: "shechem", name: "Shechem", region: "Canaan & Levant" },
-  { id: "samaria", name: "Samaria", region: "Canaan & Levant" },
-  { id: "dan", name: "Dan", region: "Canaan & Levant" },
-  { id: "tyre", name: "Tyre", region: "Canaan & Levant" },
-  { id: "sidon", name: "Sidon", region: "Canaan & Levant" },
-  { id: "damascus", name: "Damascus", region: "Canaan & Levant" },
-  { id: "carchemish", name: "Carchemish", region: "Mesopotamia & Assyria" },
-  { id: "haran", name: "Haran", region: "Mesopotamia & Assyria" },
-  { id: "asshur", name: "Asshur", region: "Mesopotamia & Assyria" },
-  { id: "nineveh", name: "Nineveh", region: "Mesopotamia & Assyria" },
-  { id: "calah", name: "Calah (Nimrud)", region: "Mesopotamia & Assyria" },
-  { id: "babylon", name: "Babylon", region: "Babylonia" },
-  { id: "erech", name: "Erech (Uruk)", region: "Babylonia" },
-  { id: "ur", name: "Ur of the Chaldees", region: "Babylonia" },
-  { id: "dedan", name: "Dedan", region: "Arabia" },
-  { id: "tema", name: "Tema", region: "Arabia" },
-  { id: "ecbatana", name: "Ecbatana", region: "Persia & Media" },
-  { id: "susa", name: "Susa (Shushan)", region: "Persia & Media" },
-  { id: "persepolis", name: "Persepolis", region: "Persia & Media" },
-];
 export default function Events({
   events,
   people,
@@ -90,31 +52,93 @@ export default function Events({
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<BiblicalEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<BiblicalEvent | null>(null);
+
+  // Millennium tabs & per-tab people filtering state
+  const [selectedTab, setSelectedTab] = useState<MillenniumId>("all");
+  const [tabFilters, setTabFilters] = useState<Record<string, TabPeopleFilterState>>({});
 
   const t = UI_TRANSLATIONS[lang];
 
-  const filteredEvents = events.filter((event) => {
-    const term = search.toLowerCase();
-    const titleMatch = event.title.toLowerCase().includes(term);
-    const arTitleMatch = (event.arabicTitle || "").toLowerCase().includes(term);
-    const descMatch = (event.description || "").toLowerCase().includes(term);
-    const arDescMatch = (event.arabicDescription || "").toLowerCase().includes(term);
-    const locMatch = (event.location || "").toLowerCase().includes(term);
-    const refMatch = (event.biblicalReferences || []).some((r) =>
-      matchesBiblicalSearch(r, term)
-    );
-    const personMatch = (event.personIds || []).some((id) => {
-      const p = people.find((person) => person.id === id);
-      if (!p) return id.toLowerCase().includes(term);
-      return (
-        p.name.toLowerCase().includes(term) ||
-        (p.arabicName || "").toLowerCase().includes(term)
-      );
+  const handleUpdateTabFilter = (
+    tabId: string,
+    filter: Partial<TabPeopleFilterState>
+  ) => {
+    setTabFilters((prev) => ({
+      ...prev,
+      [tabId]: {
+        enabled: filter.enabled !== undefined ? filter.enabled : prev[tabId]?.enabled || false,
+        selectedPersonIds:
+          filter.selectedPersonIds !== undefined
+            ? filter.selectedPersonIds
+            : prev[tabId]?.selectedPersonIds || [],
+      },
+    }));
+  };
+
+  const { eventMillenniumMap } = useMemo(
+    () => computeMillenniumSummaries(events, people),
+    [events, people]
+  );
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      // 1. Search Query Match
+      if (search.trim()) {
+        const term = search.toLowerCase();
+        const titleMatch = event.title.toLowerCase().includes(term);
+        const arTitleMatch = (event.arabicTitle || "").toLowerCase().includes(term);
+        const descMatch = (event.description || "").toLowerCase().includes(term);
+        const arDescMatch = (event.arabicDescription || "").toLowerCase().includes(term);
+        const locMatch =
+          (event.location || "").toLowerCase().includes(term) ||
+          (event.locations || []).some((loc) => loc.toLowerCase().includes(term));
+        const refMatch = (event.biblicalReferences || []).some((r) =>
+          matchesBiblicalSearch(r, term)
+        );
+        const personMatch = (event.personIds || []).some((id) => {
+          const p = people.find((person) => person.id === id);
+          if (!p) return id.toLowerCase().includes(term);
+          return (
+            p.name.toLowerCase().includes(term) ||
+            (p.arabicName || "").toLowerCase().includes(term)
+          );
+        });
+        const matched =
+          titleMatch ||
+          arTitleMatch ||
+          descMatch ||
+          arDescMatch ||
+          locMatch ||
+          refMatch ||
+          personMatch;
+        if (!matched) return false;
+      }
+
+      // 2. Millennium Tab Filtering
+      if (selectedTab !== "all") {
+        const mId = eventMillenniumMap.get(event.id);
+        if (mId !== selectedTab) return false;
+      }
+
+      // 3. Tab People Filter Switch & Selected Figures
+      const currentTabFilter = tabFilters[selectedTab];
+      if (currentTabFilter?.enabled) {
+        if (currentTabFilter.selectedPersonIds.length > 0) {
+          const eventPersonIds = new Set<string>([
+            ...(event.personIds || []),
+            ...(event.anchorPersonId ? [event.anchorPersonId] : []),
+          ]);
+          const hasSelectedPerson = currentTabFilter.selectedPersonIds.some((id) =>
+            eventPersonIds.has(id)
+          );
+          if (!hasSelectedPerson) return false;
+        }
+      }
+
+      return true;
     });
-    return titleMatch || arTitleMatch || descMatch || arDescMatch || locMatch || refMatch || personMatch;
-  });
+  }, [events, people, search, selectedTab, tabFilters, eventMillenniumMap]);
 
   const getPersonName = (id?: string) => {
     if (!id) return null;
@@ -125,26 +149,14 @@ export default function Events({
 
   const handleOpenModal = (event: BiblicalEvent) => {
     setSelectedEvent(event);
-    setIsEditing(false);
   };
 
-  const handleStartEdit = () => {
-    if (selectedEvent) {
-      setEditForm(JSON.parse(JSON.stringify(selectedEvent)));
-      setIsEditing(true);
+  const handleStartEdit = (eventToEdit?: BiblicalEvent) => {
+    const ev = eventToEdit || selectedEvent;
+    if (ev) {
+      setEditingEvent(ev);
+      setSelectedEvent(null);
     }
-  };
-
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editForm) return;
-
-    if (onUpdateEvent) {
-      onUpdateEvent(editForm);
-    }
-
-    setSelectedEvent(editForm);
-    setIsEditing(false);
   };
 
   const handleDelete = () => {
@@ -164,7 +176,6 @@ export default function Events({
       setSelectedEvent(null);
     }
   };
-const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
 
   return (
     <div className="space-y-6 animate-fadeIn" dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -188,6 +199,17 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
         </button>
       </div>
 
+      {/* Events Summary Dashboard with Total Events & Millennia Tabs & Per-tab People Filter Switch */}
+      <EventsSummaryDashboard
+        events={events}
+        people={people}
+        selectedTab={selectedTab}
+        onSelectTab={(tabId) => setSelectedTab(tabId)}
+        tabFilters={tabFilters}
+        onUpdateTabFilter={handleUpdateTabFilter}
+        lang={lang}
+      />
+
       {/* Bilingual Search */}
       <div className="relative">
         <div className={`absolute top-1/2 -translate-y-1/2 ${lang === "ar" ? "right-4" : "left-4"} text-[#D4AF37]`}>
@@ -204,13 +226,108 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
         />
       </div>
 
+      {/* Filter Status Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#7A6E5E] dark:text-[#A99F8D]">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold">
+            {t.showingEventsCount} <span className="font-bold text-[#800020] dark:text-[#F3E5AB] font-mono">{filteredEvents.length}</span> {t.ofEvents} <span className="font-mono">{events.length}</span> {t.eventsWord}
+          </span>
+
+          {selectedTab !== "all" && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#800020]/10 dark:bg-[#800020]/30 text-[#800020] dark:text-[#F3E5AB] border border-[#800020]/20 font-medium">
+              <span>{selectedTab}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedTab("all")}
+                className="hover:text-red-700 transition cursor-pointer"
+                title={lang === "ar" ? "إلغاء تصفية الألفية" : "Clear millennium filter"}
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+
+          {tabFilters[selectedTab]?.enabled && tabFilters[selectedTab].selectedPersonIds.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-medium">
+              <Users size={12} />
+              <span>
+                {lang === "ar"
+                  ? `${tabFilters[selectedTab].selectedPersonIds.length} شخصية محددة`
+                  : `${tabFilters[selectedTab].selectedPersonIds.length} figures selected`}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleUpdateTabFilter(selectedTab, { selectedPersonIds: [] })}
+                className="hover:text-red-700 transition cursor-pointer"
+                title={lang === "ar" ? "إلغاء تصفية الشخصيات" : "Clear figure filter"}
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+        </div>
+
+        {(selectedTab !== "all" || search || (tabFilters[selectedTab]?.enabled && tabFilters[selectedTab].selectedPersonIds.length > 0)) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setSelectedTab("all");
+              if (tabFilters[selectedTab]?.enabled) {
+                handleUpdateTabFilter(selectedTab, { selectedPersonIds: [] });
+              }
+            }}
+            className="inline-flex items-center gap-1 text-[11px] text-[#800020] dark:text-[#D4AF37] hover:underline font-semibold cursor-pointer"
+          >
+            <RotateCcw size={12} />
+            <span>{lang === "ar" ? "إعادة ضبط التصفية" : "Reset all filters"}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Empty State when no events match */}
+      {filteredEvents.length === 0 && (
+        <div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-[#D4AF37]/50 bg-white/40 dark:bg-[#1C1A17]/40 space-y-3">
+          <BookOpen size={36} className="mx-auto text-[#D4AF37]" />
+          <h3 className="text-base font-bold text-[#800020] dark:text-[#F3E5AB]">
+            {t.noEventsInMillennium}
+          </h3>
+          <p className="text-xs text-[#7A6E5E] dark:text-[#A99F8D] max-w-md mx-auto">
+            {lang === "ar"
+              ? "لم يتم العثور على أحداث تطابق خيارات البحث أو التصفية الحالية. جرب تغيير الألفية أو إزالة تصفية الشخصيات."
+              : "No events match the current search or tab filters. Try switching millennium or clearing the figure filter."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setSelectedTab("all");
+              if (tabFilters[selectedTab]?.enabled) {
+                handleUpdateTabFilter(selectedTab, { selectedPersonIds: [] });
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#800020] text-white text-xs font-bold shadow-sm hover:brightness-110 transition"
+          >
+            <RotateCcw size={13} />
+            <span>{lang === "ar" ? "عرض جميع الأحداث" : "Show All Events"}</span>
+          </button>
+        </div>
+      )}
+
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredEvents.map((event, index) => {
           const displayTitle = getEventDisplayTitle(event, lang);
           const displayDesc = getEventDisplayDescription(event, lang);
-          const formattedYear = formatYearDisplay(event.date?.year, lang);
+          const effYear = resolveEventYear(event, people);
+          const formattedYear = formatYearDisplay(effYear, lang);
           const secondaryTitle = lang === "ar" ? event.title : event.arabicTitle;
+          const locList =
+            event.locations && event.locations.length > 0
+              ? event.locations
+              : event.location
+              ? [event.location]
+              : [];
 
           return (
             <div
@@ -231,21 +348,49 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
                     )}
                   </div>
 
-                  {event.date?.year !== undefined ? (
-                    <span className="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
-                      {formattedYear}
-                    </span>
-                  ) : event.anchorPersonId ? (
-                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#1A365D]/40 bg-[#1A365D]/10 text-[#1A365D] dark:text-[#90CDF4]">
-                      {getPersonName(event.anchorPersonId)} ({event.anchorAge} {t.years})
-                    </span>
-                  ) : null}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {effYear !== undefined ? (
+                      <div className="flex flex-col items-end">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
+                          {formattedYear}
+                        </span>
+                        {event.anchorPersonId && (
+                          <span className="text-[10px] text-stone-500 dark:text-stone-400 font-medium">
+                            {getPersonName(event.anchorPersonId)} ({event.anchorAge ?? event.anchorPersonAgeAtEvent} {t.years})
+                          </span>
+                        )}
+                      </div>
+                    ) : event.anchorPersonId ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#1A365D]/40 bg-[#1A365D]/10 text-[#1A365D] dark:text-[#90CDF4]">
+                        {getPersonName(event.anchorPersonId)} ({event.anchorAge ?? event.anchorPersonAgeAtEvent} {t.years})
+                      </span>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(event);
+                      }}
+                      className="p-1 rounded-md text-[#6B5E4E] dark:text-[#A99F8D] hover:bg-[#D4AF37]/20 hover:text-[#800020] dark:hover:text-[#F3E5AB] transition-colors"
+                      title={t.editEvent}
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                  </div>
                 </div>
 
-                {event.location && (
-                  <div className="flex items-center gap-1.5 text-xs text-[#6B5E4E] dark:text-[#A99F8D]">
-                    <MapPin size={13} className="text-[#800020] dark:text-[#D4AF37]" />
-                    <span>{event.location}</span>
+                {locList.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#6B5E4E] dark:text-[#A99F8D]">
+                    <MapPin size={13} className="text-[#800020] dark:text-[#D4AF37] shrink-0" />
+                    {locList.map((loc, lIdx) => (
+                      <span
+                        key={`loc_${lIdx}`}
+                        className="px-2 py-0.5 rounded-md bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-stone-700 dark:text-stone-300 font-medium text-[11px]"
+                      >
+                        {loc}
+                      </span>
+                    ))}
                   </div>
                 )}
 
@@ -295,8 +440,23 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
         />
       )}
 
-      {/* View / Edit Event Modal */}
-      {selectedEvent && (
+      {/* Edit Event Modal */}
+      {editingEvent && (
+        <AddEventModal
+          existingPeople={people}
+          initialEvent={editingEvent}
+          onUpdateEvent={(updated) => {
+            if (onUpdateEvent) onUpdateEvent(updated);
+            setSelectedEvent(updated);
+            setEditingEvent(null);
+          }}
+          onClose={() => setEditingEvent(null)}
+          lang={lang}
+        />
+      )}
+
+      {/* View Event Modal */}
+      {selectedEvent && !editingEvent && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setSelectedEvent(null)}
@@ -310,229 +470,128 @@ const regions = Array.from(new Set(OT_LOCATIONS.map((c) => c.region)));
             <div className="flex items-center justify-between p-5 border-b border-[#D4AF37]/40 bg-gradient-to-r from-[#800020]/15 via-[#D4AF37]/15 to-[#1A365D]/10">
               <div className="flex items-center gap-3">
                 <CopticCross size={28} />
-                <h3 className="text-xl font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
-                  {isEditing ? t.editEvent : getEventDisplayTitle(selectedEvent, lang)}
-                </h3>
+                <div>
+                  <h3 className="text-xl font-bold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+                    {getEventDisplayTitle(selectedEvent, lang)}
+                  </h3>
+                  {((lang === "ar" && selectedEvent.title) || (lang !== "ar" && selectedEvent.arabicTitle)) && (
+                    <p className="text-xs text-[#7A6E5E] dark:text-[#A99F8D] mt-0.5">
+                      {lang === "ar" ? selectedEvent.title : selectedEvent.arabicTitle}
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-1.5 rounded-lg text-[#6B5E4E] dark:text-[#A99F8D] hover:bg-[#D4AF37]/20 transition-colors"
+                className="p-1.5 rounded-lg text-[#6B5E4E] dark:text-[#A99F8D] hover:bg-[#D4AF37]/20 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Modal Body */}
-            {isEditing && editForm ? (
-              <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      {t.eventTitleEn} *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.title}
-                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      {t.eventTitleAr}
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.arabicTitle || ""}
-                      onChange={(e) => setEditForm({ ...editForm, arabicTitle: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm font-amiri"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      {t.year} (e.g. -2000 for 2000 BC)
-                    </label>
-                    <input
-                      type="number"
-                      value={editForm.date?.year ?? ""}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          date: e.target.value !== "" ? { year: Number(e.target.value), precision: "exact" } : undefined,
-                        })
-                      }
-                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      {t.location}
-                    </label>
-                    <select
-                      value={editForm.location || ""}
-                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-                    >
-                      <option value="">{lang === "ar" ? "— اختر موقعاً كتابياً —" : "— Select Location —"}</option>
-                      {regions.map((region) => (
-                        <optgroup key={region} label={region}>
-                          {OT_LOCATIONS.filter((loc) => loc.region === region).map((city) => (
-                            <option key={city.id} value={city.name}>
-                              {city.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      {t.eventDescEn}
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={editForm.description || ""}
-                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      {t.eventDescAr}
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={editForm.arabicDescription || ""}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, arabicDescription: e.target.value })
-                      }
-                      className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm font-amiri"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                    {t.references}
-                  </label>
-                  <input
-                    type="text"
-                    value={(editForm.biblicalReferences || []).join(", ")}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        biblicalReferences: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                      })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D4AF37]/50 bg-white dark:bg-[#121110] text-sm"
-                  />
-                </div>
-
-                {/* Included Persons Selector */}
-                <div className="p-3.5 rounded-xl border border-[#D4AF37]/35 bg-[#D4AF37]/5 space-y-2">
-                  <PersonSelector
-                    people={people}
-                    selectedPersonIds={editForm.personIds || []}
-                    onChange={(personIds) => setEditForm({ ...editForm, personIds })}
-                    lang={lang}
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#D4AF37]/30">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 rounded-xl border border-[#D4AF37]/50 text-sm font-semibold hover:bg-[#D4AF37]/15"
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#800020] to-[#A01128] text-white font-bold text-sm shadow-md hover:brightness-110"
-                  >
-                    {t.save}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="p-6 space-y-4">
-                <div className="flex items-center gap-2">
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="flex flex-wrap items-center gap-2">
+                {resolveEventYear(selectedEvent, people) !== undefined && (
                   <span className="px-3 py-1 rounded-full text-xs font-bold border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
-                    {formatYearDisplay(selectedEvent.date?.year, lang)}
+                    {formatYearDisplay(resolveEventYear(selectedEvent, people), lang)}
                   </span>
-                  {selectedEvent.location && (
-                    <span className="flex items-center gap-1 text-xs text-[#6B5E4E] dark:text-[#A99F8D]">
-                      <MapPin size={14} className="text-[#800020] dark:text-[#D4AF37]" />
-                      {selectedEvent.location}
-                    </span>
-                  )}
-                </div>
-
-                {getEventDisplayDescription(selectedEvent, lang) && (
-                  <p className="text-sm leading-relaxed text-[#4A3E31] dark:text-[#C5BBAE] bg-[#D4AF37]/10 p-4 rounded-xl border border-[#D4AF37]/25">
-                    {getEventDisplayDescription(selectedEvent, lang)}
-                  </p>
                 )}
-
-                {selectedEvent.personIds && selectedEvent.personIds.length > 0 && (
-                  <div className="p-3 bg-white/60 dark:bg-[#141210] rounded-xl border border-[#D4AF37]/30 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
-                      <Users size={14} />
-                      <span>{t.associatedPeople}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#800020]/15 dark:bg-[#D4AF37]/25 font-semibold">
-                        {selectedEvent.personIds.length}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedEvent.personIds.map((id, pIdx) => (
-                        <span
-                          key={`sel_ev_pid_${id}_${pIdx}`}
-                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#1A365D]/10 dark:bg-[#1A365D]/30 border border-[#1A365D]/25 text-[#1A365D] dark:text-[#90CDF4] shadow-xs"
-                        >
-                          {getPersonName(id)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                {selectedEvent.anchorPersonId && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-medium border border-[#1A365D]/30 bg-[#1A365D]/10 text-[#1A365D] dark:text-[#90CDF4]">
+                    {lang === "ar" ? "مرتبط بـ" : "Relative to"}{" "}
+                    <span className="font-bold">{getPersonName(selectedEvent.anchorPersonId)}</span> (
+                    {selectedEvent.anchorAge ?? selectedEvent.anchorPersonAgeAtEvent} {t.years})
+                  </span>
                 )}
-
-                {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#8C6F12] dark:text-[#F3E5AB]">
-                    <BookOpen size={14} />
-                    <span>
-                      {localizeBiblicalReferences(selectedEvent.biblicalReferences, lang).join(
-                        lang === "ar" ? "، " : ", "
-                      )}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between pt-4 border-t border-[#D4AF37]/30">
-                  <button
-                    onClick={handleDelete}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold"
-                  >
-                    <Trash2 size={14} />
-                    <span>{lang === "ar" ? "حذف الحدث" : "Delete Event"}</span>
-                  </button>
-
-                  <button
-                    onClick={handleStartEdit}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C5A028] text-[#121110] text-xs font-bold shadow"
-                  >
-                    <Edit3 size={14} />
-                    <span>{t.editEvent}</span>
-                  </button>
-                </div>
               </div>
-            )}
+
+              {/* Multiple Locations Display */}
+              {((selectedEvent.locations && selectedEvent.locations.length > 0) || selectedEvent.location) && (
+                <div className="p-3 bg-white/60 dark:bg-[#141210] rounded-xl border border-[#D4AF37]/30 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                    <MapPin size={14} />
+                    <span>{t.multipleLocations}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedEvent.locations && selectedEvent.locations.length > 0 ? (
+                      selectedEvent.locations.map((loc, lIdx) => (
+                        <span
+                          key={`loc_badge_${lIdx}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-stone-800 dark:text-stone-200"
+                        >
+                          <MapPin size={11} className="text-[#800020] dark:text-[#D4AF37]" />
+                          {loc}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-stone-700 dark:text-stone-300 font-medium">
+                        {selectedEvent.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {getEventDisplayDescription(selectedEvent, lang) && (
+                <p className="text-sm leading-relaxed text-[#4A3E31] dark:text-[#C5BBAE] bg-[#D4AF37]/10 p-4 rounded-xl border border-[#D4AF37]/25">
+                  {getEventDisplayDescription(selectedEvent, lang)}
+                </p>
+              )}
+
+              {selectedEvent.personIds && selectedEvent.personIds.length > 0 && (
+                <div className="p-3 bg-white/60 dark:bg-[#141210] rounded-xl border border-[#D4AF37]/30 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#800020] dark:text-[#D4AF37]">
+                    <Users size={14} />
+                    <span>{t.associatedPeople}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#800020]/15 dark:bg-[#D4AF37]/25 font-semibold">
+                      {selectedEvent.personIds.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedEvent.personIds.map((id, pIdx) => (
+                      <span
+                        key={`sel_ev_pid_${id}_${pIdx}`}
+                        className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#1A365D]/10 dark:bg-[#1A365D]/30 border border-[#1A365D]/25 text-[#1A365D] dark:text-[#90CDF4] shadow-xs"
+                      >
+                        {getPersonName(id)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedEvent.biblicalReferences && selectedEvent.biblicalReferences.length > 0 && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#8C6F12] dark:text-[#F3E5AB]">
+                  <BookOpen size={14} />
+                  <span>
+                    {localizeBiblicalReferences(selectedEvent.biblicalReferences, lang).join(
+                      lang === "ar" ? "، " : ", "
+                    )}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t border-[#D4AF37]/30">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold cursor-pointer"
+                >
+                  <Trash2 size={14} />
+                  <span>{lang === "ar" ? "حذف الحدث" : "Delete Event"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(selectedEvent)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C5A028] text-[#121110] text-xs font-bold shadow cursor-pointer"
+                >
+                  <Edit3 size={14} />
+                  <span>{t.editEvent}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
