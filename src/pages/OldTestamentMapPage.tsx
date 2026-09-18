@@ -212,10 +212,216 @@ export default function OldTestamentMapPage({
     []
   );
 
+  // Known biblical cities geo-registry for cities entered in events
+  const KNOWN_EVENT_CITIES = useMemo<
+    Record<
+      string,
+      {
+        name: string;
+        arabicName: string;
+        coordinates: [number, number];
+        region: string;
+        modernName: string;
+        modernCountry?: string;
+        aliases: string[];
+      }
+    >
+  >(
+    () => ({
+      sodom: {
+        name: "Sodom",
+        arabicName: "سدوم",
+        coordinates: [31.25, 35.53],
+        region: "Canaan",
+        modernName: "Bab edh-Dhra, Jordan",
+        modernCountry: "Jordan",
+        aliases: ["سدوم", "sodom"],
+      },
+      gomorrah: {
+        name: "Gomorrah",
+        arabicName: "عمورة",
+        coordinates: [31.14, 35.52],
+        region: "Canaan",
+        modernName: "Numeira, Jordan",
+        modernCountry: "Jordan",
+        aliases: ["عمورة", "gomorrah", "gomorrha"],
+      },
+      zoar: {
+        name: "Zoar",
+        arabicName: "صوغر",
+        coordinates: [31.05, 35.49],
+        region: "Canaan",
+        modernName: "Ghor es-Safi, Jordan",
+        modernCountry: "Jordan",
+        aliases: ["صوغر", "zoar", "bela", "بالع"],
+      },
+      canaan: {
+        name: "Land of Canaan",
+        arabicName: "أرض كنعان",
+        coordinates: [31.85, 35.25],
+        region: "Canaan",
+        modernName: "Canaan / Holy Land",
+        modernCountry: "Palestine / Jordan",
+        aliases: ["كنعان", "أرض كنعان", "canaan"],
+      },
+      dothan: {
+        name: "Dothan",
+        arabicName: "دوثان",
+        coordinates: [32.416, 35.242],
+        region: "Canaan",
+        modernName: "Tel Dothan, West Bank",
+        aliases: ["دوثان", "dothan"],
+      },
+      penuel: {
+        name: "Penuel (Peniel)",
+        arabicName: "فنئيل",
+        coordinates: [32.19, 35.71],
+        region: "Canaan",
+        modernName: "Tulul adh-Dhahab, Jordan",
+        aliases: ["فنئيل", "penuel", "peniel"],
+      },
+      succoth: {
+        name: "Succoth",
+        arabicName: "سكوت",
+        coordinates: [32.18, 35.61],
+        region: "Canaan",
+        modernName: "Tell Deir Alla, Jordan",
+        aliases: ["سكوت", "succoth"],
+      },
+      mahanaim: {
+        name: "Mahanaim",
+        arabicName: "محنايم",
+        coordinates: [32.32, 35.73],
+        region: "Canaan",
+        modernName: "Gilead, Jordan",
+        aliases: ["محنايم", "mahanaim"],
+      },
+      gerar: {
+        name: "Gerar",
+        arabicName: "جرار",
+        coordinates: [31.38, 34.6],
+        region: "Canaan",
+        modernName: "Tel Haror, Negev",
+        aliases: ["جرار", "gerar"],
+      },
+      mamre: {
+        name: "Mamre (Plains of Mamre)",
+        arabicName: "ممرا (بلوطات ممرا)",
+        coordinates: [31.55, 35.1],
+        region: "Canaan",
+        modernName: "Ramat el-Khalil, Hebron",
+        aliases: ["ممرا", "بلوطات ممرا", "mamre"],
+      },
+      ararat: {
+        name: "Mount Ararat",
+        arabicName: "جبل أرارات",
+        coordinates: [39.702, 44.299],
+        region: "Anatolia",
+        modernName: "Agri Dagi, Turkey",
+        aliases: ["أرارات", "أراراط", "جبال أرارات", "ararat", "mount ararat"],
+      },
+    }),
+    []
+  );
+
+  // Dynamically merge ALL_MAP_LOCATIONS with any cities entered in the events:
+  const allMapLocations = useMemo(() => {
+    const list: BiblicalLocation[] = [...ALL_MAP_LOCATIONS];
+    const seenIds = new Set(list.map((l) => l.id.toLowerCase()));
+
+    events.forEach((ev) => {
+      // Gather all city names entered for this event
+      const citiesFromEvent: string[] = [];
+      if (Array.isArray(ev.locations)) {
+        citiesFromEvent.push(...ev.locations);
+      }
+      if (ev.location) {
+        // Handle comma-separated, slashed, or "and" separated cities (e.g. "Sodom and Gomorrah", "سدوم وعمورة")
+        const parts = ev.location.split(/[,،/|]|\band\b|\bو\b/gi);
+        parts.forEach((p) => {
+          const t = p.trim();
+          if (t && !citiesFromEvent.includes(t)) {
+            citiesFromEvent.push(t);
+          }
+        });
+      }
+
+      citiesFromEvent.forEach((cityStr) => {
+        const trimmed = cityStr.trim();
+        if (!trimmed || trimmed.length < 2) return;
+
+        // 1. Check if this city is already represented by an existing map location
+        const existing = list.find((l) => isLocationMatch(l, trimmed));
+        if (existing) {
+          // Link this event into the existing location keyEvents if not already present
+          if (!existing.keyEvents.includes(ev.id)) {
+            existing.keyEvents.push(ev.id);
+          }
+          return;
+        }
+
+        // 2. If not already on the map, resolve from known biblical registry or event coordinates
+        const normKey = trimmed.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/gi, "");
+        const registryMatch = Object.entries(KNOWN_EVENT_CITIES).find(
+          ([k, info]) =>
+            k === normKey ||
+            info.name.toLowerCase() === trimmed.toLowerCase() ||
+            info.arabicName === trimmed ||
+            info.aliases.some(
+              (a) =>
+                a.toLowerCase() === trimmed.toLowerCase() ||
+                trimmed.toLowerCase().includes(a.toLowerCase()) ||
+                a.includes(trimmed)
+            )
+        )?.[1];
+
+        // Determine coordinates: from event, or from registry, or contextual fallback
+        let coords: [number, number] | undefined = ev.coordinates;
+        if (!coords && registryMatch) {
+          coords = registryMatch.coordinates;
+        }
+        if (!coords) {
+          coords = [
+            31.75 + Math.sin(trimmed.length * 13) * 0.3,
+            35.25 + Math.cos(trimmed.length * 17) * 0.3,
+          ];
+        }
+
+        const newId = `event-city-${normKey || Math.random().toString(36).substring(2, 7)}`;
+        if (seenIds.has(newId)) return;
+        seenIds.add(newId);
+
+        const newLoc: BiblicalLocation = {
+          id: newId,
+          name: registryMatch?.name || trimmed,
+          arabicName: registryMatch?.arabicName || trimmed,
+          modernName:
+            registryMatch?.modernName ||
+            (ev.country ? `${trimmed}, ${ev.country}` : trimmed),
+          modernCountry: registryMatch?.modernCountry || ev.country,
+          coordinates: coords,
+          region: registryMatch?.region || "Canaan",
+          biblicalEra: "Patriarchal",
+          keyEvents: [ev.id],
+          description: `Location entered in biblical event "${ev.title}".`,
+          arabicDescription: `موقع مُدخل في الحدث الكتابي "${ev.arabicTitle || ev.title}".`,
+          biblicalReferences: ev.biblicalReferences || [],
+          placeType: "city",
+          certainty: "probable",
+          aliases: [trimmed, ...(registryMatch?.aliases || [])],
+        };
+
+        list.push(newLoc);
+      });
+    });
+
+    return list;
+  }, [events, isLocationMatch, KNOWN_EVENT_CITIES]);
+
   // Map events to biblical locations (via keyEvents, locationId, coordinates, and text match)
   const eventsByLocation = useMemo(() => {
     const map = new Map<string, BiblicalEvent[]>();
-    ALL_MAP_LOCATIONS.forEach((loc) => {
+    allMapLocations.forEach((loc) => {
       const matchedEvents = events.filter((event) => {
         if (event.locationId && event.locationId.toLowerCase() === loc.id.toLowerCase()) return true;
         if (
@@ -235,23 +441,23 @@ export default function OldTestamentMapPage({
       map.set(loc.id, matchedEvents);
     });
     return map;
-  }, [events, isLocationMatch]);
+  }, [events, allMapLocations, isLocationMatch]);
 
   // Map people to locations by place of birth
   const peopleByLocation = useMemo(() => {
     const map = new Map<string, Person[]>();
-    ALL_MAP_LOCATIONS.forEach((loc) => {
+    allMapLocations.forEach((loc) => {
       const matchedPeople = people.filter((person) =>
         isLocationMatch(loc, person.placeOfBirth)
       );
       map.set(loc.id, matchedPeople);
     });
     return map;
-  }, [people, isLocationMatch]);
+  }, [people, allMapLocations, isLocationMatch]);
 
   // Filtered Locations based on search, region, era, and site type
   const filteredLocations = useMemo(() => {
-    return ALL_MAP_LOCATIONS.filter((loc) => {
+    return allMapLocations.filter((loc) => {
       if (selectedRegion !== "All") {
         const reg = (loc.region || "").toLowerCase();
         const sel = selectedRegion.toLowerCase();
@@ -280,7 +486,7 @@ export default function OldTestamentMapPage({
 
       return true;
     });
-  }, [selectedRegion, selectedEra, selectedType, searchQuery]);
+  }, [allMapLocations, selectedRegion, selectedEra, selectedType, searchQuery]);
 
   // Format BC/AD year label
   const formatYearLabel = (year?: number) => {
@@ -327,6 +533,10 @@ export default function OldTestamentMapPage({
       shechem: { dx: 0, dy: -10 },
       samaria: { dx: -14, dy: 0 },
       rephidim: { dx: -10, dy: -6 },
+      sodom: { dx: 14, dy: 10 },
+      gomorrah: { dx: 14, dy: 22 },
+      zoar: { dx: 8, dy: 30 },
+      canaan: { dx: -18, dy: -2 },
     }),
     []
   );
@@ -342,6 +552,10 @@ export default function OldTestamentMapPage({
       shechem: "top",
       samaria: "left",
       beersheba: "bottom",
+      sodom: "right",
+      gomorrah: "right",
+      zoar: "right",
+      canaan: "top",
       tyre: "left",
       sidon: "left",
       dan: "top",

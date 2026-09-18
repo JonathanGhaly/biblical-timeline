@@ -245,6 +245,81 @@ export const BIBLICAL_LOCATIONS: BiblicalLocation[] = [
     biblicalReferences: ["1 Kings 16:24", "2 Kings 17:5-6"],
   },
   {
+    id: "sodom",
+    name: "Sodom",
+    arabicName: "سدوم (مدينة السهل)",
+    modernName: "Bab edh-Dhra / Dead Sea Plain, Jordan",
+    coordinates: [31.25, 35.53],
+    region: "Canaan",
+    biblicalEra: "Patriarchal",
+    keyEvents: ["sodom-destruction", "abraham-covenant"],
+    description:
+      "Ancient city in the Plain of Jordan near the Dead Sea where Lot resided; destroyed by divine fire and brimstone for its wickedness after Abraham's intercession.",
+    arabicDescription:
+      "إحدى أشهر مدن دائرة الأردن وسهل السديم قرب البحر الميت حيث سكن لوط، أمطر الرب عليها كبريتاً وناراً من السماء بعد شفاعة إبراهيم البارة.",
+    biblicalReferences: [
+      "Genesis 13:10-13",
+      "Genesis 14:1-12",
+      "Genesis 18:16-33",
+      "Genesis 19:1-29",
+      "Deuteronomy 29:23",
+      "Isaiah 1:9",
+      "Ezekiel 16:49-50",
+    ],
+    placeType: "city",
+    certainty: "probable",
+    aliases: ["سدوم", "Sodom", "Tall el-Hammam", "Bab edh-Dhra", "Sodom and Gomorrah"],
+  },
+  {
+    id: "gomorrah",
+    name: "Gomorrah",
+    arabicName: "عمورة (مدينة السهل)",
+    modernName: "Numeira, Dead Sea Basin, Jordan",
+    coordinates: [31.14, 35.52],
+    region: "Canaan",
+    biblicalEra: "Patriarchal",
+    keyEvents: ["sodom-destruction", "abraham-covenant"],
+    description:
+      "Allied sister city to Sodom in the Vale of Siddim; overthrown alongside Sodom in perpetual biblical testimony of God's holy justice.",
+    arabicDescription:
+      "مدينة شقيقة لسدوم في وادي السديم وسهل الأردن، انقلبت وهلكت مع سدوم بنار وكبريت من السماء لتكون عبرة كتابية أبدية لمخافة الرب.",
+    biblicalReferences: [
+      "Genesis 10:19",
+      "Genesis 14:2-11",
+      "Genesis 19:24-28",
+      "Deuteronomy 32:32",
+      "Jeremiah 23:14",
+      "Amos 4:11",
+    ],
+    placeType: "city",
+    certainty: "probable",
+    aliases: ["عمورة", "Gomorrah", "Gomorrha", "Numeira", "Sodom and Gomorrah"],
+  },
+  {
+    id: "canaan",
+    name: "Land of Canaan",
+    arabicName: "أرض كنعان (أرض الموعد)",
+    modernName: "Canaan / Holy Land",
+    coordinates: [31.85, 35.25],
+    region: "Canaan",
+    biblicalEra: "Patriarchal",
+    keyEvents: ["abraham-covenant"],
+    description:
+      "The Promised Land pledged by the Lord God to the Patriarch Abraham and his descendants in an eternal covenant.",
+    arabicDescription:
+      "أرض الموعد التي أقسم الرب أن يهبها لأبينا إبراهيم ونسله عهداً أبدياً، الممتدة من نهر مصر إلى النهر الكبير نهر الفرات.",
+    biblicalReferences: [
+      "Genesis 11:31",
+      "Genesis 12:5-7",
+      "Genesis 15:18-21",
+      "Genesis 17:8",
+      "Exodus 6:4",
+    ],
+    placeType: "region",
+    certainty: "certain",
+    aliases: ["Canaan", "كنعان", "أرض كنعان", "Promised Land", "بلاد كنعان"],
+  },
+  {
     id: "tyre",
     name: "Tyre (Sour)",
     arabicName: "صور",
@@ -600,23 +675,96 @@ export function convertBiblicalPlaceToLocation(place: BiblicalPlace): BiblicalLo
   };
 }
 
-const seenMapIds = new Set<string>();
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-export const ALL_MAP_LOCATIONS: BiblicalLocation[] = [
-  ...BIBLICAL_LOCATIONS.map((loc) => {
-    const matchedPlace = ALL_BIBLICAL_PLACES.find((p) => p.id.toLowerCase() === loc.id.toLowerCase());
-    return {
-      ...loc,
-      placeType: matchedPlace?.type || "city",
-      certainty: matchedPlace?.certainty || "certain",
-      aliases: matchedPlace?.aliases || [],
-    };
-  }),
-  ...ALL_BIBLICAL_PLACES.map(convertBiblicalPlaceToLocation),
-].filter((loc) => {
-  const normId = loc.id.toLowerCase();
-  if (seenMapIds.has(normId)) return false;
-  seenMapIds.add(normId);
-  return true;
-});
+function normalizeLocationId(id: string): string {
+  let s = id.toLowerCase().replace(/[-_]/g, "");
+  if (s.endsWith("city") && s !== "city") s = s.slice(0, -4);
+  if (s === "onheliopolis") s = "on";
+  if (s === "zoantanis") s = "zoan";
+  if (s === "eziongeberelath") s = "eziongeber";
+  return s;
+}
+
+function buildDeduplicatedMapLocations(): BiblicalLocation[] {
+  const result: BiblicalLocation[] = [];
+
+  const allCandidates: BiblicalLocation[] = [
+    ...BIBLICAL_LOCATIONS.map((loc) => {
+      const matchedPlace = ALL_BIBLICAL_PLACES.find(
+        (p) => normalizeLocationId(p.id) === normalizeLocationId(loc.id)
+      );
+      return {
+        ...loc,
+        placeType: matchedPlace?.type || loc.placeType || "city",
+        certainty: matchedPlace?.certainty || loc.certainty || "certain",
+        aliases: Array.from(
+          new Set([...(loc.aliases || []), ...(matchedPlace?.aliases || [])])
+        ),
+      };
+    }),
+    ...ALL_BIBLICAL_PLACES.map(convertBiblicalPlaceToLocation),
+  ];
+
+  for (const cand of allCandidates) {
+    const norm = normalizeLocationId(cand.id);
+    const existingIndex = result.findIndex((existing) => {
+      if (normalizeLocationId(existing.id) === norm) return true;
+      const d = distanceKm(
+        existing.coordinates[0],
+        existing.coordinates[1],
+        cand.coordinates[0],
+        cand.coordinates[1]
+      );
+      const nameMatch =
+        existing.name.toLowerCase().includes(cand.name.toLowerCase()) ||
+        cand.name.toLowerCase().includes(existing.name.toLowerCase());
+      const arMatch =
+        Boolean(existing.arabicName) &&
+        Boolean(cand.arabicName) &&
+        (existing.arabicName.includes(cand.arabicName) ||
+          cand.arabicName.includes(existing.arabicName));
+      return d < 8 && (nameMatch || arMatch);
+    });
+
+    if (existingIndex >= 0) {
+      // Merge into existing
+      const ex = result[existingIndex];
+      ex.aliases = Array.from(
+        new Set([
+          ...(ex.aliases || []),
+          ...(cand.aliases || []),
+          cand.id,
+          cand.name,
+          ...(cand.arabicName ? [cand.arabicName] : []),
+        ])
+      );
+      ex.biblicalReferences = Array.from(
+        new Set([...(ex.biblicalReferences || []), ...(cand.biblicalReferences || [])])
+      );
+      ex.keyEvents = Array.from(
+        new Set([...(ex.keyEvents || []), ...(cand.keyEvents || [])])
+      );
+      if (!ex.arabicDescription && cand.arabicDescription) ex.arabicDescription = cand.arabicDescription;
+      if (!ex.description && cand.description) ex.description = cand.description;
+    } else {
+      result.push({ ...cand });
+    }
+  }
+
+  return result;
+}
+
+export const ALL_MAP_LOCATIONS: BiblicalLocation[] = buildDeduplicatedMapLocations();
 

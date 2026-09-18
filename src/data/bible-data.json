@@ -189,8 +189,10 @@
         "precision": "approximate"
       },
       "personIds": ["noah"],
-      "description": "The Flood narrative involving Noah and his family.",
-      "arabicDescription": "طوفان نوح وتجديد العهد الإلهي مع بني البشر.",
+      "location": "Mount Ararat",
+      "locations": ["Mount Ararat"],
+      "description": "The Flood narrative involving Noah and his family, with the Ark resting upon the mountains of Ararat.",
+      "arabicDescription": "طوفان نوح وتجديد العهد الإلهي مع بني البشر واستقرار الفلك على جبال أرارات.",
       "biblicalReferences": ["Genesis 6-9"]
     },
     {
@@ -203,9 +205,25 @@
       },
       "personIds": ["abraham"],
       "location": "Canaan",
+      "locations": ["Canaan"],
       "description": "God establishes a covenant with Abraham.",
       "arabicDescription": "تأسيس الله عهد النسل والبركة مع أبي الآباء إبراهيم في أرض كنعان.",
       "biblicalReferences": ["Genesis 12", "Genesis 15", "Genesis 17"]
+    },
+    {
+      "id": "sodom-destruction",
+      "title": "Destruction of Sodom and Gomorrah",
+      "arabicTitle": "خراب سدوم وعمورة وإنقاذ لوط",
+      "date": {
+        "year": -2067,
+        "precision": "approximate"
+      },
+      "personIds": ["abraham", "lot"],
+      "location": "Sodom and Gomorrah",
+      "locations": ["Sodom", "Gomorrah"],
+      "description": "God sends fire and brimstone upon Sodom and Gomorrah because of their wickedness, while angels rescue Lot and his daughters.",
+      "arabicDescription": "أمطر الرب ناراً وكبريتاً من السماء على سدوم وعمورة لشرورهما بعد شفاعة إبراهيم، وأنقذ الملاكان لوطاً وابنتيه.",
+      "biblicalReferences": ["Genesis 18", "Genesis 19"]
     },
     {
       "id": "isaac-birth",
@@ -216,8 +234,10 @@
         "precision": "approximate"
       },
       "personIds": ["abraham", "sarah", "isaac"],
-      "description": "Isaac is born to Abraham and Sarah.",
-      "arabicDescription": "ولادة ابن الموعد إسحاق لإبراهيم وسارة في شيخوختهما.",
+      "location": "Beersheba",
+      "locations": ["Beersheba"],
+      "description": "Isaac is born to Abraham and Sarah in Beersheba.",
+      "arabicDescription": "ولادة ابن الموعد إسحاق لإبراهيم وسارة في بئر سبع في شيخوختهما.",
       "biblicalReferences": ["Genesis 21"]
     }
   ]
