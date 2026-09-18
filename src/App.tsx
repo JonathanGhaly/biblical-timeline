@@ -8,7 +8,9 @@ import FamilyTree from "./pages/FamilyTree";
 import TimelinePage from "./pages/TimelinePage";
 import Timeline from "./pages/Timeline";
 import Events from "./pages/Events";
+import GodsLaw from "./pages/GodsLaw";
 import OldTestamentMapPage from "./pages/OldTestamentMapPage";
+import { initialBiblicalLaws } from "./data/initialBiblicalLaws";
 
 import { CopticHeader } from "./components/Coptic/CopticHeader";
 import { CopticSidebar, type Page } from "./components/Coptic/CopticSidebar";
@@ -23,6 +25,7 @@ import type {
   GenealogyData,
   Person,
   BiblicalEvent,
+  BiblicalLaw,
   Language,
   ThemeMode,
 } from "./types/genealogy";
@@ -51,6 +54,7 @@ export default function App() {
 
   const people = data.people;
   const events = data.events;
+  const laws: BiblicalLaw[] = data.laws && data.laws.length > 0 ? data.laws : initialBiblicalLaws;
 
   // Synchronize language and document direction
   useEffect(() => {
@@ -159,12 +163,30 @@ export default function App() {
     updateEntireData({ ...data, events: updatedEvents });
   };
 
+  const handleAddLaw = (newLaw: BiblicalLaw) => {
+    const updatedLaws = [...laws, newLaw];
+    updateEntireData({ ...data, laws: updatedLaws });
+  };
+
+  const handleUpdateLaw = (updatedLaw: BiblicalLaw) => {
+    const updatedLaws = laws.map((l) =>
+      l.id === updatedLaw.id ? updatedLaw : l
+    );
+    updateEntireData({ ...data, laws: updatedLaws });
+  };
+
+  const handleDeleteLaw = (lawId: string) => {
+    const updatedLaws = laws.filter((l) => l.id !== lawId);
+    updateEntireData({ ...data, laws: updatedLaws });
+  };
+
   const handleExportData = () => {
     const exportObject = {
       version: data.version || 1,
       creationYearBC: data.creationYearBC || 4000,
       people,
       events,
+      laws,
     };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(exportObject, null, 2)
@@ -184,7 +206,10 @@ export default function App() {
         : "Reset to initial bundled biblical data? Any unsaved local changes will be cleared.";
 
     if (window.confirm(confirmMsg)) {
-      const resetState = fallbackData as GenealogyData;
+      const resetState: GenealogyData = {
+        ...(fallbackData as GenealogyData),
+        laws: initialBiblicalLaws,
+      };
       updateEntireData(resetState);
     }
   };
@@ -228,6 +253,18 @@ export default function App() {
             onAddEvent={handleAddEvent}
             onUpdateEvent={handleUpdateEvent}
             onDeleteEvent={handleDeleteEvent}
+            lang={lang}
+          />
+        );
+
+      case "gods-law":
+        return (
+          <GodsLaw
+            laws={laws}
+            people={people}
+            onAddLaw={handleAddLaw}
+            onUpdateLaw={handleUpdateLaw}
+            onDeleteLaw={handleDeleteLaw}
             lang={lang}
           />
         );

@@ -57,11 +57,43 @@ export interface BiblicalEvent {
   anchorPersonAgeAtBirth?: number;
 }
 
+export type LawCategory =
+  | "moral"              // Ten Commandments & moral foundations
+  | "covenant"           // Covenants with Noah, Abraham, Sinai, etc.
+  | "civil_judicial"     // Civil justice, restitution, liability, protection
+  | "ceremonial_worship" // Tabernacle, sacrifices, priesthood, blessing
+  | "festivals_sabbath"  // Sabbath, Sabbatical Year, Jubilee, feasts
+  | "holiness_ethics"    // Holiness code, love neighbor, purity, diet
+  | "other";
+
+export interface BiblicalLaw {
+  id: string;
+  title: string;
+  arabicTitle?: string;
+  spokenTo: string;             // Recipient (e.g., "Moses and the Children of Israel")
+  arabicSpokenTo?: string;       // Recipient in Arabic (e.g., "موسى وبنو إسرائيل")
+  spokenBy?: string;             // Setting / divine delivery (e.g., "God from Mount Sinai")
+  arabicSpokenBy?: string;       // Divine delivery in Arabic (e.g., "الله من جبل سيناء")
+  category: LawCategory;
+  scriptureReference: string;    // e.g., "Exodus 20:1-17"
+  arabicScriptureReference?: string; // e.g., "خروج 20: 1-17"
+  commandmentTextEn: string;     // The spoken words of God in English
+  commandmentTextAr?: string;    // The spoken words of God in Arabic
+  summaryEn?: string;            // Summary / theological context
+  summaryAr?: string;
+  biblicalYearBC?: number;       // Approximate historical year BC (e.g. 1446)
+  location?: string;             // e.g., "Mount Sinai"
+  arabicLocation?: string;       // e.g., "جبل سيناء"
+  keyPrinciples?: string[];      // e.g., ["Monotheism", "Justice"]
+  linkedPersonIds?: string[];    // Associated people IDs (e.g., ["moses", "aaron"])
+}
+
 export interface GenealogyData {
   version?: number;
   creationYearBC?: number;
   people: Person[];
   events: BiblicalEvent[];
+  laws?: BiblicalLaw[];
 }
 
 export type Language = "en" | "ar";

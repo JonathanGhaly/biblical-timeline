@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ExternalLink,
   BookOpen,
+  Scroll,
 } from "lucide-react";
 import { CopticCross } from "../components/Coptic/CopticCross";
 import type { GenealogyData, Language } from "../types/genealogy";
@@ -38,6 +39,7 @@ export default function Dashboard({
   const t = UI_TRANSLATIONS[lang];
   const peopleCount = data.people.length;
   const eventsCount = data.events.length;
+  const lawsCount = data.laws && data.laws.length > 0 ? data.laws.length : 12;
   const gistId = getStoredGistId();
 
   // Calculate earliest biblical date
@@ -91,11 +93,11 @@ export default function Dashboard({
       </div>
 
       {/* Illuminated Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* People Metric */}
         <div
           onClick={() => onNavigate("people")}
-          className="group cursor-pointer rounded-2xl p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
+          className="group cursor-pointer rounded-2xl p-4 sm:p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#6B5E4E] dark:text-[#A99F8D]">
@@ -106,11 +108,11 @@ export default function Dashboard({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+            <span className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
               {peopleCount}
             </span>
             <span className="text-xs text-[#7A6E5E] dark:text-[#887C6C]">
-              {lang === "ar" ? "شخصية تاريخية" : "patriarchs & figures"}
+              {lang === "ar" ? "شخصية" : "figures"}
             </span>
           </div>
         </div>
@@ -118,7 +120,7 @@ export default function Dashboard({
         {/* Events Metric */}
         <div
           onClick={() => onNavigate("events")}
-          className="group cursor-pointer rounded-2xl p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
+          className="group cursor-pointer rounded-2xl p-4 sm:p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#6B5E4E] dark:text-[#A99F8D]">
@@ -129,11 +131,34 @@ export default function Dashboard({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold font-cinzel text-[#1A365D] dark:text-[#90CDF4]">
+            <span className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#1A365D] dark:text-[#90CDF4]">
               {eventsCount}
             </span>
             <span className="text-xs text-[#7A6E5E] dark:text-[#887C6C]">
-              {lang === "ar" ? "حدث كتابي" : "biblical milestones"}
+              {lang === "ar" ? "حدث" : "events"}
+            </span>
+          </div>
+        </div>
+
+        {/* God's Law Metric */}
+        <div
+          onClick={() => onNavigate("gods-law")}
+          className="group cursor-pointer rounded-2xl p-4 sm:p-5 border-2 border-[#D4AF37] bg-white/80 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#800020] transition-all transform hover:-translate-y-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#800020] dark:text-[#D4AF37]">
+              {t.navGodsLaw}
+            </span>
+            <div className="p-2 rounded-xl bg-[#800020]/10 dark:bg-[#800020]/30 text-[#800020] dark:text-[#F3E5AB]">
+              <Scroll size={20} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+              {lawsCount}
+            </span>
+            <span className="text-xs text-[#7A6E5E] dark:text-[#887C6C]">
+              {lang === "ar" ? "شريعة إلهية" : "sacred laws"}
             </span>
           </div>
         </div>
@@ -141,7 +166,7 @@ export default function Dashboard({
         {/* Generations Metric */}
         <div
           onClick={() => onNavigate("family-tree")}
-          className="group cursor-pointer rounded-2xl p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
+          className="group cursor-pointer rounded-2xl p-4 sm:p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#6B5E4E] dark:text-[#A99F8D]">
@@ -152,11 +177,11 @@ export default function Dashboard({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold font-cinzel text-[#8C6F12] dark:text-[#F3E5AB]">
+            <span className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#8C6F12] dark:text-[#F3E5AB]">
               20+
             </span>
             <span className="text-xs text-[#7A6E5E] dark:text-[#887C6C]">
-              {lang === "ar" ? "من آدم إلى إبراهيم" : "Adam to Abraham"}
+              {lang === "ar" ? "أجيال" : "generations"}
             </span>
           </div>
         </div>
@@ -164,7 +189,7 @@ export default function Dashboard({
         {/* Earliest Era Metric */}
         <div
           onClick={() => onNavigate("timeline")}
-          className="group cursor-pointer rounded-2xl p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1"
+          className="group cursor-pointer rounded-2xl p-4 sm:p-5 border-2 border-[#D4AF37]/60 bg-white/70 dark:bg-[#1C1A17] shadow-sm hover:shadow-md hover:border-[#D4AF37] transition-all transform hover:-translate-y-1 col-span-2 sm:col-span-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#6B5E4E] dark:text-[#A99F8D]">
@@ -175,11 +200,11 @@ export default function Dashboard({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+            <span className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
               4000
             </span>
             <span className="text-xs text-[#7A6E5E] dark:text-[#887C6C]">
-              {lang === "ar" ? "ق.م (الخلق)" : "BC (Creation)"}
+              {lang === "ar" ? "ق.م" : "BC"}
             </span>
           </div>
         </div>

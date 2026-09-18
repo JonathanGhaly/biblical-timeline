@@ -7,6 +7,7 @@ import {
   Calendar,
   BookOpen,
   Compass,
+  Scroll,
 } from "lucide-react";
 import type { Language } from "../../types/genealogy";
 import { UI_TRANSLATIONS } from "../../utils/i18n";
@@ -18,6 +19,7 @@ export type Page =
   | "family-timeline"
   | "timeline"
   | "events"
+  | "gods-law"
   | "map";
 
 interface CopticSidebarProps {
@@ -63,6 +65,11 @@ export const CopticSidebar: React.FC<CopticSidebarProps> = ({
       id: "events",
       label: t.navEvents,
       icon: <BookOpen size={18} />,
+    },
+    {
+      id: "gods-law",
+      label: t.navGodsLaw,
+      icon: <Scroll size={18} />,
     },
     {
       id: "map",
