@@ -521,14 +521,47 @@ export function guessEventTypeForLegacyEvent(event: {
   if (text.includes("birth") || text.includes("born") || text.includes("ولد") || text.includes("ميلاد")) {
     return "birth";
   }
+  if (text.includes("death") || text.includes("died") || text.includes("وفاة") || text.includes("موت") || text.includes("وفاه")) {
+    return "death";
+  }
+  if (text.includes("burial") || text.includes("buried") || text.includes("دفن") || text.includes("قبر") || text.includes("مغارة") || text.includes("machpelah")) {
+    return "burial";
+  }
+  if (text.includes("marriage") || text.includes("wedding") || text.includes("زواج") || text.includes("عرس") || text.includes("اقتران")) {
+    return "marriage";
+  }
   if (text.includes("covenant") || text.includes("عهد")) {
     return "covenant";
+  }
+  if (text.includes("destruction") || text.includes("destroy") || text.includes("خراب") || text.includes("دمار") || text.includes("sodom") || text.includes("سدوم") || text.includes("عمورة") || text.includes("gomorrah")) {
+    return "destruction";
   }
   if (text.includes("flood") || text.includes("طوفان") || text.includes("creation") || text.includes("خليقة")) {
     return "natural_event";
   }
-  if (text.includes("fall") || text.includes("سقوط") || text.includes("sin") || text.includes("rebel")) {
+  if (text.includes("judgment") || text.includes("دينونة") || text.includes("قضاء") || text.includes("عقاب")) {
+    return "judgment";
+  }
+  if (text.includes("fall") || text.includes("سقوط") || text.includes("sin") || text.includes("rebel") || text.includes("معصية")) {
     return "sin_rebellion";
+  }
+  if (text.includes("calling") || text.includes("دعوة") || text.includes("نداء")) {
+    return "calling";
+  }
+  if (text.includes("vision") || text.includes("رؤيا") || text.includes("رؤية")) {
+    return "vision";
+  }
+  if (text.includes("dream") || text.includes("حلم") || text.includes("أحلام")) {
+    return "dream";
+  }
+  if (text.includes("miracle") || text.includes("معجزة") || text.includes("عجيبة")) {
+    return "miracle";
+  }
+  if (text.includes("worship") || text.includes("عبادة") || text.includes("مذبح") || text.includes("altar")) {
+    return "worship";
+  }
+  if (text.includes("sacrifice") || text.includes("ذبيحة") || text.includes("محرقة") || text.includes("offering") || text.includes("قربان")) {
+    return "sacrifice";
   }
   if (text.includes("journey") || text.includes("travel") || text.includes("رحلة")) {
     return "journey";
@@ -544,6 +577,18 @@ export function guessEventTypeForLegacyEvent(event: {
   }
   if (text.includes("famine") || text.includes("مجاعة")) {
     return "famine";
+  }
+  if (text.includes("plague") || text.includes("ضربة") || text.includes("وباء")) {
+    return "plague";
+  }
+  if (text.includes("building") || text.includes("build") || text.includes("بناء") || text.includes("برج") || text.includes("tower") || text.includes("babel") || text.includes("بابل")) {
+    return "building";
+  }
+  if (text.includes("exile") || text.includes("سبي")) {
+    return "exile";
+  }
+  if (text.includes("return") || text.includes("رجوع")) {
+    return "return";
   }
   return "other";
 }

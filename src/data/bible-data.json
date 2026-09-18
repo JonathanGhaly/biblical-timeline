@@ -158,6 +158,7 @@
       "id": "creation",
       "title": "Creation",
       "arabicTitle": "بدء الخليقة والتكوين",
+      "eventType": "natural_event",
       "date": {
         "year": -4000,
         "precision": "approximate"
@@ -171,6 +172,7 @@
       "id": "fall",
       "title": "The Fall",
       "arabicTitle": "السقوط والخروج من الجنة",
+      "eventType": "sin_rebellion",
       "date": {
         "year": -4000,
         "precision": "approximate"
@@ -184,6 +186,7 @@
       "id": "flood",
       "title": "The Flood",
       "arabicTitle": "طوفان نوح العظيم",
+      "eventType": "judgment",
       "date": {
         "year": -2348,
         "precision": "approximate"
@@ -199,6 +202,7 @@
       "id": "abraham-covenant",
       "title": "Covenant with Abraham",
       "arabicTitle": "العهد الإلهي مع إبراهيم",
+      "eventType": "covenant",
       "date": {
         "year": -2091,
         "precision": "approximate"
@@ -214,6 +218,7 @@
       "id": "sodom-destruction",
       "title": "Destruction of Sodom and Gomorrah",
       "arabicTitle": "خراب سدوم وعمورة وإنقاذ لوط",
+      "eventType": "destruction",
       "date": {
         "year": -2067,
         "precision": "approximate"
@@ -229,6 +234,7 @@
       "id": "isaac-birth",
       "title": "Birth of Isaac",
       "arabicTitle": "ميلاد إسحاق ابن الموعد",
+      "eventType": "birth",
       "date": {
         "year": -2066,
         "precision": "approximate"

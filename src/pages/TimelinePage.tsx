@@ -33,6 +33,10 @@ import {
   deriveMarriages,
   generateTicks,
 } from "../components/Timeline/timelineUtils";
+import {
+  guessEventTypeForLegacyEvent,
+  getEventTypeLabel,
+} from "../data/biblicalEventTypes";
 
 type TimelinePageProps = {
   people: Person[];
@@ -51,6 +55,7 @@ export default function TimelinePage({
   const [selectedEra, setSelectedEra] = useState<EraId>("all");
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [isFitToScreen, setIsFitToScreen] = useState<boolean>(true);
+  const [selectedEventType, setSelectedEventType] = useState<string>("all");
 
   // Layer visibility toggles
   const [showFigures, setShowFigures] = useState<boolean>(true);
@@ -217,17 +222,38 @@ export default function TimelinePage({
     });
   }, [derivedMarriagesList, minYear, maxYear, term]);
 
+  const availableEventTypes = useMemo(() => {
+    const counts: Record<string, number> = {};
+    validEvents.forEach(({ event, year }) => {
+      if (year >= minYear && year <= maxYear) {
+        const type = event.eventType || guessEventTypeForLegacyEvent(event);
+        counts[type] = (counts[type] || 0) + 1;
+      }
+    });
+    return Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a])
+      .map((key) => ({
+        key,
+        count: counts[key],
+        label: getEventTypeLabel(key, lang),
+      }));
+  }, [validEvents, minYear, maxYear, lang]);
+
   const filteredEvents = useMemo(() => {
     return validEvents.filter(({ event, year }) => {
       const inEra = year >= minYear && year <= maxYear;
       if (!inEra) return false;
+      if (selectedEventType !== "all") {
+        const resolvedType = event.eventType || guessEventTypeForLegacyEvent(event);
+        if (resolvedType !== selectedEventType) return false;
+      }
       if (!term) return true;
       const titleMatch = event.title.toLowerCase().includes(term);
       const arMatch = (event.arabicTitle || "").toLowerCase().includes(term);
       const descMatch = (event.description || "").toLowerCase().includes(term);
       return titleMatch || arMatch || descMatch;
     });
-  }, [validEvents, minYear, maxYear, term]);
+  }, [validEvents, minYear, maxYear, selectedEventType, term]);
 
   // Timeline Scale & Geometry
   const ticks = useMemo(() => generateTicks(minYear, maxYear), [minYear, maxYear]);
@@ -438,6 +464,9 @@ export default function TimelinePage({
         onToggleMarriages={() => setShowMarriages(!showMarriages)}
         showEvents={showEvents}
         onToggleEvents={() => setShowEvents(!showEvents)}
+        selectedEventType={selectedEventType}
+        onEventTypeChange={setSelectedEventType}
+        availableEventTypes={availableEventTypes}
         counts={{
           figures: filteredPeople.length,
           marriages: filteredMarriages.length,

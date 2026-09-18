@@ -11,6 +11,7 @@ import {
   Heart,
   Sparkles,
   RotateCcw,
+  Filter,
 } from "lucide-react";
 import type { Language } from "../../types/genealogy";
 import { UI_TRANSLATIONS } from "../../utils/i18n";
@@ -19,6 +20,9 @@ import {
   type EraId,
   type TimelineViewMode,
 } from "./timelineUtils";
+import {
+  getEventTypeDefinition,
+} from "../../data/biblicalEventTypes";
 
 interface TimelineControlsProps {
   lang: Language;
@@ -46,6 +50,9 @@ interface TimelineControlsProps {
     events: number;
     matchedFigures?: number;
   };
+  selectedEventType?: string;
+  onEventTypeChange?: (type: string) => void;
+  availableEventTypes?: { key: string; count: number; label: string }[];
 }
 
 export const TimelineControls: React.FC<TimelineControlsProps> = ({
@@ -69,6 +76,9 @@ export const TimelineControls: React.FC<TimelineControlsProps> = ({
   showEvents,
   onToggleEvents,
   counts,
+  selectedEventType = "all",
+  onEventTypeChange,
+  availableEventTypes = [],
 }) => {
   const t = UI_TRANSLATIONS[lang];
   const isRTL = lang === "ar";
@@ -278,6 +288,60 @@ export const TimelineControls: React.FC<TimelineControlsProps> = ({
           </div>
         )}
       </div>
+
+      {/* Optional Event Type Filter Sub-Bar when Events Layer is enabled */}
+      {showEvents && onEventTypeChange && availableEventTypes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#D4AF37]/20 text-xs">
+          <div className="flex items-center gap-1 text-[11px] font-bold text-[#800020] dark:text-[#D4AF37] uppercase tracking-wider me-1">
+            <Filter size={12} />
+            <span>{t.filterByEventType}:</span>
+          </div>
+
+          <button
+            type="button"
+            id="family-tl-pill-all"
+            onClick={() => onEventTypeChange("all")}
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold transition cursor-pointer border ${
+              selectedEventType === "all"
+                ? "bg-[#800020] text-[#F3E5AB] border-[#800020] shadow-sm"
+                : "bg-[#FBF8EF] dark:bg-[#121110] border-[#D4AF37]/40 text-[#6B5E4E] dark:text-[#A99F8D] hover:border-[#D4AF37]"
+            }`}
+          >
+            <span>{t.allEventTypes}</span>
+          </button>
+
+          {availableEventTypes.map((type) => {
+            const isSelected = selectedEventType === type.key;
+            const def = getEventTypeDefinition(type.key);
+            const Icon = def.icon;
+
+            return (
+              <button
+                key={`ctl_type_${type.key}`}
+                type="button"
+                id={`family-tl-pill-${type.key}`}
+                onClick={() => onEventTypeChange(isSelected ? "all" : type.key)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold transition cursor-pointer border ${
+                  isSelected
+                    ? "bg-[#800020] text-[#F3E5AB] border-[#800020] shadow-sm ring-1 ring-[#D4AF37]"
+                    : `${def.badgeBg} ${def.badgeBorder} ${def.badgeText} hover:opacity-90`
+                }`}
+                title={type.label}
+              >
+                <Icon size={11} className={isSelected ? "text-[#F3E5AB]" : def.colorClass} />
+                <span>{type.label}</span>
+                <span
+                  className={`text-[10px] px-1 rounded-full font-mono font-bold ${
+                    isSelected ? "bg-[#F3E5AB] text-[#800020]" : "bg-black/10 dark:bg-white/10"
+                  }`}
+                >
+                  {type.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
