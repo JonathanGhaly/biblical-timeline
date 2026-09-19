@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   X,
   Scroll,
@@ -89,7 +89,7 @@ export const AddLawModal: React.FC<AddLawModalProps> = ({
   const t = UI_TRANSLATIONS[lang];
   const isRTL = lang === "ar";
 
-  const [formData, setFormData] = useState<Partial<BiblicalLaw>>({
+  const emptyForm: Partial<BiblicalLaw> = {
     title: "",
     arabicTitle: "",
     spokenTo: "",
@@ -108,42 +108,23 @@ export const AddLawModal: React.FC<AddLawModalProps> = ({
     arabicLocation: "",
     keyPrinciples: [],
     linkedPersonIds: [],
-  });
+  };
 
-  const [principlesInput, setPrinciplesInput] = useState("");
+  const [formData, setFormData] = useState<Partial<BiblicalLaw>>(
+    initialLaw ? { ...initialLaw } : emptyForm
+  );
+  const [principlesInput, setPrinciplesInput] = useState(
+    initialLaw ? (initialLaw.keyPrinciples || []).join(", ") : ""
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [prevLawId, setPrevLawId] = useState(initialLaw?.id);
 
-  useEffect(() => {
-    if (initialLaw) {
-      setFormData({
-        ...initialLaw,
-      });
-      setPrinciplesInput((initialLaw.keyPrinciples || []).join(", "));
-    } else {
-      setFormData({
-        title: "",
-        arabicTitle: "",
-        spokenTo: "",
-        arabicSpokenTo: "",
-        spokenBy: "",
-        arabicSpokenBy: "",
-        category: "moral",
-        scriptureReference: "",
-        arabicScriptureReference: "",
-        commandmentTextEn: "",
-        commandmentTextAr: "",
-        summaryEn: "",
-        summaryAr: "",
-        biblicalYearBC: undefined,
-        location: "",
-        arabicLocation: "",
-        keyPrinciples: [],
-        linkedPersonIds: [],
-      });
-      setPrinciplesInput("");
-    }
+  if (initialLaw?.id !== prevLawId) {
+    setPrevLawId(initialLaw?.id);
+    setFormData(initialLaw ? { ...initialLaw } : emptyForm);
+    setPrinciplesInput(initialLaw ? (initialLaw.keyPrinciples || []).join(", ") : "");
     setErrors({});
-  }, [initialLaw, isOpen]);
+  }
 
   if (!isOpen) return null;
 

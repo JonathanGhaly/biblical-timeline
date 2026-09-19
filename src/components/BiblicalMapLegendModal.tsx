@@ -67,16 +67,16 @@ export const BiblicalMapLegendModal: React.FC<BiblicalMapLegendModalProps> = ({
         className="w-full max-w-3xl max-h-[90vh] bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 border-[#D4AF37] flex flex-col overflow-hidden font-serif animate-in fade-in zoom-in-95 duration-200"
       >
         {/* HEADER */}
-        <div className="px-5 py-4 bg-[#F5E8CA] border-b border-[#D4AF37]/50 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#800020] text-[#D4AF37] flex items-center justify-center shadow-sm shrink-0 border border-[#D4AF37]/60">
-              <Compass className="w-5 h-5" />
+        <div className="px-3.5 sm:px-5 py-3 sm:py-4 bg-[#F5E8CA] border-b border-[#D4AF37]/50 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#800020] text-[#D4AF37] flex items-center justify-center shadow-sm shrink-0 border border-[#D4AF37]/60">
+              <Compass className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className={`text-lg md:text-xl font-bold text-[#800020] leading-tight ${isRTL ? "font-['Amiri']" : "font-['Cinzel']"}`}>
+              <h2 className={`text-base sm:text-lg md:text-xl font-bold text-[#800020] leading-tight ${isRTL ? "font-['Amiri']" : "font-['Cinzel']"}`}>
                 {isRTL ? "مفتاح الخريطة والمسارات الكتابية" : "Map Legend & Biblical Holy Routes"}
               </h2>
-              <p className="text-xs text-[#78350F] font-sans">
+              <p className="text-[11px] sm:text-xs text-[#78350F] font-sans line-clamp-1 sm:line-clamp-none">
                 {isRTL
                   ? "دليل مسار رحلة إبراهيم، ومسار خروج موسى وتيه سيناء، ورموز التضاريس"
                   : "Cartographic guide to Abraham's Path, Moses' Exodus, and Ancient Geography"}
@@ -87,7 +87,7 @@ export const BiblicalMapLegendModal: React.FC<BiblicalMapLegendModalProps> = ({
           <button
             id="legend-modal-close-btn"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/80 hover:bg-white text-stone-700 hover:text-[#800020] flex items-center justify-center border border-[#D4AF37]/40 transition shadow-xs cursor-pointer"
+            className="w-9 h-9 rounded-xl bg-white/80 hover:bg-white text-stone-700 hover:text-[#800020] flex items-center justify-center border border-[#D4AF37]/40 transition shadow-xs cursor-pointer shrink-0"
             title={isRTL ? "إغلاق" : "Close"}
             aria-label="Close Legend"
           >
@@ -96,7 +96,7 @@ export const BiblicalMapLegendModal: React.FC<BiblicalMapLegendModalProps> = ({
         </div>
 
         {/* NAVIGATION TABS */}
-        <div className="flex items-center border-b border-stone-200 bg-[#FAF6EC] px-4 pt-2 gap-2 shrink-0 font-sans text-xs">
+        <div className="flex items-center border-b border-stone-200 bg-[#FAF6EC] px-3 sm:px-4 pt-2 gap-1.5 sm:gap-2 shrink-0 font-sans text-xs overflow-x-auto scrollbar-none">
           <button
             id="tab-abraham-route"
             onClick={() => setActiveTab("abraham")}

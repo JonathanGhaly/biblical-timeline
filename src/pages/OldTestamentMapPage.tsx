@@ -29,6 +29,11 @@ import {
   Maximize2,
   Minimize2,
   Crosshair,
+  Eye,
+  EyeOff,
+  Filter,
+  History,
+  Landmark,
 } from "lucide-react";
 import type { Person, BiblicalEvent, Language, BiblicalLocation } from "../types/genealogy";
 import { ALL_MAP_LOCATIONS } from "../data/biblicalLocations";
@@ -77,6 +82,19 @@ export default function OldTestamentMapPage({
   const [selectedType, setSelectedType] = useState<string>("all");
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const [sidebarView, setSidebarView] = useState<"events" | "directory">("events");
+  // Synchronized visual highlight for specific timeline event when clicking a map marker
+  const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
+
+  // City Journey Window on Map (Step 0 = City History, Steps 1..N = Sequential Events)
+  const [cityWindowStep, setCityWindowStep] = useState<number>(0);
+  const [isCityWindowOpen, setIsCityWindowOpen] = useState<boolean>(true);
+
+  // Point Visibility Control: "click-only" (points appear only when clicked/selected) vs "show-all"
+  const [pointDisplayMode, setPointDisplayMode] = useState<"click-only" | "show-all">("click-only");
+  // Set of location IDs explicitly clicked/pinned to show on the map
+  const [activeLocationIds, setActiveLocationIds] = useState<Set<string>>(new Set());
+  // Toggle for showing major biblical centers preset
+  const [showMajorCentersOnly, setShowMajorCentersOnly] = useState(false);
 
   // Cartographic Layers State
   const [layers, setLayers] = useState<MapLayerVisibility>({
@@ -100,10 +118,15 @@ export default function OldTestamentMapPage({
     }));
   }, []);
 
-  // Mobile Bottom Sheet Collapse State (collapsed peek header vs 55% sheet)
-  const [isMobileDrawerCollapsed, setIsMobileDrawerCollapsed] = useState(false);
-  // Sidebar Visibility State (Desktop sidebar and Mobile drawer toggle)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Mobile Bottom Sheet State: 'peek' (56px bar), 'half' (52vh), 'full' (88vh), 'hidden' (minimized)
+  type MobileSheetMode = "peek" | "half" | "full" | "hidden";
+  const [mobileSheetMode, setMobileSheetMode] = useState<MobileSheetMode>("peek");
+  // Mobile expandable filters drawer (Eras & Types)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  // Clean mode banner dismiss state
+  const [isCleanBannerDismissed, setIsCleanBannerDismissed] = useState(false);
+  // Sidebar Visibility State (Desktop sidebar and Mobile drawer toggle - starts collapsed)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Pan & Zoom Engine State (strictly synchronized with transformRef and boundary-clamped)
   const [zoom, setZoom] = useState(1);
@@ -503,6 +526,26 @@ export default function OldTestamentMapPage({
     });
   }, [events, people]);
 
+  // Synchronized highlighted biblical event instance
+  const highlightedEvent = useMemo(() => {
+    if (!highlightedEventId) return null;
+    return events.find((e) => e.id === highlightedEventId) || null;
+  }, [highlightedEventId, events]);
+
+  // Chronologically ordered events for the selected location (City Journey)
+  const selectedCityEvents = useMemo(() => {
+    if (!selectedLocation) return [];
+    const evs = eventsByLocation.get(selectedLocation.id) || [];
+    return [...evs].sort((a, b) => {
+      const ya = resolveEventYear(a, people) ?? a.date?.year ?? 0;
+      const yb = resolveEventYear(b, people) ?? b.date?.year ?? 0;
+      return ya - yb;
+    });
+  }, [selectedLocation, eventsByLocation, people]);
+
+  // Total steps in the City Journey Window: 1 (City History) + N (Events)
+  const totalCitySteps = 1 + selectedCityEvents.length;
+
   // Major Biblical centers given priority for label visibility
   const MAJOR_CENTERS = useMemo(
     () =>
@@ -521,6 +564,107 @@ export default function OldTestamentMapPage({
       ]),
     []
   );
+
+  // Locations that actually appear as points on the interactive map canvas
+  const mapVisibleLocations = useMemo(() => {
+    // If show-all mode is explicitly toggled, display all filtered sites
+    if (pointDisplayMode === "show-all") {
+      return filteredLocations;
+    }
+
+    // In click-only mode (default): points only appear when clicked/selected
+    const visibleMap = new Map<string, BiblicalLocation>();
+
+    // 1. Explicitly clicked / selected single location
+    if (selectedLocation) {
+      visibleMap.set(selectedLocation.id, selectedLocation);
+    }
+
+    // 2. Explicitly clicked/pinned multiple location IDs
+    if (activeLocationIds.size > 0) {
+      activeLocationIds.forEach((id) => {
+        const loc = allMapLocations.find((l) => l.id.toLowerCase() === id.toLowerCase());
+        if (loc) visibleMap.set(loc.id, loc);
+      });
+    }
+
+    // 3. If a specific region was selected
+    if (selectedRegion !== "All") {
+      filteredLocations.forEach((loc) => visibleMap.set(loc.id, loc));
+    }
+
+    // 4. If a specific biblical era was selected
+    if (selectedEra !== "All") {
+      filteredLocations.forEach((loc) => visibleMap.set(loc.id, loc));
+    }
+
+    // 5. If a specific place type was selected
+    if (selectedType !== "all") {
+      filteredLocations.forEach((loc) => visibleMap.set(loc.id, loc));
+    }
+
+    // 6. If search query was entered
+    if (searchQuery.trim() !== "") {
+      filteredLocations.forEach((loc) => visibleMap.set(loc.id, loc));
+    }
+
+    // 7. If Major Centers preset was selected
+    if (showMajorCentersOnly) {
+      allMapLocations.forEach((loc) => {
+        if (MAJOR_CENTERS.has(loc.id.toLowerCase())) {
+          visibleMap.set(loc.id, loc);
+        }
+      });
+    }
+
+    // 8. If an event is selected, display its tagged locations
+    if (selectedEvent) {
+      if (selectedEvent.locationId) {
+        const loc = allMapLocations.find(
+          (l) => l.id.toLowerCase() === selectedEvent.locationId!.toLowerCase()
+        );
+        if (loc) visibleMap.set(loc.id, loc);
+      }
+      if (selectedEvent.location) {
+        const loc = allMapLocations.find((l) => isLocationMatch(l, selectedEvent.location));
+        if (loc) visibleMap.set(loc.id, loc);
+      }
+      if (selectedEvent.locations) {
+        selectedEvent.locations.forEach((locName) => {
+          const loc = allMapLocations.find((l) => isLocationMatch(l, locName));
+          if (loc) visibleMap.set(loc.id, loc);
+        });
+      }
+    }
+
+    // 9. If a route station is selected, display its location
+    if (selectedStation) {
+      const loc = allMapLocations.find(
+        (l) =>
+          l.id.toLowerCase() === selectedStation.id.toLowerCase() ||
+          isLocationMatch(l, selectedStation.title) ||
+          isLocationMatch(l, selectedStation.arabicTitle)
+      );
+      if (loc) visibleMap.set(loc.id, loc);
+    }
+
+    return Array.from(visibleMap.values());
+  }, [
+    pointDisplayMode,
+    filteredLocations,
+    selectedLocation,
+    activeLocationIds,
+    selectedRegion,
+    selectedEra,
+    selectedType,
+    searchQuery,
+    showMajorCentersOnly,
+    selectedEvent,
+    selectedStation,
+    allMapLocations,
+    MAJOR_CENTERS,
+    isLocationMatch,
+  ]);
 
   // Initial cluster separation offsets for dense Canaan corridor
   const CANAAN_OFFSETS: Record<string, { dx: number; dy: number }> = useMemo(
@@ -590,7 +734,7 @@ export default function OldTestamentMapPage({
     const minDistance = Math.max(minPinDistance, 30 * markerScale); // dynamic collision spacing
 
     // 1. Initial pin coordinates with geographic cluster separation offsets
-    const pins = filteredLocations.map((loc) => {
+    const pins = mapVisibleLocations.map((loc) => {
       const { x, y } = geoToPixel(loc.coordinates[0], loc.coordinates[1]);
       const offset = CANAAN_OFFSETS[loc.id] || { dx: 0, dy: 0 };
       const locEvents = eventsByLocation.get(loc.id) || [];
@@ -838,7 +982,7 @@ export default function OldTestamentMapPage({
 
     return pins;
   }, [
-    filteredLocations,
+    mapVisibleLocations,
     scaleFactors,
     selectedLocation,
     eventsByLocation,
@@ -1157,19 +1301,200 @@ export default function OldTestamentMapPage({
     centerOnLocation(29.8, 33.8, 2.3);
   }, [centerOnLocation]);
 
-  // Handler for station click (from map marker or legend)
-  const handleStationClick = useCallback((station: RouteStation) => {
-    setSelectedStation(station);
-    centerOnLocation(station.coords[0], station.coords[1], 2.8);
-  }, [centerOnLocation]);
-
-  const handleSelectLocation = (loc: BiblicalLocation) => {
-    setSelectedLocation(loc);
+  // Clear all points from map canvas to return to clean map
+  const clearAllMapPoints = useCallback(() => {
+    setSelectedLocation(null);
     setSelectedEvent(null);
-    centerOnLocation(loc.coordinates[0], loc.coordinates[1]);
-    // On mobile, automatically expand drawer if collapsed so user sees details
-    setIsMobileDrawerCollapsed(false);
-  };
+    setSelectedStation(null);
+    setHighlightedEventId(null);
+    setIsCityWindowOpen(false);
+    setCityWindowStep(0);
+    setSelectedRegion("All");
+    setSelectedEra("All");
+    setSelectedType("all");
+    setSearchQuery("");
+    setActiveLocationIds(new Set());
+    setShowMajorCentersOnly(false);
+  }, []);
+
+  // Quick region bookmark selector (centers map and displays points of that biblical region)
+  const handleQuickRegion = useCallback(
+    (regionKey: string, lat: number, lon: number, targetZoom = 2.4) => {
+      setSelectedLocation(null);
+      setSelectedEvent(null);
+      setSelectedStation(null);
+      setHighlightedEventId(null);
+      setIsCityWindowOpen(false);
+      setCityWindowStep(0);
+      setActiveLocationIds(new Set());
+      setShowMajorCentersOnly(false);
+      setSelectedRegion(regionKey);
+      centerOnLocation(lat, lon, targetZoom);
+    },
+    [centerOnLocation]
+  );
+
+  // Quick major biblical centers bookmark selector
+  const handleShowMajorCenters = useCallback(() => {
+    setSelectedLocation(null);
+    setSelectedEvent(null);
+    setSelectedStation(null);
+    setHighlightedEventId(null);
+    setIsCityWindowOpen(false);
+    setCityWindowStep(0);
+    setActiveLocationIds(new Set());
+    setSelectedRegion("All");
+    setSelectedEra("All");
+    setSelectedType("all");
+    setShowMajorCentersOnly(true);
+    fitToWindow();
+  }, [fitToWindow]);
+
+  // Reset entire map view and clear all points
+  const handleResetView = useCallback(() => {
+    clearAllMapPoints();
+    fitToWindow();
+  }, [clearAllMapPoints, fitToWindow]);
+
+  // Select a location: displays its pin, opens City Journey window on map, and highlights timeline event
+  const handleSelectLocation = useCallback(
+    (loc: BiblicalLocation) => {
+      setSelectedLocation(loc);
+      setCityWindowStep(0); // Always start at Step 0: City History as requested
+      setIsCityWindowOpen(true);
+      setSelectedStation(null); // Close route station preview if open to avoid overlap
+      setSelectedEvent(null);
+      setSidebarView("events");
+      setActiveLocationIds(new Set([loc.id]));
+      setShowMajorCentersOnly(false);
+      centerOnLocation(loc.coordinates[0], loc.coordinates[1], 2.8);
+
+      // Identify the specific timeline event to highlight in the sidebar
+      const locEvents = eventsByLocation.get(loc.id) || [];
+      const primaryEvent =
+        locEvents.find((e) => loc.keyEvents && loc.keyEvents.includes(e.id)) ||
+        locEvents[0] ||
+        null;
+      const targetEventId = primaryEvent ? primaryEvent.id : null;
+      setHighlightedEventId(targetEventId);
+
+      // Auto-scroll the sidebar events container directly to the highlighted event card if sidebar is visible
+      if (targetEventId) {
+        setTimeout(() => {
+          const card =
+            document.getElementById(`event-card-${targetEventId}`) ||
+            document.getElementById(`chron-event-${targetEventId}`);
+          if (card) {
+            card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }, 150);
+      }
+    },
+    [centerOnLocation, eventsByLocation]
+  );
+
+  // Step navigation inside City Journey Window (Arrow controls) - Purely updates step in window without triggering full-screen modal
+  const handleNextCityStep = useCallback(() => {
+    setCityWindowStep((prev) => {
+      const nextStep = Math.min(prev + 1, totalCitySteps - 1);
+      if (nextStep > 0 && selectedCityEvents[nextStep - 1]) {
+        const targetEv = selectedCityEvents[nextStep - 1];
+        setHighlightedEventId(targetEv.id);
+        setTimeout(() => {
+          const card =
+            document.getElementById(`event-card-${targetEv.id}`) ||
+            document.getElementById(`chron-event-${targetEv.id}`);
+          if (card) {
+            card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }, 120);
+      }
+      return nextStep;
+    });
+  }, [totalCitySteps, selectedCityEvents]);
+
+  const handlePrevCityStep = useCallback(() => {
+    setCityWindowStep((prev) => {
+      const prevStep = Math.max(prev - 1, 0);
+      if (prevStep > 0 && selectedCityEvents[prevStep - 1]) {
+        const targetEv = selectedCityEvents[prevStep - 1];
+        setHighlightedEventId(targetEv.id);
+        setTimeout(() => {
+          const card =
+            document.getElementById(`event-card-${targetEv.id}`) ||
+            document.getElementById(`chron-event-${targetEv.id}`);
+          if (card) {
+            card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }, 120);
+      }
+      return prevStep;
+    });
+  }, [selectedCityEvents]);
+
+  const handleJumpToCityStep = useCallback(
+    (stepIndex: number) => {
+      if (stepIndex < 0 || stepIndex >= totalCitySteps) return;
+      setCityWindowStep(stepIndex);
+      if (stepIndex > 0 && selectedCityEvents[stepIndex - 1]) {
+        const targetEv = selectedCityEvents[stepIndex - 1];
+        setHighlightedEventId(targetEv.id);
+        setTimeout(() => {
+          const card =
+            document.getElementById(`event-card-${targetEv.id}`) ||
+            document.getElementById(`chron-event-${targetEv.id}`);
+          if (card) {
+            card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }, 120);
+      }
+    },
+    [totalCitySteps, selectedCityEvents]
+  );
+
+  // Toggle single location visibility on map without wiping other selections
+  const toggleLocationOnMap = useCallback(
+    (locId: string) => {
+      setActiveLocationIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(locId)) {
+          next.delete(locId);
+          if (selectedLocation?.id === locId) {
+            setSelectedLocation(null);
+            setHighlightedEventId(null);
+          }
+        } else {
+          next.add(locId);
+          const loc = allMapLocations.find((l) => l.id === locId);
+          if (loc) {
+            handleSelectLocation(loc);
+          }
+        }
+        return next;
+      });
+    },
+    [selectedLocation, allMapLocations, handleSelectLocation]
+  );
+
+  // Handler for station click (from map marker or legend)
+  const handleStationClick = useCallback(
+    (station: RouteStation) => {
+      setSelectedStation(station);
+      centerOnLocation(station.coords[0], station.coords[1], 2.8);
+      // Synchronize with biblical location if one matches
+      const matched = allMapLocations.find(
+        (l) =>
+          l.id.toLowerCase() === station.id.toLowerCase() ||
+          station.title.toLowerCase().includes(l.name.toLowerCase()) ||
+          l.name.toLowerCase().includes(station.title.toLowerCase()) ||
+          (l.arabicName && station.arabicTitle.includes(l.arabicName))
+      );
+      if (matched) {
+        handleSelectLocation(matched);
+      }
+    },
+    [centerOnLocation, allMapLocations, handleSelectLocation]
+  );
 
   // Double click to zoom in at mouse position
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -1328,47 +1653,101 @@ export default function OldTestamentMapPage({
         </div>
 
         {/* Top Controls & Quick Stats */}
-        <div className="flex items-center gap-2 font-sans text-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2 font-sans text-xs">
           {/* Show / Hide Sidebar Toggle Button */}
           <button
             id="header-toggle-sidebar-btn"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 font-semibold text-xs shadow-xs min-h-[36px] active:scale-95 cursor-pointer ${
-              isSidebarOpen
+            onClick={() => {
+              setIsSidebarOpen((prev) => !prev);
+              setMobileSheetMode((prev) => (prev === "hidden" ? "peek" : "hidden"));
+            }}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 font-semibold text-xs shadow-xs min-h-[36px] active:scale-95 cursor-pointer ${
+              isSidebarOpen && mobileSheetMode !== "hidden"
                 ? "bg-[#F5E8CA] border-[#D4AF37] text-[#800020] hover:bg-[#EBDCB9]"
                 : "bg-white border-stone-300 text-stone-700 hover:bg-[#F5E8CA] hover:text-[#800020]"
             }`}
             title={
-              isSidebarOpen
-                ? isRTL ? "إخفاء القائمة الجانبية للخريطة" : "Hide Map Sidebar"
-                : isRTL ? "إظهار القائمة الجانبية للخريطة" : "Show Map Sidebar"
+              isSidebarOpen && mobileSheetMode !== "hidden"
+                ? isRTL ? "إخفاء القائمة والدليل" : "Hide Directory"
+                : isRTL ? "إظهار دليل المواقع" : "Show Directory"
             }
-            aria-label={isSidebarOpen ? "Hide Map Sidebar" : "Show Map Sidebar"}
+            aria-label="Toggle Directory"
           >
-            {isSidebarOpen ? (
+            {isSidebarOpen && mobileSheetMode !== "hidden" ? (
               <>
                 <PanelLeftClose className="w-4 h-4 text-[#800020]" />
-                <span className="font-medium">{isRTL ? "إخفاء القائمة" : "Hide Sidebar"}</span>
+                <span className="font-medium hidden xs:inline">{isRTL ? "إخفاء الدليل" : "Hide"}</span>
               </>
             ) : (
               <>
                 <PanelLeftOpen className="w-4 h-4 text-[#800020]" />
-                <span className="font-medium">{isRTL ? "إظهار القائمة" : "Show Sidebar"}</span>
+                <span className="font-medium hidden xs:inline">{isRTL ? "الدليل" : "Directory"}</span>
               </>
             )}
           </button>
 
-          <span className="px-2.5 py-1 rounded-full bg-[#FEF3C7] text-[#854D0E] font-semibold border border-[#FDE68A]">
-            {filteredLocations.length} {isRTL ? "مواقع محددة" : "Biblical Sites"}
-          </span>
-          {selectedLocation && (
+          {/* Display Mode Toggle */}
+          <div className="flex bg-stone-100 p-0.5 rounded-lg border border-stone-300 gap-0.5">
             <button
-              id="clear-location-btn"
-              onClick={() => setSelectedLocation(null)}
-              className="px-2.5 py-1 rounded-full bg-[#E7E5E4] text-[#44403C] hover:bg-[#D6D3D1] transition flex items-center gap-1 font-semibold"
+              id="mode-click-only-btn"
+              type="button"
+              onClick={() => {
+                setPointDisplayMode("click-only");
+              }}
+              className={`px-2 sm:px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
+                pointDisplayMode === "click-only"
+                  ? "bg-[#800020] text-[#D4AF37] shadow-xs"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
+              title={isRTL ? "إظهار النقاط فقط عند النقر عليها" : "Show points only when clicked"}
             >
-              <X className="w-3.5 h-3.5" />
-              {isRTL ? "عرض الكل" : "Show All"}
+              <Crosshair className="w-3 h-3" />
+              <span className="hidden sm:inline">{isRTL ? "حسب النقر" : "On Click"}</span>
+            </button>
+            <button
+              id="mode-show-all-btn"
+              type="button"
+              onClick={() => {
+                setPointDisplayMode("show-all");
+              }}
+              className={`px-2 sm:px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
+                pointDisplayMode === "show-all"
+                  ? "bg-[#800020] text-[#D4AF37] shadow-xs"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
+              title={isRTL ? "عرض كل المواقع في نفس الوقت" : "Show all sites at once"}
+            >
+              <span>{isRTL ? "عرض الكل" : "Show All"}</span>
+            </button>
+          </div>
+
+          {/* Visible points count badge */}
+          {mapVisibleLocations.length > 0 ? (
+            <span className="px-2 sm:px-2.5 py-1 rounded-full bg-[#800020] text-[#D4AF37] font-bold border border-[#800020] shadow-2xs flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+              <span>
+                {mapVisibleLocations.length}
+                <span className="hidden sm:inline"> {isRTL ? "على الخريطة" : "on map"}</span>
+              </span>
+            </span>
+          ) : (
+            <span className="px-2 sm:px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 font-medium border border-stone-200 flex items-center gap-1 text-[11px] sm:text-xs">
+              <EyeOff className="w-3 h-3 text-stone-400" />
+              <span>0<span className="hidden sm:inline"> {isRTL ? "على الخريطة" : "on map"}</span></span>
+            </span>
+          )}
+
+          {/* Hide/Clear Points button */}
+          {mapVisibleLocations.length > 0 && (
+            <button
+              id="clear-all-points-btn"
+              type="button"
+              onClick={clearAllMapPoints}
+              className="px-2 sm:px-2.5 py-1 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-1 font-semibold border border-stone-300 cursor-pointer text-[11px] sm:text-xs"
+              title={isRTL ? "إخفاء كل النقاط من الخريطة" : "Hide all points from map"}
+            >
+              <EyeOff className="w-3.5 h-3.5 text-[#800020]" />
+              <span className="hidden sm:inline">{isRTL ? "إخفاء النقاط" : "Hide Pins"}</span>
             </button>
           )}
         </div>
@@ -1383,79 +1762,202 @@ export default function OldTestamentMapPage({
           id="location-sidebar-drawer"
           className={`
             bg-[#FDFBF7] border-stone-300 z-40 transition-all duration-300 flex flex-col
-            ${/* Mobile: when closed, zero height; when open, either 14 (peek) or 55% */ ""}
+            ${/* Desktop layout */ ""}
             ${
               !isSidebarOpen
-                ? "h-0 md:h-full md:w-0 opacity-0 pointer-events-none overflow-hidden border-0"
-                : isMobileDrawerCollapsed
-                ? "order-2 h-14 md:h-full md:order-1 md:w-[35%] opacity-100 shrink-0"
-                : "order-2 h-[55%] md:h-full md:order-1 md:w-[35%] opacity-100 shrink-0"
+                ? "md:w-0 md:opacity-0 md:pointer-events-none md:overflow-hidden md:border-0"
+                : `md:w-[35%] md:opacity-100 md:shrink-0 md:h-full md:border-r ${isRTL ? "md:border-l md:border-r-0" : ""}`
             }
-            ${/* Desktop layout border styling */ ""}
+            ${/* Mobile Floating Bottom Sheet */ ""}
+            fixed inset-x-0 bottom-0 md:relative md:inset-auto md:shadow-none
             ${
-              isSidebarOpen
-                ? `md:border-r ${isRTL ? "md:border-l md:border-r-0" : ""} border-t md:border-t-0 shadow-lg md:shadow-none`
-                : ""
+              mobileSheetMode === "hidden"
+                ? "translate-y-full md:translate-y-0 opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto h-0 md:h-full"
+                : mobileSheetMode === "peek"
+                ? "h-14 md:h-full rounded-t-2xl shadow-2xl border-t-2 border-[#D4AF37] md:rounded-none md:border-t-0"
+                : mobileSheetMode === "half"
+                ? "h-[54vh] max-h-[54vh] rounded-t-2xl shadow-2xl border-t-2 border-[#D4AF37] md:rounded-none md:border-t-0"
+                : "h-[88vh] max-h-[88vh] rounded-t-2xl shadow-2xl border-t-2 border-[#D4AF37] md:rounded-none md:border-t-0"
             }
           `}
         >
-          {/* MOBILE PEEK HEADER & DRAG HANDLE (Always visible on mobile) */}
-          <div
-            className="md:hidden flex items-center justify-between px-4 py-2 bg-[#F5E8CA] border-b border-[#D4AF37]/40 cursor-pointer min-h-[44px]"
-            onClick={() => setIsMobileDrawerCollapsed((prev) => !prev)}
-            role="button"
-            tabIndex={0}
-            aria-label={isMobileDrawerCollapsed ? "Expand Details" : "Collapse Details"}
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-1 bg-[#800020]/40 rounded-full mx-auto" />
-              <span className="text-xs font-bold text-[#800020] uppercase tracking-wider font-sans">
-                {selectedLocation
-                  ? `${isRTL ? selectedLocation.arabicName : selectedLocation.name}`
-                  : `${isRTL ? "دليل المواقع الكتابية" : "Biblical Locations Directory"} (${filteredLocations.length})`}
-              </span>
-            </div>
+          {/* MOBILE BOTTOM SHEET PEEK BAR (When in peek mode) */}
+          {mobileSheetMode === "peek" && (
+            <div
+              className="md:hidden flex items-center justify-between px-3 py-1.5 bg-[#F5E8CA] border-b border-[#D4AF37]/50 cursor-pointer min-h-[56px] select-none shadow-xs"
+              onClick={() => setMobileSheetMode("half")}
+              role="button"
+              tabIndex={0}
+              aria-label="Expand Site Details"
+            >
+              {selectedLocation ? (
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-8 h-8 rounded-lg bg-[#800020] text-[#D4AF37] flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                    {selectedLocation.placeType === "mountain" ? "⛰️" : selectedLocation.placeType === "river" ? "🌊" : "🏰"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[#800020] truncate font-serif">
+                        {isRTL ? selectedLocation.arabicName : selectedLocation.name}
+                      </span>
+                      {selectedLocation.modernName && (
+                        <span className="text-[10px] text-stone-500 truncate hidden xs:inline">
+                          ({selectedLocation.modernName})
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-stone-600 truncate font-sans">
+                      {isRTL ? selectedLocation.name : selectedLocation.arabicName}
+                      {selectedLocation.region && ` • ${selectedLocation.region}`}
+                    </p>
+                    {highlightedEvent && (
+                      <p className="text-[10px] text-[#800020] truncate font-sans font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse shrink-0" />
+                        <span>{getEventDisplayTitle(highlightedEvent, lang)}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-8 h-8 rounded-lg bg-[#800020] text-[#D4AF37] flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-[#800020] block truncate font-serif">
+                      {isRTL ? "دليل المواقع والأماكن الكتابية" : "Biblical Sites Directory"}
+                    </span>
+                    <span className="text-[10px] text-stone-600 block truncate">
+                      {isRTL
+                        ? `${filteredLocations.length} موقع • اضغط للاستكشاف والبحث`
+                        : `${filteredLocations.length} sites • Tap to search & explore`}
+                    </span>
+                  </div>
+                </div>
+              )}
 
-            <div className="flex items-center gap-1">
-              <button
-                id="mobile-drawer-toggle-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsMobileDrawerCollapsed((prev) => !prev);
-                }}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#800020] hover:bg-[#EBDCB9] rounded-md transition"
-                title={isMobileDrawerCollapsed ? "Expand" : "Collapse"}
-              >
-                {isMobileDrawerCollapsed ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
+              <div className="flex items-center gap-1 shrink-0">
+                {selectedLocation && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      centerOnLocation(selectedLocation.coordinates[0], selectedLocation.coordinates[1], 3.0);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-[#800020] bg-white/80 hover:bg-white rounded-lg transition border border-[#D4AF37]/50 cursor-pointer"
+                    title={isRTL ? "تركيز" : "Focus"}
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
                 )}
-              </button>
-              <button
-                id="mobile-close-sidebar-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsSidebarOpen(false);
-                }}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#800020] hover:bg-[#EBDCB9] rounded-md transition"
-                title={isRTL ? "إخفاء القائمة" : "Hide Sidebar"}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
 
-          {/* SIDEBAR BODY (Visible when not collapsed on mobile, always on desktop) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMobileSheetMode("half");
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-[#800020] text-[#D4AF37] text-xs font-semibold hover:bg-[#991B1B] transition flex items-center gap-1 cursor-pointer min-h-[36px]"
+                >
+                  <span>{isRTL ? "توسيع" : "Expand"}</span>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+
+                {selectedLocation ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedLocation(null);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-800 rounded-lg hover:bg-stone-200/60 transition cursor-pointer"
+                    title={isRTL ? "إلغاء التحديد" : "Clear selection"}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMobileSheetMode("hidden");
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-800 rounded-lg hover:bg-stone-200/60 transition cursor-pointer"
+                    title={isRTL ? "إخفاء" : "Hide"}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MOBILE EXPANDED HEADER & DRAG HANDLE (When in half or full mode) */}
+          {(mobileSheetMode === "half" || mobileSheetMode === "full") && (
+            <div className="md:hidden flex flex-col bg-[#F5E8CA] border-b border-[#D4AF37]/40 shrink-0">
+              {/* Drag Handle */}
+              <div
+                className="w-full py-1 flex items-center justify-center cursor-pointer"
+                onClick={() => setMobileSheetMode((prev) => (prev === "half" ? "full" : "half"))}
+              >
+                <div className="w-10 h-1.5 bg-[#800020]/30 rounded-full" />
+              </div>
+
+              {/* Title & Action Buttons */}
+              <div className="flex items-center justify-between px-3 py-1.5 min-h-[44px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-[#800020] uppercase tracking-wider font-serif truncate">
+                    {selectedLocation
+                      ? `${isRTL ? selectedLocation.arabicName : selectedLocation.name}`
+                      : `${isRTL ? "دليل المواقع الكتابية" : "Biblical Sites Directory"} (${filteredLocations.length})`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* Toggle Half / Full */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileSheetMode((prev) => (prev === "half" ? "full" : "half"))}
+                    className="w-8 h-8 flex items-center justify-center text-[#800020] bg-white/70 hover:bg-white rounded-lg transition border border-[#D4AF37]/40 cursor-pointer"
+                    title={mobileSheetMode === "half" ? (isRTL ? "ملء الشاشة" : "Maximize") : (isRTL ? "تصغير" : "Minimize")}
+                  >
+                    {mobileSheetMode === "half" ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+                  </button>
+
+                  {/* Collapse to Peek */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileSheetMode("peek")}
+                    className="w-8 h-8 flex items-center justify-center text-[#800020] bg-white/70 hover:bg-white rounded-lg transition border border-[#D4AF37]/40 cursor-pointer"
+                    title={isRTL ? "تصغير للشريط" : "Collapse to Bar"}
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {/* Hide Completely */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileSheetMode("hidden")}
+                    className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-800 rounded-lg hover:bg-stone-200/60 transition cursor-pointer"
+                    title={isRTL ? "إخفاء القائمة" : "Hide Directory"}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SIDEBAR BODY (Visible when not in peek on mobile, always on desktop) */}
           <div
             className={`flex-1 flex flex-col overflow-hidden ${
-              isMobileDrawerCollapsed ? "hidden md:flex" : "flex"
+              mobileSheetMode === "peek" ? "hidden md:flex" : "flex"
             }`}
           >
             {/* SEARCH & FILTER CONTROLS */}
-            <div className="p-3 bg-[#FBF8EF] border-b border-stone-200 space-y-2.5 shrink-0 font-sans">
-              {/* Search Bar + Desktop Hide Sidebar Button */}
-              <div className="flex items-center gap-2">
+            <div className="p-2.5 sm:p-3 bg-[#FBF8EF] border-b border-stone-200 space-y-2 shrink-0 font-sans">
+              {/* Search Bar + Mobile Filters Toggle + Desktop Hide Sidebar Button */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <div className="relative flex-1">
                   <Search className={`w-4 h-4 absolute top-1/2 -translate-y-1/2 text-stone-400 ${isRTL ? "right-3" : "left-3"}`} />
                   <input
@@ -1468,14 +1970,14 @@ export default function OldTestamentMapPage({
                         ? "ابحث عن مدينة، موقع أثري، أو شاهد كتابي..."
                         : "Search city, modern site, or scripture..."
                     }
-                    className={`w-full h-10 text-xs bg-white rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] focus:border-transparent ${
+                    className={`w-full h-9 sm:h-10 text-xs bg-white rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#800020] focus:border-transparent ${
                       isRTL ? "pr-9 pl-8" : "pl-9 pr-8"
                     }`}
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
-                      className={`absolute top-1/2 -translate-y-1/2 min-w-[32px] min-h-[32px] flex items-center justify-center text-stone-400 hover:text-stone-600 ${
+                      className={`absolute top-1/2 -translate-y-1/2 min-w-[30px] min-h-[30px] flex items-center justify-center text-stone-400 hover:text-stone-600 ${
                         isRTL ? "left-1" : "right-1"
                       }`}
                     >
@@ -1483,6 +1985,24 @@ export default function OldTestamentMapPage({
                     </button>
                   )}
                 </div>
+
+                {/* Filter expand button on mobile */}
+                <button
+                  id="mobile-advanced-filters-toggle"
+                  type="button"
+                  onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                  className={`md:hidden min-w-[36px] min-h-[36px] px-2 flex items-center justify-center gap-1 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                    showAdvancedFilters || selectedEra !== "All" || selectedType !== "all"
+                      ? "bg-[#800020] text-[#D4AF37] border-[#800020]"
+                      : "bg-white text-stone-700 border-stone-300 hover:bg-[#F5E8CA]"
+                  }`}
+                  title={isRTL ? "فلاتر إضافية" : "More Filters"}
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  {(selectedEra !== "All" || selectedType !== "all") && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                  )}
+                </button>
 
                 {/* Hide sidebar button inside desktop search header */}
                 <button
@@ -1496,18 +2016,32 @@ export default function OldTestamentMapPage({
                 </button>
               </div>
 
-              {/* Region Filter Chips (Scrollable with min 44px tap target) */}
-              <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+              {/* Region Filter Chips (Scrollable with min 40px tap target) */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                 {regions.map((reg) => {
                   const isActive = selectedRegion === reg.key;
                   return (
                     <button
                       key={reg.key}
                       id={`region-chip-${reg.key}`}
-                      onClick={() => setSelectedRegion(reg.key)}
-                      className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center justify-center shrink-0 border ${
+                      onClick={() => {
+                        if (selectedRegion === reg.key && reg.key !== "All") {
+                          setSelectedRegion("All");
+                        } else {
+                          setSelectedRegion(reg.key);
+                          setSelectedLocation(null);
+                          setActiveLocationIds(new Set());
+                          setShowMajorCentersOnly(false);
+                          if (reg.key === "Canaan") centerOnLocation(31.8, 35.2, 2.6);
+                          else if (reg.key === "Egypt" || reg.key === "Sinai") centerOnLocation(29.8, 32.2, 2.4);
+                          else if (reg.key === "Mesopotamia") centerOnLocation(33.5, 43.8, 2.2);
+                          else if (reg.key === "Anatolia") centerOnLocation(38.5, 39.5, 2.2);
+                          else if (reg.key === "All") fitToWindow();
+                        }
+                      }}
+                      className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center justify-center shrink-0 border cursor-pointer ${
                         isActive
-                          ? "bg-[#800020] text-[#D4AF37] border-[#800020] shadow-sm font-bold"
+                          ? "bg-[#800020] text-[#D4AF37] border-[#800020] shadow-xs font-bold"
                           : "bg-[#F5E8CA]/60 text-[#451A03] border-[#D4AF37]/30 hover:bg-[#F5E8CA]"
                       }`}
                     >
@@ -1517,46 +2051,67 @@ export default function OldTestamentMapPage({
                 })}
               </div>
 
-              {/* Biblical Era Filter Chips (min 44px tap target) */}
-              <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
-                {eras.map((era) => {
-                  const isActive = selectedEra === era.key;
-                  return (
-                    <button
-                      key={era.key}
-                      id={`era-chip-${era.key}`}
-                      onClick={() => setSelectedEra(era.key)}
-                      className={`min-h-[44px] px-3 py-1.5 rounded-md text-[11px] font-medium whitespace-nowrap transition flex items-center justify-center shrink-0 border ${
-                        isActive
-                          ? "bg-[#1A365D] text-white border-[#1A365D]"
-                          : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
-                      }`}
-                    >
-                      {isRTL ? era.arabicLabel : era.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Collapsible Era and Place Type Chips on Mobile, Always on Desktop */}
+              <div className={showAdvancedFilters ? "block space-y-2 pt-1" : "hidden md:block md:space-y-2 md:pt-1"}>
+                {/* Biblical Era Filter Chips */}
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {eras.map((era) => {
+                    const isActive = selectedEra === era.key;
+                    return (
+                      <button
+                        key={era.key}
+                        id={`era-chip-${era.key}`}
+                        onClick={() => {
+                          if (selectedEra === era.key && era.key !== "All") {
+                            setSelectedEra("All");
+                          } else {
+                            setSelectedEra(era.key);
+                            setSelectedLocation(null);
+                            setActiveLocationIds(new Set());
+                            setShowMajorCentersOnly(false);
+                          }
+                        }}
+                        className={`min-h-[34px] px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition flex items-center justify-center shrink-0 border cursor-pointer ${
+                          isActive
+                            ? "bg-[#1A365D] text-white border-[#1A365D] font-bold"
+                            : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                        }`}
+                      >
+                        {isRTL ? era.arabicLabel : era.label}
+                      </button>
+                    );
+                  })}
+                </div>
 
-              {/* Site / Place Type Filter Chips */}
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                {placeTypes.map((pt) => {
-                  const isActive = selectedType === pt.key;
-                  return (
-                    <button
-                      key={pt.key}
-                      id={`type-chip-${pt.key}`}
-                      onClick={() => setSelectedType(pt.key)}
-                      className={`min-h-[36px] px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition flex items-center justify-center shrink-0 border ${
-                        isActive
-                          ? "bg-[#065F46] text-white border-[#065F46] shadow-2xs font-semibold"
-                          : "bg-white text-stone-600 border-stone-200 hover:bg-emerald-50 hover:text-emerald-800"
-                      }`}
-                    >
-                      {isRTL ? pt.arabicLabel : pt.label}
-                    </button>
-                  );
-                })}
+                {/* Site / Place Type Filter Chips */}
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                  {placeTypes.map((pt) => {
+                    const isActive = selectedType === pt.key;
+                    return (
+                      <button
+                        key={pt.key}
+                        id={`type-chip-${pt.key}`}
+                        onClick={() => {
+                          if (selectedType === pt.key && pt.key !== "all") {
+                            setSelectedType("all");
+                          } else {
+                            setSelectedType(pt.key);
+                            setSelectedLocation(null);
+                            setActiveLocationIds(new Set());
+                            setShowMajorCentersOnly(false);
+                          }
+                        }}
+                        className={`min-h-[32px] px-2.5 py-0.5 rounded-md text-[11px] font-medium whitespace-nowrap transition flex items-center justify-center shrink-0 border cursor-pointer ${
+                          isActive
+                            ? "bg-[#065F46] text-white border-[#065F46] shadow-2xs font-semibold"
+                            : "bg-white text-stone-600 border-stone-200 hover:bg-emerald-50 hover:text-emerald-800"
+                        }`}
+                      >
+                        {isRTL ? pt.arabicLabel : pt.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -1709,30 +2264,60 @@ export default function OldTestamentMapPage({
                 /* === SINGLE LOCATION FULL DETAILS & VERTICAL EVENTS CARD === */
                 <div className="space-y-3.5 animate-in fade-in duration-200">
                   {/* Card Top Action Bar */}
-                  <div className="flex items-center justify-between pb-1 border-b border-stone-200">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-stone-200">
                     <button
                       id="back-to-locations-list"
                       onClick={() => setSelectedLocation(null)}
-                      className="min-h-[44px] px-3.5 rounded-lg bg-[#F5E8CA] text-[#451A03] hover:bg-[#EBDCB9] transition flex items-center gap-1.5 text-xs font-semibold"
+                      className="min-h-[44px] px-3.5 rounded-lg bg-[#F5E8CA] text-[#451A03] hover:bg-[#EBDCB9] transition flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
                     >
                       <span>{isRTL ? "→" : "←"}</span>
                       <span>{isRTL ? "عرض كل الأحداث" : "Show All Events"}</span>
                     </button>
 
-                    <button
-                      id="focus-map-location-btn"
-                      onClick={() =>
-                        centerOnLocation(
-                          selectedLocation.coordinates[0],
-                          selectedLocation.coordinates[1],
-                          3.2
-                        )
-                      }
-                      className="min-h-[44px] px-3.5 rounded-lg bg-[#800020] text-[#D4AF37] hover:bg-[#991B1B] transition flex items-center gap-1.5 text-xs font-bold shadow-sm"
-                    >
-                      <Navigation className="w-3.5 h-3.5" />
-                      <span>{isRTL ? "تركيز على الخريطة" : "Center on Map"}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        id="toggle-pin-map-btn"
+                        type="button"
+                        onClick={() => toggleLocationOnMap(selectedLocation.id)}
+                        className={`min-h-[44px] px-3 rounded-lg transition flex items-center gap-1.5 text-xs font-semibold border cursor-pointer ${
+                          mapVisibleLocations.some((l) => l.id === selectedLocation.id)
+                            ? "bg-[#FEF3C7] text-[#854D0E] border-[#FDE68A] hover:bg-[#FDE68A]"
+                            : "bg-white text-stone-700 border-stone-300 hover:bg-stone-100"
+                        }`}
+                        title={
+                          mapVisibleLocations.some((l) => l.id === selectedLocation.id)
+                            ? isRTL ? "إخفاء هذه النقطة من الخريطة" : "Hide this point from map"
+                            : isRTL ? "إظهار هذه النقطة على الخريطة" : "Show this point on map"
+                        }
+                      >
+                        {mapVisibleLocations.some((l) => l.id === selectedLocation.id) ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5 text-[#B91C1C]" />
+                            <span>{isRTL ? "إخفاء النقطة" : "Hide Pin"}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5 text-[#15803D]" />
+                            <span>{isRTL ? "إظهار النقطة" : "Show Pin"}</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        id="focus-map-location-btn"
+                        onClick={() =>
+                          centerOnLocation(
+                            selectedLocation.coordinates[0],
+                            selectedLocation.coordinates[1],
+                            3.2
+                          )
+                        }
+                        className="min-h-[44px] px-3.5 rounded-lg bg-[#800020] text-[#D4AF37] hover:bg-[#991B1B] transition flex items-center gap-1.5 text-xs font-bold shadow-sm cursor-pointer"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>{isRTL ? "تركيز" : "Center"}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Location Title & Badges */}
@@ -1878,18 +2463,37 @@ export default function OldTestamentMapPage({
                             const title = getEventDisplayTitle(event, lang);
                             const desc = getEventDisplayDescription(event, lang);
                             const effYear = resolveEventYear(event, people);
+                            const isHighlighted = highlightedEventId === event.id;
                             return (
                               <div
                                 key={`era-ev-${event.id}`}
-                                onClick={() => setSelectedEvent(event)}
-                                className="p-2.5 bg-white rounded-lg border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition space-y-1"
+                                id={`era-event-${event.id}`}
+                                onClick={() => {
+                                  setHighlightedEventId(event.id);
+                                  setSelectedEvent(event);
+                                }}
+                                className={`p-2.5 rounded-lg border cursor-pointer transition space-y-1.5 ${
+                                  isHighlighted
+                                    ? "border-[#800020] bg-gradient-to-br from-[#FEF3C7] via-[#FFFDF8] to-[#FDF8EE] ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#FDFBF7] shadow-md border-s-4 border-s-[#800020] animate-in fade-in duration-200"
+                                    : "bg-white border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF]"
+                                }`}
                               >
+                                {isHighlighted && (
+                                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#800020] text-[#D4AF37] text-[10px] font-bold shadow-xs">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4AF37] opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#D4AF37]"></span>
+                                    </span>
+                                    <MapPin className="w-2.5 h-2.5 text-[#D4AF37]" />
+                                    <span>{isRTL ? "محدد من علامة الخريطة" : "Map Synchronized"}</span>
+                                  </div>
+                                )}
                                 <div className="flex items-start justify-between gap-2">
-                                  <h4 className="text-xs font-bold text-stone-900 leading-snug">
+                                  <h4 className={`text-xs font-bold leading-snug ${isHighlighted ? "text-[#800020]" : "text-stone-900"}`}>
                                     {title}
                                   </h4>
                                   {effYear !== undefined && (
-                                    <span className="text-[11px] font-bold text-[#B91C1C] shrink-0">
+                                    <span className="text-[11px] font-bold text-[#B91C1C] shrink-0 font-sans">
                                       {formatYearLabel(effYear)}
                                     </span>
                                   )}
@@ -1912,25 +2516,61 @@ export default function OldTestamentMapPage({
                             const title = getEventDisplayTitle(event, lang);
                             const desc = getEventDisplayDescription(event, lang);
                             const effYear = resolveEventYear(event, people);
+                            const isHighlighted = highlightedEventId === event.id;
                             return (
                               <div
                                 key={`act_ev_${event.id}_${idx}`}
                                 id={`event-card-${event.id}`}
-                                onClick={() => setSelectedEvent(event)}
-                                className="p-3 rounded-xl border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1.5"
+                                onClick={() => {
+                                  setHighlightedEventId(event.id);
+                                  setSelectedEvent(event);
+                                }}
+                                className={`p-3 rounded-xl border transition cursor-pointer space-y-2 relative ${
+                                  isHighlighted
+                                    ? "border-[#800020] bg-gradient-to-br from-[#FEF3C7] via-[#FFFDF8] to-[#FDF8EE] ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#FDFBF7] shadow-md border-s-4 border-s-[#800020] animate-in fade-in zoom-in-98 duration-300"
+                                    : "bg-white border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] shadow-2xs group"
+                                }`}
                               >
+                                {isHighlighted && (
+                                  <div className="flex items-center justify-between gap-2 pb-0.5">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#800020] text-[#D4AF37] text-[10px] font-bold shadow-xs">
+                                      <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4AF37] opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D4AF37]"></span>
+                                      </span>
+                                      <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                                      <span>{isRTL ? "محدد من علامة الخريطة" : "Synchronized with Map Marker"}</span>
+                                    </div>
+                                    <span className="text-[10px] text-[#800020] font-bold">
+                                      {isRTL ? "الحدث المرتبط" : "Linked Event"}
+                                    </span>
+                                  </div>
+                                )}
+
                                 <div className="flex items-start justify-between gap-2">
-                                  <h4 className="text-xs font-bold text-stone-900 group-hover:text-[#800020] leading-snug">
+                                  <h4
+                                    className={`text-xs font-bold leading-snug ${
+                                      isHighlighted
+                                        ? "text-[#800020] text-sm"
+                                        : "text-stone-900 group-hover:text-[#800020]"
+                                    }`}
+                                  >
                                     {title}
                                   </h4>
                                   {effYear !== undefined && (
-                                    <span className="text-[11px] font-bold text-[#B91C1C] bg-red-50 px-2 py-0.5 rounded-full border border-red-100 shrink-0">
+                                    <span
+                                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 font-sans ${
+                                        isHighlighted
+                                          ? "text-[#800020] bg-[#FEF3C7] border-[#FDE68A]"
+                                          : "text-[#B91C1C] bg-red-50 border-red-100"
+                                      }`}
+                                    >
                                       {formatYearLabel(effYear)}
                                     </span>
                                   )}
                                 </div>
                                 {desc && (
-                                  <p className="text-[11px] text-stone-600 line-clamp-2">
+                                  <p className="text-[11px] text-stone-600 line-clamp-2 leading-relaxed">
                                     {desc}
                                   </p>
                                 )}
@@ -1987,20 +2627,59 @@ export default function OldTestamentMapPage({
                         event.locations && event.locations.length > 0
                           ? event.locations.join(isRTL ? "، " : ", ")
                           : event.location;
+                      const isHighlighted = highlightedEventId === event.id;
 
                       return (
                         <div
                           key={`all-event-${event.id}`}
                           id={`chron-event-${event.id}`}
-                          onClick={() => setSelectedEvent(event)}
-                          className="p-3 bg-white rounded-xl border border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-2"
+                          onClick={() => {
+                            setHighlightedEventId(event.id);
+                            setSelectedEvent(event);
+                            if (matchedLoc) {
+                              handleSelectLocation(matchedLoc);
+                            }
+                          }}
+                          className={`p-3 rounded-xl border transition shadow-2xs space-y-2 cursor-pointer ${
+                            isHighlighted
+                              ? "border-[#800020] bg-gradient-to-br from-[#FEF3C7] via-[#FFFDF8] to-[#FDF8EE] ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#FDFBF7] shadow-md border-s-4 border-s-[#800020] animate-in fade-in zoom-in-98 duration-300"
+                              : "bg-white border-stone-200 hover:border-[#800020] hover:bg-[#FBF8EF] group"
+                          }`}
                         >
+                          {isHighlighted && (
+                            <div className="flex items-center justify-between gap-2 pb-0.5">
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#800020] text-[#D4AF37] text-[10px] font-bold shadow-xs">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4AF37] opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D4AF37]"></span>
+                                </span>
+                                <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                                <span>{isRTL ? "محدد من علامة الخريطة" : "Synchronized with Map Marker"}</span>
+                              </div>
+                              <span className="text-[10px] text-[#800020] font-bold">
+                                {isRTL ? "متزامن" : "Synchronized"}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="flex items-start justify-between gap-2">
-                            <h4 className="text-xs font-bold text-stone-900 group-hover:text-[#800020] leading-snug">
+                            <h4
+                              className={`text-xs font-bold leading-snug ${
+                                isHighlighted
+                                  ? "text-[#800020] text-sm"
+                                  : "text-stone-900 group-hover:text-[#800020]"
+                              }`}
+                            >
                               {title}
                             </h4>
                             {effYear !== undefined && (
-                              <span className="text-[11px] font-bold text-[#B91C1C] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-100 shrink-0">
+                              <span
+                                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 font-sans ${
+                                  isHighlighted
+                                    ? "text-[#800020] bg-[#FEF3C7] border-[#FDE68A]"
+                                    : "text-[#B91C1C] bg-red-50 border-red-100"
+                                }`}
+                              >
                                 {formatYearLabel(effYear)}
                               </span>
                             )}
@@ -2083,6 +2762,8 @@ export default function OldTestamentMapPage({
                         ? getCertaintyBadge(loc.certainty as any, lang)
                         : null;
 
+                      const isShowingOnMap = mapVisibleLocations.some((l) => l.id === loc.id);
+
                       return (
                         <div
                           key={loc.id}
@@ -2095,7 +2776,11 @@ export default function OldTestamentMapPage({
                               handleSelectLocation(loc);
                             }
                           }}
-                          className="p-3 bg-white rounded-xl border border-stone-200 hover:border-[#D4AF37] hover:bg-[#FBF8EF] cursor-pointer transition shadow-2xs group space-y-1.5 min-h-[44px]"
+                          className={`p-3 rounded-xl border cursor-pointer transition shadow-2xs group space-y-1.5 min-h-[44px] ${
+                            isShowingOnMap
+                              ? "border-[#D4AF37] bg-[#FBF8EF]/80 ring-1 ring-[#D4AF37]/40"
+                              : "bg-white border-stone-200 hover:border-[#D4AF37] hover:bg-[#FBF8EF]"
+                          }`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -2106,15 +2791,37 @@ export default function OldTestamentMapPage({
                                 {loc.arabicName}
                               </span>
                             </div>
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F5E8CA] text-[#451A03]">
-                                {loc.region}
-                              </span>
-                              {placeTypeInfo && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                  {isRTL ? placeTypeInfo.labelAr : placeTypeInfo.labelEn}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F5E8CA] text-[#451A03]">
+                                  {loc.region}
                                 </span>
-                              )}
+                                {placeTypeInfo && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    {isRTL ? placeTypeInfo.labelAr : placeTypeInfo.labelEn}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleLocationOnMap(loc.id);
+                                }}
+                                className={`p-1.5 rounded-lg border transition flex items-center justify-center cursor-pointer min-h-[32px] min-w-[32px] ${
+                                  isShowingOnMap
+                                    ? "bg-[#800020] text-[#D4AF37] border-[#800020] shadow-xs"
+                                    : "bg-white text-stone-400 hover:text-stone-700 border-stone-200 hover:bg-stone-100"
+                                }`}
+                                title={
+                                  isShowingOnMap
+                                    ? isRTL ? "معروض على الخريطة (انقر للإخفاء)" : "Visible on map (click to hide)"
+                                    : isRTL ? "انقر للإظهار على الخريطة" : "Click to show on map"
+                                }
+                                aria-label={isShowingOnMap ? "Hide from map" : "Show on map"}
+                              >
+                                {isShowingOnMap ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                              </button>
                             </div>
                           </div>
 
@@ -2159,16 +2866,8 @@ export default function OldTestamentMapPage({
           id="map-main-stage"
           dir="ltr"
           className={`
-            relative overflow-hidden bg-[#EBDCB9] select-none transition-all duration-300 flex-1
-            ${/* Mobile: Top 45% when sheet is open, or 100%-56px when collapsed, or 100% when sidebar is hidden */ ""}
-            ${
-              !isSidebarOpen
-                ? "order-1 h-full w-full"
-                : isMobileDrawerCollapsed
-                ? "order-1 h-[calc(100%-56px)] md:h-full md:w-[65%]"
-                : "order-1 h-[45%] md:h-full md:w-[65%]"
-            }
-            ${!isSidebarOpen ? "md:w-full" : "md:order-2"}
+            relative overflow-hidden bg-[#EBDCB9] select-none transition-all duration-300 flex-1 h-full w-full
+            ${!isSidebarOpen ? "md:w-full" : "md:w-[65%]"}
           `}
         >
           {/* MAP CANVAS VIEWPORT */}
@@ -2185,14 +2884,14 @@ export default function OldTestamentMapPage({
             onTouchEnd={handleTouchEnd}
             className="w-full h-full relative cursor-grab active:cursor-grabbing overflow-hidden touch-none bg-[#EBDCB9]"
           >
-            {/* FLOATING SHOW SIDEBAR BUTTON (When sidebar is hidden) */}
+            {/* FLOATING SHOW SIDEBAR BUTTON (DESKTOP) */}
             {!isSidebarOpen && (
               <button
                 id="floating-show-sidebar-btn"
                 onClick={() => setIsSidebarOpen(true)}
-                className={`absolute top-3 ${
+                className={`hidden md:flex absolute top-3 ${
                   isRTL ? "right-3" : "left-3"
-                } z-40 flex items-center gap-2 px-3 py-2 bg-[#FDFBF7]/95 hover:bg-[#F5E8CA] text-[#800020] rounded-xl shadow-lg border border-[#D4AF37] font-semibold text-xs transition active:scale-95 backdrop-blur-xs min-h-[44px] cursor-pointer`}
+                } z-40 items-center gap-2 px-3 py-2 bg-[#FDFBF7]/95 hover:bg-[#F5E8CA] text-[#800020] rounded-xl shadow-lg border border-[#D4AF37] font-semibold text-xs transition active:scale-95 backdrop-blur-xs min-h-[44px] cursor-pointer`}
                 title={isRTL ? "إظهار القائمة الجانبية والدليل" : "Show Map Sidebar & Directory"}
                 aria-label="Show Map Sidebar"
               >
@@ -2204,6 +2903,21 @@ export default function OldTestamentMapPage({
                 <span className={isRTL ? "font-['Amiri'] font-bold text-sm" : "font-['Cinzel'] font-bold"}>
                   {isRTL ? "عرض القائمة الجانبية" : "Show Sidebar"}
                 </span>
+              </button>
+            )}
+
+            {/* FLOATING RE-OPEN SHEET BUTTON (MOBILE: when sheet is hidden) */}
+            {mobileSheetMode === "hidden" && (
+              <button
+                id="mobile-reopen-sheet-btn"
+                onClick={() => setMobileSheetMode("peek")}
+                className={`md:hidden absolute bottom-4 ${
+                  isRTL ? "right-4" : "left-4"
+                } z-40 flex items-center gap-2 px-3 py-2 bg-[#800020] text-[#D4AF37] rounded-full shadow-2xl border-2 border-[#D4AF37] font-bold text-xs transition active:scale-95 min-h-[44px] cursor-pointer`}
+                title={isRTL ? "إظهار دليل المواقع" : "Open Sites Directory"}
+              >
+                <Search className="w-4 h-4" />
+                <span>{isRTL ? "دليل المواقع" : "Sites Directory"}</span>
               </button>
             )}
 
@@ -2468,6 +3182,80 @@ export default function OldTestamentMapPage({
               </div>
             </div>
 
+            {/* CLEAN MAP MODE GUIDE BANNER (Appears when in click-only mode and no pins are active) */}
+            {!isCleanBannerDismissed && pointDisplayMode === "click-only" && mapVisibleLocations.length === 0 && (
+              <div
+                id="map-clean-mode-banner"
+                className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-lg w-[90%] p-3.5 bg-[#FDFBF7]/95 rounded-2xl border border-[#D4AF37]/80 shadow-xl backdrop-blur-xs text-center space-y-2 pointer-events-auto animate-in fade-in zoom-in-95 duration-200 select-none"
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsCleanBannerDismissed(true)}
+                  className={`absolute top-2.5 ${
+                    isRTL ? "left-2.5" : "right-2.5"
+                  } p-1 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-200/50 transition cursor-pointer`}
+                  title={isRTL ? "إغلاق الإشعار" : "Dismiss Notice"}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="flex items-center justify-center gap-2 text-[#800020] font-bold text-xs md:text-sm">
+                  <Crosshair className="w-4 h-4 text-[#D4AF37]" />
+                  <span>
+                    {isRTL
+                      ? "الخريطة في وضع الظهور عند النقر فقط"
+                      : "Click-to-View Points Mode Active"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed font-sans">
+                  {isRTL
+                    ? "النقاط تظهر على الخريطة فقط عندما تنقر على ما ترغب في رؤيته. اختر مدينة من القائمة الجانبية، أو اختر من الأزرار السريعة:"
+                    : "Points will only appear on the map when you click what you want to see. Select any site from the sidebar, or pick a region below:"}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickRegion("Canaan", 31.8, 35.2, 2.6)}
+                    className="px-2.5 py-1 rounded-lg bg-[#800020] text-[#D4AF37] text-xs font-semibold hover:bg-[#991B1B] transition shadow-xs cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🕊️</span>
+                    <span>{isRTL ? "أرض كنعان" : "Canaan"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickRegion("Sinai", 29.8, 32.2, 2.4)}
+                    className="px-2.5 py-1 rounded-lg bg-white text-stone-800 hover:bg-[#F5E8CA] border border-stone-200 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🌊</span>
+                    <span>{isRTL ? "مصر وسيناء" : "Egypt & Sinai"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickRegion("Mesopotamia", 33.5, 43.8, 2.2)}
+                    className="px-2.5 py-1 rounded-lg bg-white text-stone-800 hover:bg-[#F5E8CA] border border-stone-200 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🏺</span>
+                    <span>{isRTL ? "بلاد الرافدين" : "Mesopotamia"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShowMajorCenters}
+                    className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 text-xs font-semibold hover:bg-amber-200 transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-700" />
+                    <span>{isRTL ? "أهم 11 عاصمة" : "Top 11 Centers"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPointDisplayMode("show-all")}
+                    className="px-2 py-1 rounded-lg text-[11px] text-[#800020] hover:underline font-semibold cursor-pointer"
+                  >
+                    {isRTL ? "أو عرض كل الـ 113 موقعاً" : "Or show all 113 sites"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* TRANSFORM CONTAINER (Pan & Zoom Applied Here - Crisp Vector Rendering) */}
             <div
               id="map-transform-layer"
@@ -2658,44 +3446,80 @@ export default function OldTestamentMapPage({
             {/* QUICK REGION BOOKMARK FOCUS PILLS (Bottom Center) */}
             <div
               id="map-quick-region-bookmarks"
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#FDFBF7]/95 border border-[#D4AF37]/60 shadow-lg backdrop-blur-xs max-w-[94%] overflow-x-auto scrollbar-none"
+              className={`absolute z-30 flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#FDFBF7]/95 border border-[#D4AF37]/60 shadow-lg backdrop-blur-xs max-w-[94%] overflow-x-auto scrollbar-none transition-all duration-300 left-1/2 -translate-x-1/2 ${
+                mobileSheetMode === "peek"
+                  ? "bottom-16 md:bottom-3"
+                  : mobileSheetMode === "hidden"
+                  ? "bottom-3"
+                  : "hidden md:flex md:bottom-3"
+              }`}
             >
               <button
-                onClick={() => fitToWindow()}
+                onClick={handleResetView}
                 className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#800020] text-[#D4AF37] hover:bg-[#991B1B] active:scale-95 shadow-xs shrink-0 cursor-pointer"
-                title={isRTL ? "ملاءمة الخريطة للنافذة بالكامل" : "Fit Map to Window"}
+                title={isRTL ? "إعادة ضبط الخريطة ومسح التحديد" : "Reset Map & Clear Selection"}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>{isRTL ? "كامل الخريطة" : "Fit Window"}</span>
               </button>
 
               <button
-                onClick={() => centerOnLocation(31.8, 35.2, 2.6)}
-                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+                type="button"
+                onClick={handleShowMajorCenters}
+                className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 border active:scale-95 shrink-0 cursor-pointer ${
+                  showMajorCentersOnly
+                    ? "bg-[#800020] text-[#D4AF37] border-[#800020] shadow-xs font-bold"
+                    : "bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300"
+                }`}
+                title={isRTL ? "عرض أهم 11 مركزاً وعاصمة كتابية" : "Show 11 Major Biblical Centers"}
+              >
+                <span>⭐</span>
+                <span>{isRTL ? "أهم العواصم" : "Major Centers"}</span>
+              </button>
+
+              <button
+                onClick={() => handleQuickRegion("Canaan", 31.8, 35.2, 2.6)}
+                className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 border active:scale-95 shrink-0 cursor-pointer ${
+                  selectedRegion === "Canaan"
+                    ? "bg-[#800020] text-[#D4AF37] border-[#800020] font-bold shadow-xs"
+                    : "bg-white hover:bg-[#F5E8CA] text-stone-800 border-stone-200"
+                }`}
               >
                 <span>🕊️</span>
                 <span>{isRTL ? "أرض كنعان" : "Canaan"}</span>
               </button>
 
               <button
-                onClick={() => centerOnLocation(29.8, 32.2, 2.4)}
-                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+                onClick={() => handleQuickRegion("Sinai", 29.8, 32.2, 2.4)}
+                className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 border active:scale-95 shrink-0 cursor-pointer ${
+                  selectedRegion === "Sinai"
+                    ? "bg-[#800020] text-[#D4AF37] border-[#800020] font-bold shadow-xs"
+                    : "bg-white hover:bg-[#F5E8CA] text-stone-800 border-stone-200"
+                }`}
               >
                 <span>🌊</span>
                 <span>{isRTL ? "مصر وسيناء" : "Egypt & Sinai"}</span>
               </button>
 
               <button
-                onClick={() => centerOnLocation(33.5, 43.8, 2.2)}
-                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+                onClick={() => handleQuickRegion("Mesopotamia", 33.5, 43.8, 2.2)}
+                className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 border active:scale-95 shrink-0 cursor-pointer ${
+                  selectedRegion === "Mesopotamia"
+                    ? "bg-[#800020] text-[#D4AF37] border-[#800020] font-bold shadow-xs"
+                    : "bg-white hover:bg-[#F5E8CA] text-stone-800 border-stone-200"
+                }`}
               >
                 <span>🏺</span>
                 <span>{isRTL ? "بلاد الرافدين" : "Mesopotamia"}</span>
               </button>
 
               <button
-                onClick={() => centerOnLocation(38.5, 39.5, 2.2)}
-                className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 bg-white hover:bg-[#F5E8CA] text-stone-800 border border-stone-200 active:scale-95 shrink-0 cursor-pointer"
+                onClick={() => handleQuickRegion("Anatolia", 38.5, 39.5, 2.2)}
+                className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1 border active:scale-95 shrink-0 cursor-pointer ${
+                  selectedRegion === "Anatolia"
+                    ? "bg-[#800020] text-[#D4AF37] border-[#800020] font-bold shadow-xs"
+                    : "bg-white hover:bg-[#F5E8CA] text-stone-800 border-stone-200"
+                }`}
               >
                 <span>⛰️</span>
                 <span>{isRTL ? "الأناضول وأرارات" : "Anatolia"}</span>
@@ -2897,6 +3721,278 @@ export default function OldTestamentMapPage({
                 {isRTL ? "إغلاق" : "Close"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING CITY JOURNEY WINDOW (City History -> Event 1 -> Event 2 ... with Next/Prev Arrows) */}
+      {selectedLocation && isCityWindowOpen && (
+        <div
+          id="city-journey-window"
+          className={`absolute ${
+            mobileSheetMode === "peek" ? "bottom-20 md:bottom-4" : "bottom-4"
+          } ${
+            isRTL ? "left-3 sm:left-6" : "right-3 sm:right-6"
+          } z-40 max-w-sm sm:max-w-md w-[calc(100%-1.5rem)] sm:w-[420px] bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 border-[#800020] p-4 sm:p-4.5 font-sans text-xs animate-in fade-in slide-in-from-bottom-3 duration-200 backdrop-blur-xs`}
+        >
+          {/* Header Row: Number/Icon Badge + City/Event Title + Close Button */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {cityWindowStep === 0 ? (
+                <span
+                  className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-[11px] shrink-0 shadow-xs bg-[#800020] border border-[#D4AF37]"
+                  title={isRTL ? "تاريخ ونظرة عامة على الموقع" : "City History & Overview"}
+                >
+                  <Landmark className="w-3.5 h-3.5 text-[#D4AF37]" />
+                </span>
+              ) : (
+                <span
+                  className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-xs bg-[#DC2626] border border-red-300"
+                  title={isRTL ? `الحدث ${cityWindowStep}` : `Event ${cityWindowStep}`}
+                >
+                  {cityWindowStep}
+                </span>
+              )}
+
+              <div className="min-w-0">
+                <h4 className="font-serif font-bold text-sm sm:text-base text-[#800020] leading-tight truncate">
+                  {cityWindowStep === 0
+                    ? (isRTL ? selectedLocation.arabicName : selectedLocation.name)
+                    : (selectedCityEvents[cityWindowStep - 1]
+                        ? getEventDisplayTitle(selectedCityEvents[cityWindowStep - 1], lang)
+                        : (isRTL ? selectedLocation.arabicName : selectedLocation.name))}
+                </h4>
+                <p className="text-[11px] text-stone-500 font-sans truncate">
+                  {cityWindowStep === 0
+                    ? `${isRTL ? selectedLocation.name : selectedLocation.arabicName}${
+                        selectedLocation.modernName ? ` • ${selectedLocation.modernName}` : ""
+                      }`
+                    : (isRTL ? selectedLocation.arabicName : selectedLocation.name)}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsCityWindowOpen(false)}
+              className="p-1 rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition cursor-pointer shrink-0"
+              title={isRTL ? "إغلاق نافذة الرحلة" : "Close Journey Window"}
+              aria-label="Close Journey Window"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Category / Stage / Era Tags */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            {cityWindowStep === 0 ? (
+              <>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-red-50 text-[#800020] border border-red-200">
+                  <History className="w-3 h-3 text-[#800020]" />
+                  <span>{isRTL ? "تاريخ ونظرة عامة على الموقع" : "City History & Overview"}</span>
+                </span>
+                {selectedLocation.region && (
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-900 border border-amber-200">
+                    {selectedLocation.region}
+                  </span>
+                )}
+                {selectedLocation.placeType && (
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-stone-100 text-stone-700 border border-stone-200">
+                    {selectedLocation.placeType}
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-red-50 text-[#800020] border border-red-200">
+                  <span>
+                    {isRTL
+                      ? `الحدث ${cityWindowStep} من ${selectedCityEvents.length}`
+                      : `Event ${cityWindowStep} of ${selectedCityEvents.length}`}
+                  </span>
+                </span>
+                {selectedCityEvents[cityWindowStep - 1] &&
+                  resolveEventYear(selectedCityEvents[cityWindowStep - 1], people) !== undefined && (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#FEF3C7] text-[#800020] border border-[#FDE68A] font-sans">
+                      {formatYearLabel(resolveEventYear(selectedCityEvents[cityWindowStep - 1], people))}
+                    </span>
+                  )}
+              </>
+            )}
+          </div>
+
+          {/* Description Text */}
+          <div className="space-y-1.5 mb-3">
+            {cityWindowStep === 0 ? (
+              <>
+                <p className="text-stone-700 text-[11.5px] leading-relaxed max-h-32 overflow-y-auto pr-1 scrollbar-thin">
+                  {isRTL
+                    ? (selectedLocation.arabicDescription || selectedLocation.description)
+                    : (selectedLocation.description || selectedLocation.arabicDescription)}
+                </p>
+                {selectedCityEvents.length > 0 ? (
+                  <p className="text-[11px] text-[#800020] font-medium pt-1 border-t border-stone-100 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+                    <span>
+                      {isRTL
+                        ? `يرتبط بهذا الموقع ${selectedCityEvents.length} أحداث كتابية. استخدم الأسهم للتنقل:`
+                        : `Associated with ${selectedCityEvents.length} biblical events. Use arrows to explore:`}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-[10.5px] text-stone-500 italic pt-1 border-t border-stone-100">
+                    {isRTL ? "لا توجد أحداث فرعية مسجلة لهذا الموقع حالياً." : "No separate events recorded for this site."}
+                  </p>
+                )}
+              </>
+            ) : (
+              selectedCityEvents[cityWindowStep - 1] && (
+                <p className="text-stone-700 text-[11.5px] leading-relaxed max-h-32 overflow-y-auto pr-1 scrollbar-thin">
+                  {getEventDisplayDescription(selectedCityEvents[cityWindowStep - 1], lang)}
+                </p>
+              )
+            )}
+          </div>
+
+          {/* Journey Navigation Bar with 2 Arrows and Step Indicators */}
+          <div className="flex items-center justify-between gap-2 p-1.5 mb-2.5 rounded-xl bg-stone-50 border border-stone-200/80">
+            {/* Previous Arrow Button */}
+            <button
+              type="button"
+              id="city-journey-prev-btn"
+              disabled={cityWindowStep === 0}
+              onClick={handlePrevCityStep}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-700 hover:bg-[#F5E8CA] hover:text-[#800020] disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs cursor-pointer font-semibold text-[11px]"
+              title={
+                isRTL
+                  ? cityWindowStep === 1
+                    ? "العودة لتاريخ المدينة"
+                    : "الحدث السابق"
+                  : cityWindowStep === 1
+                  ? "Back to City History"
+                  : "Previous Event"
+              }
+            >
+              {isRTL ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+              <span>{isRTL ? "السابق" : "Prev"}</span>
+            </button>
+
+            {/* Step Indicators / Interactive Jump Buttons */}
+            <div className="flex items-center gap-1 overflow-x-auto py-0.5 px-1 scrollbar-none max-w-[170px] sm:max-w-[220px]">
+              {/* Step 0: History Button */}
+              <button
+                type="button"
+                onClick={() => handleJumpToCityStep(0)}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition shrink-0 cursor-pointer ${
+                  cityWindowStep === 0
+                    ? "bg-[#800020] text-[#D4AF37] shadow-xs"
+                    : "bg-white text-stone-600 hover:bg-[#F5E8CA] border border-stone-200"
+                }`}
+                title={isRTL ? "تاريخ ونظرة عامة على الموقع" : "City History"}
+              >
+                {isRTL ? "التاريخ" : "History"}
+              </button>
+
+              {/* Steps 1..N: Event Buttons */}
+              {selectedCityEvents.map((ev, idx) => {
+                const stepNum = idx + 1;
+                const isActive = cityWindowStep === stepNum;
+                return (
+                  <button
+                    key={`city-jump-step-${ev.id}`}
+                    type="button"
+                    onClick={() => handleJumpToCityStep(stepNum)}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold transition shrink-0 cursor-pointer ${
+                      isActive
+                        ? "bg-[#DC2626] text-white shadow-xs ring-1 ring-[#800020]"
+                        : "bg-white text-stone-600 hover:bg-red-50 border border-stone-200"
+                    }`}
+                    title={getEventDisplayTitle(ev, lang)}
+                  >
+                    {stepNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next Arrow Button */}
+            <button
+              type="button"
+              id="city-journey-next-btn"
+              disabled={cityWindowStep >= totalCitySteps - 1}
+              onClick={handleNextCityStep}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#800020] border border-[#800020] text-[#D4AF37] hover:bg-[#991B1B] disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs cursor-pointer font-semibold text-[11px]"
+              title={
+                isRTL
+                  ? cityWindowStep === 0
+                    ? "الانتقال إلى الحدث الأول"
+                    : "الحدث التالي"
+                  : cityWindowStep === 0
+                  ? "Go to First Event"
+                  : "Next Event"
+              }
+            >
+              <span>{isRTL ? "التالي" : "Next"}</span>
+              {isRTL ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+
+          {/* Footer Row: Scripture Citation + View in Sidebar Action */}
+          <div className="flex items-center justify-between pt-2 border-t border-stone-200 gap-2">
+            {/* Scripture Reference Pill */}
+            {(() => {
+              const activeRef =
+                cityWindowStep === 0
+                  ? selectedLocation.biblicalReferences?.[0]
+                  : (selectedCityEvents[cityWindowStep - 1]?.biblicalReferences?.[0] ||
+                     selectedLocation.biblicalReferences?.[0]);
+              if (!activeRef) return <div />;
+              return (
+                <span className="font-semibold text-[#800020] bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10.5px] font-sans truncate max-w-[190px] flex items-center gap-1">
+                  <BookOpen className="w-3 h-3 text-[#D4AF37] shrink-0" />
+                  <span className="truncate">{localizeBiblicalReference(activeRef, lang)}</span>
+                </span>
+              );
+            })()}
+
+            {/* View in Sidebar & Show Event Details Pop up */}
+            <button
+              onClick={() => {
+                const currentEv: BiblicalEvent =
+                  cityWindowStep > 0 && selectedCityEvents[cityWindowStep - 1]
+                    ? selectedCityEvents[cityWindowStep - 1]
+                    : selectedCityEvents[0] || {
+                        id: `city-info-${selectedLocation.id}`,
+                        title: selectedLocation.name,
+                        arabicTitle: selectedLocation.arabicName,
+                        description: selectedLocation.description || "",
+                        arabicDescription: selectedLocation.arabicDescription || "",
+                        location: selectedLocation.name,
+                        locationId: selectedLocation.id,
+                        coordinates: selectedLocation.coordinates,
+                        biblicalReferences: selectedLocation.biblicalReferences || [],
+                        category: selectedLocation.placeType || selectedLocation.region || "historical_site",
+                      };
+
+                // Show the details popup modal
+                setSelectedEvent(currentEv);
+                setHighlightedEventId(currentEv.id);
+
+                // Open sidebar and scroll to event card
+                setIsSidebarOpen(true);
+                setSidebarView("events");
+                setTimeout(() => {
+                  const card =
+                    document.getElementById(`event-card-${currentEv.id}`) ||
+                    document.getElementById(`chron-event-${currentEv.id}`);
+                  if (card) {
+                    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  }
+                }, 150);
+              }}
+              className="text-[#800020] hover:text-[#991B1B] font-bold text-[11px] hover:underline cursor-pointer shrink-0 flex items-center gap-1"
+            >
+              <span>{isRTL ? "عرض على القائمة ←" : "View on Sidebar & Details →"}</span>
+            </button>
           </div>
         </div>
       )}
