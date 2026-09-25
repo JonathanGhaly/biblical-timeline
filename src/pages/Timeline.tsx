@@ -21,15 +21,19 @@ import {
   Plus,
   Trash2,
   Filter,
+  Landmark,
 } from "lucide-react";
 import { CopticCross } from "../components/Coptic/CopticCross";
 import AddEventModal from "../components/Event/AddEventModal";
 import { EventTypeBadge } from "../components/Event/EventTypeBadge";
+import { AdamsChartOfHistory } from "../components/Timeline/AdamsChartOfHistory";
 import {
   getEventTypeDefinition,
   getEventTypeLabel,
   guessEventTypeForLegacyEvent,
 } from "../data/biblicalEventTypes";
+import { PutPersonOnYearModal } from "../components/Timeline/PutPersonOnYearModal";
+import { Calendar } from "lucide-react";
 
 type TimelineProps = {
   people: Person[];
@@ -37,6 +41,7 @@ type TimelineProps = {
   onAddEvent?: (newEvent: BiblicalEvent) => void;
   onUpdateEvent?: (updatedEvent: BiblicalEvent) => void;
   onDeleteEvent?: (eventId: string) => void;
+  onUpdatePerson?: (updatedPerson: Person) => void;
   lang?: Language;
 };
 
@@ -46,13 +51,17 @@ export default function Timeline({
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
+  onUpdatePerson,
   lang = "en",
 }: TimelineProps) {
   const [selectedEvent, setSelectedEvent] = useState<BiblicalEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isPutPersonModalOpen, setIsPutPersonModalOpen] = useState(false);
+  const [personToPutOnYear, setPersonToPutOnYear] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEventType, setSelectedEventType] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"biblical" | "adams">("biblical");
 
   const t = UI_TRANSLATIONS[lang];
 
@@ -137,47 +146,116 @@ export default function Timeline({
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div
+      className={`space-y-6 animate-fadeIn ${
+        activeTab === "adams" ? "max-w-7xl" : "max-w-4xl"
+      } mx-auto`}
+      dir={lang === "ar" ? "rtl" : "ltr"}
+    >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
         <div>
           <div className="flex items-center gap-2">
-            <CopticCross size={26} />
-            <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
-              {t.navTimeline}
+            <CopticCross size={24} />
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+              {activeTab === "adams" ? t.adamsTitle : t.navTimeline}
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-[#6B5E4E] dark:text-[#A99F8D] mt-1">
-            {lang === "ar"
+            {activeTab === "adams"
+              ? t.adamsSubtitle
+              : lang === "ar"
               ? "التسلسل الزمني التاريخي لأحداث العهد القديم من الخليقة عبر العصور."
               : "Sacred vertical chronology tracking epochs, covenants, and historical milestones."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {onAddEvent && (
+        {activeTab === "biblical" && (
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
             <button
-              onClick={() => setIsAdding(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C5A028] text-[#121110] font-bold text-xs sm:text-sm shadow cursor-pointer transition-colors whitespace-nowrap"
+              type="button"
+              onClick={() => {
+                setPersonToPutOnYear(null);
+                setIsPutPersonModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#800020] via-[#9B1238] to-[#800020] text-[#F3E5AB] border border-[#D4AF37] text-xs sm:text-sm font-bold shadow hover:brightness-110 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
             >
-              <Plus size={16} />
-              <span>{t.addEvent}</span>
+              <Calendar size={14} />
+              <span>{lang === "ar" ? "ضبط سنة شخص" : "Put Person on Year"}</span>
             </button>
-          )}
-          <div className="relative">
-            <input
-              type="search"
-              placeholder={lang === "ar" ? "تصفية الأحداث بالاسم أو الشاهد..." : "Filter events by name, reference..."}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64 px-4 py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#121110] text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-            />
+
+            {onAddEvent && (
+              <button
+                onClick={() => setIsAdding(true)}
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C5A028] text-[#121110] font-bold text-xs sm:text-sm shadow cursor-pointer transition-colors whitespace-nowrap"
+              >
+                <Plus size={15} />
+                <span>{t.addEvent}</span>
+              </button>
+            )}
+            <div className="relative flex-1 sm:flex-initial">
+              <input
+                type="search"
+                placeholder={
+                  lang === "ar"
+                    ? "تصفية الأحداث بالاسم أو الشاهد..."
+                    : "Filter events by name, reference..."
+                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full sm:w-60 md:w-64 px-3.5 py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#121110] text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Interactive Event Type Filter Bar */}
-      <div className="bg-white/85 dark:bg-[#1C1A17]/85 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border-2 border-[#D4AF37]/50 shadow-sm space-y-3">
+      {/* Primary Timeline View Tabs (Biblical Events vs. Adams' Chart of History) */}
+      <div className="flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 rounded-2xl bg-white/85 dark:bg-[#1C1A17]/85 backdrop-blur-md border-2 border-[#D4AF37]/50 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setActiveTab("biblical")}
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTab === "biblical"
+              ? "bg-[#800020] text-[#F3E5AB] shadow-md"
+              : "text-[#6B5E4E] dark:text-[#A99F8D] hover:text-[#800020] dark:hover:text-[#F3E5AB] hover:bg-[#800020]/5"
+          }`}
+        >
+          <BookOpen size={15} />
+          <span>{t.timelineTabBiblical}</span>
+          <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10">
+            {events.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("adams")}
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTab === "adams"
+              ? "bg-[#800020] text-[#F3E5AB] shadow-md"
+              : "text-[#6B5E4E] dark:text-[#A99F8D] hover:text-[#800020] dark:hover:text-[#F3E5AB] hover:bg-[#800020]/5"
+          }`}
+        >
+          <Landmark size={15} />
+          <span>{t.timelineTabAdams}</span>
+          <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10">
+            {events.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Active Tab Content */}
+      {activeTab === "adams" ? (
+        <AdamsChartOfHistory
+          lang={lang}
+          biblicalPeople={people}
+          biblicalEvents={events}
+        />
+      ) : (
+        <>
+          {/* Interactive Event Type Filter Bar */}
+          <div className="bg-white/85 dark:bg-[#1C1A17]/85 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border-2 border-[#D4AF37]/50 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Label + Dropdown */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -625,6 +703,8 @@ export default function Timeline({
           </div>
         </div>
       )}
+      </>
+      )}
 
       {/* Edit Modal */}
       {selectedEvent && isEditing && onUpdateEvent && (
@@ -653,6 +733,21 @@ export default function Timeline({
           lang={lang}
         />
       )}
+
+      {/* Put Person on Correct Year Modal */}
+      <PutPersonOnYearModal
+        isOpen={isPutPersonModalOpen}
+        onClose={() => {
+          setIsPutPersonModalOpen(false);
+          setPersonToPutOnYear(null);
+        }}
+        people={people}
+        initialPersonId={personToPutOnYear?.id}
+        onSavePerson={(updatedPerson) => {
+          onUpdatePerson?.(updatedPerson);
+        }}
+        lang={lang}
+      />
     </div>
   );
 }

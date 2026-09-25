@@ -80,17 +80,17 @@ export const CopticSidebar: React.FC<CopticSidebarProps> = ({
 
   return (
     <aside
-      className="w-full md:w-64 shrink-0 p-3 md:p-4 border-b md:border-b-0 md:border-r border-[#D4AF37]/40 bg-[#F3EEE0]/60 dark:bg-[#181614]/80 backdrop-blur-sm transition-colors"
+      className="w-full md:w-64 shrink-0 p-2 sm:p-3 md:p-4 border-b md:border-b-0 md:border-e border-[#D4AF37]/40 bg-[#F3EEE0]/60 dark:bg-[#181614]/80 backdrop-blur-sm transition-colors"
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
-      <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-none">
+      <nav className="flex md:flex-col gap-1 sm:gap-1.5 overflow-x-auto md:overflow-x-visible pb-1.5 md:pb-0 scrollbar-none touch-pan-x -mx-1 px-1">
         {navItems.map((item) => {
           const isActive = currentPage === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onSelectPage(item.id)}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-xs sm:text-sm whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all ${
                 isActive
                   ? "bg-gradient-to-r from-[#800020] to-[#990026] text-white shadow-md font-bold scale-[1.02]"
                   : "text-[#4A3E31] dark:text-[#C5BBAE] hover:bg-[#D4AF37]/15 hover:text-[#800020] dark:hover:text-[#F3E5AB]"

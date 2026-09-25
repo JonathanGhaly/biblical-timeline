@@ -192,18 +192,18 @@ export default function GodsLaw({
   return (
     <div className="space-y-6 pb-12" dir={isRTL ? "rtl" : "ltr"}>
       {/* Grand Top Banner with Coptic Motif */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020] via-[#910027] to-[#800020] p-6 sm:p-8 text-[#F3E5AB] shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020] via-[#910027] to-[#800020] p-4 sm:p-6 lg:p-8 text-[#F3E5AB] shadow-xl">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <CopticCross size={180} />
         </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-white/10 border border-[#D4AF37]/50 shadow-inner">
-                <Scroll size={28} className="text-[#D4AF37]" />
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-xl bg-white/10 border border-[#D4AF37]/50 shadow-inner shrink-0">
+                <Scroll size={24} className="text-[#D4AF37]" />
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-cinzel tracking-wide text-white drop-shadow-sm">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black font-cinzel tracking-wide text-white drop-shadow-sm">
                 {t.godsLawTitle}
               </h1>
             </div>
@@ -212,14 +212,14 @@ export default function GodsLaw({
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
             <button
               type="button"
               id="btn-add-gods-law"
               onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#D4AF37] hover:bg-[#E5C158] text-[#800020] shadow-lg hover:shadow-xl transition-all scale-100 hover:scale-[1.02] cursor-pointer"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#D4AF37] hover:bg-[#E5C158] text-[#800020] shadow-lg hover:shadow-xl transition-all scale-100 hover:scale-[1.02] cursor-pointer"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               <span>{t.addLaw}</span>
             </button>
           </div>

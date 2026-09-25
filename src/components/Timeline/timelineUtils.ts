@@ -110,6 +110,79 @@ export const BIBLICAL_ERAS: EraDefinition[] = [
 ];
 
 /**
+ * Determines if a person has recorded birth information:
+ * - Specific birth year (or date)
+ * - Or anchor/father age at birth
+ * - Or is Adam (the Genesis creation anchor)
+ * - Or is Sarah (known in Genesis 17:17 to be born 10 years after Abraham)
+ */
+export const hasPersonBirth = (person: Person): boolean => {
+  if (!person) return false;
+  const pAny = person as any;
+  if (
+    person.birth?.year !== undefined ||
+    typeof person.birth === "number" ||
+    pAny.birthYear !== undefined ||
+    pAny.birth_year !== undefined ||
+    pAny.dateOfBirth?.year !== undefined
+  ) {
+    return true;
+  }
+  const ageAtBirth =
+    person.anchorPersonAgeAtBirth ??
+    person.fatherAgeAtBirth ??
+    pAny.ageAtBirth ??
+    pAny.father_age_at_birth;
+  if (ageAtBirth !== undefined && ageAtBirth !== null && !isNaN(Number(ageAtBirth))) {
+    return true;
+  }
+  // Creation anchor
+  if (person.id?.toLowerCase() === "adam" || person.name?.toLowerCase() === "adam") {
+    return true;
+  }
+  // Sarah (Genesis 17:17)
+  if (person.id?.toLowerCase() === "sarah" || person.name?.toLowerCase() === "sarah") {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Determines if a person has recorded death / lifespan information:
+ * - Explicit years lived / lifespan
+ * - Or explicit death year
+ */
+export const hasPersonDeath = (person: Person): boolean => {
+  if (!person) return false;
+  const pAny = person as any;
+  if (
+    person.yearsLived !== undefined &&
+    person.yearsLived !== null &&
+    !isNaN(Number(person.yearsLived))
+  ) {
+    return true;
+  }
+  if (
+    pAny.lifespan !== undefined &&
+    pAny.lifespan !== null &&
+    !isNaN(Number(pAny.lifespan))
+  ) {
+    return true;
+  }
+  if (
+    person.death?.year !== undefined &&
+    person.death.year !== null &&
+    !isNaN(Number(person.death.year))
+  ) {
+    return true;
+  }
+  if (typeof pAny.death === "number" && !isNaN(pAny.death)) {
+    return true;
+  }
+  return false;
+};
+
+/**
  * Checks if a person's birth year is estimated from their father
  * (i.e. neither birth.year nor fatherAgeAtBirth was explicitly recorded)
  */
@@ -207,6 +280,10 @@ export const getBirthYear = (
     const spouse = peopleList.find((p) => p.id === spouseId);
     if (spouse) {
       const spouseBirth = getBirthYear(spouse, peopleList, visited);
+      // Genesis 17:17: Abraham was 100, Sarah was 90 (born 10 years after Abraham)
+      if (person.id?.toLowerCase() === "sarah" || person.name?.toLowerCase() === "sarah") {
+        return spouseBirth + 10;
+      }
       return spouseBirth + 2;
     }
   }

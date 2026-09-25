@@ -564,25 +564,36 @@ export default function AddEventModal({
             )}
 
             {/* Precision Toggle */}
-            <div className="flex items-center justify-between pt-2 border-t border-[#D4AF37]/30">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#800020] dark:text-[#D4AF37]">
-                <Calendar size={13} />
-                <span>{lang === "ar" ? "دقة التاريخ الزمني:" : "Date Precision:"}</span>
-                <span className="text-[10px] text-[#6B5E4E] dark:text-[#A99F8D] font-normal">
-                  ({lang === "ar" ? "انقر للتبديل" : "Click to toggle"})
-                </span>
+            <div className="space-y-1.5 pt-2 border-t border-[#D4AF37]/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-[#800020] dark:text-[#D4AF37]">
+                  <Calendar size={13} />
+                  <span>{lang === "ar" ? "دقة التاريخ الزمني:" : "Date Precision:"}</span>
+                  <span className="text-[10px] text-[#6B5E4E] dark:text-[#A99F8D] font-normal">
+                    ({lang === "ar" ? "انقر للتبديل" : "Click to toggle"})
+                  </span>
+                </div>
+                <PrecisionIndicator
+                  precision={datePrecision}
+                  lang={lang}
+                  interactive={true}
+                  onToggle={() =>
+                    setDatePrecision((prev) =>
+                      prev === "exact" || prev === "calculated" ? "approximate" : "exact"
+                    )
+                  }
+                  size="md"
+                />
               </div>
-              <PrecisionIndicator
-                precision={datePrecision}
-                lang={lang}
-                interactive={true}
-                onToggle={() =>
-                  setDatePrecision((prev) =>
-                    prev === "exact" || prev === "calculated" ? "approximate" : "exact"
-                  )
-                }
-                size="md"
-              />
+              <p className="text-[11px] text-[#6B5E4E] dark:text-[#A99F8D]">
+                {datePrecision === "exact" || datePrecision === "calculated"
+                  ? lang === "ar"
+                    ? "✓ تاريخ مؤكد ومحسوب — يُضاف هذا الحدث إلى جدول سيباستيان آدامز التاريخي."
+                    : "✓ Confirmed / calculated date — this event will be included in Adams Synchronological Chart."
+                  : lang === "ar"
+                    ? "⚠️ تاريخ تقديري / غير مؤكد — لن يُضاف إلى جدول سيباستيان آدامز التزامني (لقاعدة اليقين التاريخي)."
+                    : "⚠️ Approximate / uncertain date — omitted from Adams Synchronological Chart per certainty rules."}
+              </p>
             </div>
           </div>
 

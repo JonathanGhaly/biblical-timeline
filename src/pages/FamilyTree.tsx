@@ -11,6 +11,7 @@ import {
   type TreeNodeData,
 } from "../components/Tree/InteractiveTreeNode";
 import { PersonDetailModal } from "../components/Tree/PersonDetailModal";
+import { SvgGenerationalTree } from "../components/Tree/SvgGenerationalTree";
 import {
   Heart,
   GitCommit,
@@ -21,6 +22,7 @@ import {
   Minimize2,
   GitBranch,
   ListOrdered,
+  Workflow,
   Filter,
   X,
 } from "lucide-react";
@@ -32,7 +34,7 @@ type FamilyTreeProps = {
 };
 
 export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps) {
-  const [viewMode, setViewMode] = useState<"tree" | "sequential">("tree");
+  const [viewMode, setViewMode] = useState<"tree" | "svg" | "sequential">("svg");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedEra, setSelectedEra] = useState<string>("all");
   const [selectedPersonForModal, setSelectedPersonForModal] =
@@ -257,12 +259,12 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
   return (
     <div className="space-y-8 animate-fadeIn" dir={isRTL ? "rtl" : "ltr"}>
       {/* Page Header */}
-      <div className="p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#D4AF37]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#800020]/25 shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-4 sm:p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#D4AF37]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#800020]/25 shadow-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <CopticCross size={26} />
-              <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+              <CopticCross size={24} />
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
                 {t.treeTitle}
               </h2>
             </div>
@@ -272,40 +274,52 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
           </div>
 
           {/* View Mode Toggle & Expand Controls */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* View Mode Switcher */}
             <div className="flex items-center p-1 rounded-xl border border-[#D4AF37]/50 bg-white/80 dark:bg-[#121110] shadow-sm">
               <button
                 onClick={() => setViewMode("tree")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                   viewMode === "tree"
                     ? "bg-[#800020] text-white shadow"
                     : "text-[#800020] dark:text-[#D4AF37] hover:bg-[#D4AF37]/10"
                 }`}
               >
-                <GitBranch size={14} />
+                <GitBranch size={13} />
                 <span>{t.interactiveTree}</span>
               </button>
 
               <button
+                onClick={() => setViewMode("svg")}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  viewMode === "svg"
+                    ? "bg-[#800020] text-white shadow"
+                    : "text-[#800020] dark:text-[#D4AF37] hover:bg-[#D4AF37]/10"
+                }`}
+              >
+                <Workflow size={13} />
+                <span>{t.svgTreeView || "SVG Tree"}</span>
+              </button>
+
+              <button
                 onClick={() => setViewMode("sequential")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                   viewMode === "sequential"
                     ? "bg-[#800020] text-white shadow"
                     : "text-[#800020] dark:text-[#D4AF37] hover:bg-[#D4AF37]/10"
                 }`}
               >
-                <ListOrdered size={14} />
+                <ListOrdered size={13} />
                 <span>{t.sequentialView}</span>
               </button>
             </div>
 
             {/* Tree Branch Expansion Buttons */}
             {viewMode === "tree" && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <button
                   onClick={handleExpandAll}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#1C1A17] text-xs font-bold text-[#800020] dark:text-[#F3E5AB] hover:bg-[#D4AF37]/20 transition-colors shadow-sm"
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#1C1A17] text-xs font-bold text-[#800020] dark:text-[#F3E5AB] hover:bg-[#D4AF37]/20 transition-colors shadow-sm"
                   title={t.expandAll}
                 >
                   <Maximize2 size={13} />
@@ -313,7 +327,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
                 </button>
                 <button
                   onClick={handleCollapseAll}
-                  className="flex items-center gap-1 px-3 py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#1C1A17] text-xs font-bold text-[#800020] dark:text-[#F3E5AB] hover:bg-[#D4AF37]/20 transition-colors shadow-sm"
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-[#D4AF37]/60 bg-white dark:bg-[#1C1A17] text-xs font-bold text-[#800020] dark:text-[#F3E5AB] hover:bg-[#D4AF37]/20 transition-colors shadow-sm"
                   title={t.collapseAll}
                 >
                   <Minimize2 size={13} />
@@ -325,9 +339,9 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
         </div>
 
         {/* Search & Era Quick Filter Toolbar */}
-        <div className="mt-5 pt-4 border-t border-[#D4AF37]/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-[#D4AF37]/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative w-full md:max-w-md">
             <Search
               size={15}
               className={`absolute top-1/2 -translate-y-1/2 text-[#8C7B6B] ${
@@ -356,7 +370,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
           </div>
 
           {/* Era Quick Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-xs">
             <span className="font-bold text-[#800020] dark:text-[#D4AF37] text-[11px] flex items-center gap-1">
               <Filter size={12} />
               {lang === "ar" ? "الحقبة:" : "Era:"}
@@ -370,7 +384,7 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
               <button
                 key={era.id}
                 onClick={() => setSelectedEra(era.id)}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors border ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg font-semibold transition-colors border text-[11px] sm:text-xs ${
                   selectedEra === era.id
                     ? "border-[#800020] bg-[#800020] text-white dark:border-[#D4AF37] dark:bg-[#D4AF37] dark:text-[#121110]"
                     : "border-[#D4AF37]/40 bg-white/70 dark:bg-[#1A1816] text-[#6B5E4E] dark:text-[#C5BAA8] hover:bg-[#D4AF37]/15"
@@ -410,7 +424,20 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
         </div>
       )}
 
-      {/* VIEW MODE 2: SEQUENTIAL FAMILY UNITS (Ordered Father -> Sons) */}
+      {/* VIEW MODE 2: TOP-TO-BOTTOM GENERATIONAL SVG TREE */}
+      {viewMode === "svg" && (
+        <div className="pb-8 sm:pb-12">
+          <SvgGenerationalTree
+            people={computedPeople}
+            lang={lang}
+            searchTerm={searchTerm}
+            selectedEra={selectedEra}
+            onSelectPerson={(p) => setSelectedPersonForModal(p)}
+          />
+        </div>
+      )}
+
+      {/* VIEW MODE 3: SEQUENTIAL FAMILY UNITS (Ordered Father -> Sons) */}
       {viewMode === "sequential" && (
         <div className="space-y-6">
           <div className="p-3 rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/10 flex items-center justify-between text-xs font-bold text-[#800020] dark:text-[#F3E5AB]">

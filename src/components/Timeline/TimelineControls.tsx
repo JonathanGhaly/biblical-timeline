@@ -84,11 +84,11 @@ export const TimelineControls: React.FC<TimelineControlsProps> = ({
   const isRTL = lang === "ar";
 
   return (
-    <div className="space-y-3 bg-white/85 dark:bg-[#1C1A17]/85 backdrop-blur-md p-4 rounded-2xl border-2 border-[#D4AF37]/50 shadow-sm">
+    <div className="space-y-3 bg-white/85 dark:bg-[#1C1A17]/85 backdrop-blur-md p-3 sm:p-4 rounded-2xl border-2 border-[#D4AF37]/50 shadow-sm">
       {/* Top Row: Search, View Mode & Zoom Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
         {/* Search Bar */}
-        <div className="relative flex-1 min-w-[220px] max-w-md">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px] max-w-md">
           <Search
             size={16}
             className={`absolute top-1/2 -translate-y-1/2 ${
@@ -124,7 +124,7 @@ export const TimelineControls: React.FC<TimelineControlsProps> = ({
           <button
             id="view-mode-compact-btn"
             onClick={() => onViewModeChange("compact")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === "compact"
                 ? "bg-gradient-to-r from-[#800020] to-[#991B1B] text-[#F3E5AB] shadow-sm"
                 : "text-[#6B5E4E] dark:text-[#A99F8D] hover:text-[#800020] dark:hover:text-[#F3E5AB]"
@@ -137,7 +137,7 @@ export const TimelineControls: React.FC<TimelineControlsProps> = ({
           <button
             id="view-mode-expanded-btn"
             onClick={() => onViewModeChange("expanded")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === "expanded"
                 ? "bg-gradient-to-r from-[#800020] to-[#991B1B] text-[#F3E5AB] shadow-sm"
                 : "text-[#6B5E4E] dark:text-[#A99F8D] hover:text-[#800020] dark:hover:text-[#F3E5AB]"

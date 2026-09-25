@@ -42,29 +42,29 @@ export const CopticHeader: React.FC<CopticHeaderProps> = ({
       {/* Decorative Gold Top Stripe */}
       <div className="h-1 w-full bg-gradient-to-r from-[#800020] via-[#D4AF37] to-[#1A365D]" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand & Coptic Emblem */}
-        <div className="flex items-center gap-3.5">
-          <div className="relative p-1 rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#800020]/20 border border-[#D4AF37]/40 shadow-sm flex items-center justify-center">
-            <CopticCross size={34} />
+        <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+          <div className="relative p-1 rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#800020]/20 border border-[#D4AF37]/40 shadow-sm flex items-center justify-center shrink-0">
+            <CopticCross size={28} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-wide font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="text-base sm:text-xl md:text-2xl font-extrabold tracking-wide font-cinzel text-[#800020] dark:text-[#F3E5AB] truncate max-w-[150px] xs:max-w-[220px] sm:max-w-none">
                 {t.appTitle}
               </h1>
-              <span className="hidden md:inline-flex items-center text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB]">
+              <span className="hidden md:inline-flex items-center text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full border border-[#D4AF37] bg-[#D4AF37]/15 text-[#8C6F12] dark:text-[#F3E5AB] shrink-0">
                 {t.copticTradition}
               </span>
             </div>
-            <p className="text-xs text-[#6B5E4E] dark:text-[#A99F8D] truncate max-w-[280px] sm:max-w-md">
+            <p className="hidden sm:block text-xs text-[#6B5E4E] dark:text-[#A99F8D] truncate max-w-[280px] sm:max-w-md">
               {t.appSubtitle}
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Gist Live Status Pill */}
           <button
             onClick={onOpenGistModal}
@@ -112,7 +112,7 @@ export const CopticHeader: React.FC<CopticHeaderProps> = ({
             className="sm:hidden p-2 rounded-xl border border-[#D4AF37]/50 text-[#800020] dark:text-[#D4AF37] hover:bg-[#D4AF37]/15"
             title={t.gistConfigure}
           >
-            <Database size={17} />
+            <Database size={16} />
           </button>
 
           {/* Dark / Light Theme Toggle */}
@@ -121,16 +121,16 @@ export const CopticHeader: React.FC<CopticHeaderProps> = ({
             className="p-2 rounded-xl border border-[#D4AF37]/50 text-[#800020] dark:text-[#D4AF37] hover:bg-[#D4AF37]/15 transition-all shadow-sm"
             title={theme === "dark" ? "Light Parchment Mode" : "Dark Coptic Crypt Mode"}
           >
-            {theme === "dark" ? <Sun size={17} className="text-[#D4AF37]" /> : <Moon size={17} />}
+            {theme === "dark" ? <Sun size={16} className="text-[#D4AF37]" /> : <Moon size={16} />}
           </button>
 
           {/* Language Switcher (English ⇄ العربية) */}
           <button
             onClick={onToggleLang}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#D4AF37]/20 to-[#800020]/20 hover:from-[#D4AF37]/30 hover:to-[#800020]/30 font-bold text-xs sm:text-sm text-[#800020] dark:text-[#F3E5AB] shadow transition-all hover:scale-105"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#D4AF37]/20 to-[#800020]/20 hover:from-[#D4AF37]/30 hover:to-[#800020]/30 font-bold text-xs sm:text-sm text-[#800020] dark:text-[#F3E5AB] shadow transition-all hover:scale-105"
             title={lang === "en" ? "التبديل إلى اللغة العربية" : "Switch to English"}
           >
-            <Globe size={15} />
+            <Globe size={14} />
             <span>{lang === "en" ? "العربية" : "English"}</span>
           </button>
         </div>

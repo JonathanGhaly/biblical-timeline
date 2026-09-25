@@ -231,7 +231,14 @@ export default function App() {
         return <FamilyTree people={people} lang={lang} />;
 
       case "family-timeline":
-        return <TimelinePage people={people} events={events} lang={lang} />;
+        return (
+          <TimelinePage
+            people={people}
+            events={events}
+            onUpdatePerson={handleUpdatePerson}
+            lang={lang}
+          />
+        );
 
       case "timeline":
         return (
@@ -241,6 +248,7 @@ export default function App() {
             onAddEvent={handleAddEvent}
             onUpdateEvent={handleUpdateEvent}
             onDeleteEvent={handleDeleteEvent}
+            onUpdatePerson={handleUpdatePerson}
             lang={lang}
           />
         );
@@ -327,7 +335,7 @@ export default function App() {
 
         <main
           className={`flex-1 min-w-0 ${
-            currentPage === "map" ? "p-0 h-full overflow-hidden" : "p-4 sm:p-6 lg:p-8"
+            currentPage === "map" ? "p-0 h-full overflow-hidden" : "p-3 sm:p-5 lg:p-8"
           }`}
         >
           {renderPage()}

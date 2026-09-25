@@ -1,5 +1,5 @@
 import React from "react";
-import { X, BookOpen, Clock, Heart, Sparkles, MapPin, Users } from "lucide-react";
+import { X, BookOpen, Clock, Heart, Sparkles, MapPin, Users, Calendar } from "lucide-react";
 import type { Language, Person } from "../../types/genealogy";
 import {
   UI_TRANSLATIONS,
@@ -19,6 +19,7 @@ interface TimelineDetailModalProps {
   onClose: () => void;
   lang: Language;
   allPeople: Person[];
+  onSetPersonYear?: (person: Person) => void;
 }
 
 export const TimelineDetailModal: React.FC<TimelineDetailModalProps> = ({
@@ -26,6 +27,7 @@ export const TimelineDetailModal: React.FC<TimelineDetailModalProps> = ({
   onClose,
   lang,
   allPeople,
+  onSetPersonYear,
 }) => {
   if (!item) return null;
 
@@ -118,6 +120,27 @@ export const TimelineDetailModal: React.FC<TimelineDetailModalProps> = ({
                     ? "📍 تاريخ الميلاد غير مسجل؛ تم تقديره ووضعه زمنياً تحت والده."
                     : "📍 Birth year not explicitly recorded; placed chronologically under their father."}
                 </p>
+              )}
+
+              {/* Action Button: Put / Set Person on Correct Year */}
+              {onSetPersonYear && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSetPersonYear(item.data);
+                      onClose();
+                    }}
+                    className="w-full py-1.5 px-3 rounded-lg bg-[#800020] hover:bg-[#9B1238] text-[#F3E5AB] border border-[#D4AF37] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all"
+                  >
+                    <Calendar size={13} />
+                    <span>
+                      {isRTL
+                        ? "تعديل وضبط سنة الشخص على الخط الزمني"
+                        : "Set / Correct Year on Timeline"}
+                    </span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -315,16 +338,38 @@ export const TimelineDetailModal: React.FC<TimelineDetailModalProps> = ({
             )}
 
             {item.data.personIds && item.data.personIds.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-[#1A365D] dark:text-[#90CDF4]">
-                <Users size={14} />
-                <span className="font-semibold">
-                  {item.data.personIds
-                    .map((id) => {
-                      const person = allPeople.find((p) => p.id === id);
-                      return person ? getPersonDisplayName(person, lang) : id;
-                    })
-                    .join(", ")}
-                </span>
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center gap-1.5 text-xs text-[#1A365D] dark:text-[#90CDF4] font-semibold">
+                  <Users size={14} />
+                  <span>{isRTL ? "الشخصيات المرتبطة بالحدث:" : "People connected to event:"}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {item.data.personIds.map((id) => {
+                    const person = allPeople.find((p) => p.id === id);
+                    if (!person) return null;
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 dark:bg-[#121110] border border-[#D4AF37]/40 text-xs font-medium"
+                      >
+                        <span>{getPersonDisplayName(person, lang)}</span>
+                        {onSetPersonYear && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSetPersonYear(person);
+                              onClose();
+                            }}
+                            className="p-0.5 rounded hover:bg-[#800020]/20 text-[#800020] dark:text-[#D4AF37] ms-1"
+                            title={isRTL ? "ضبط سنة هذا الشخص" : "Set this person's year"}
+                          >
+                            <Calendar size={12} />
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

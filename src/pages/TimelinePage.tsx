@@ -7,9 +7,10 @@ import {
   formatYearDisplay,
   localizeBiblicalReference,
 } from "../utils/i18n";
-import { Clock, Sparkles, Heart, Users } from "lucide-react";
+import { Clock, Sparkles, Heart, Users, Landmark } from "lucide-react";
 import { resolveEventYear } from "../utils/chronology";
 import { CopticCross } from "../components/Coptic/CopticCross";
+import { AdamsChartOfHistory } from "../components/Timeline/AdamsChartOfHistory";
 import {
   TimelineControls,
 } from "../components/Timeline/TimelineControls";
@@ -29,6 +30,8 @@ import {
   type TimelineSelectedItem,
   getBirthYear,
   isBirthYearEstimated,
+  hasPersonBirth,
+  hasPersonDeath,
   packIntoLanes,
   deriveMarriages,
   generateTicks,
@@ -37,16 +40,20 @@ import {
   guessEventTypeForLegacyEvent,
   getEventTypeLabel,
 } from "../data/biblicalEventTypes";
+import { PutPersonOnYearModal } from "../components/Timeline/PutPersonOnYearModal";
+import { Calendar, UserCheck, AlertCircle } from "lucide-react";
 
 type TimelinePageProps = {
   people: Person[];
   events: BiblicalEvent[];
+  onUpdatePerson?: (person: Person) => void;
   lang?: Language;
 };
 
 export default function TimelinePage({
   people,
   events,
+  onUpdatePerson,
   lang = "en",
 }: TimelinePageProps) {
   const [selectedItem, setSelectedItem] = useState<TimelineSelectedItem | null>(null);
@@ -56,6 +63,9 @@ export default function TimelinePage({
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [isFitToScreen, setIsFitToScreen] = useState<boolean>(true);
   const [selectedEventType, setSelectedEventType] = useState<string>("all");
+  const [activeTimelineTab, setActiveTimelineTab] = useState<"lifespans" | "adams">("lifespans");
+  const [isPutPersonModalOpen, setIsPutPersonModalOpen] = useState<boolean>(false);
+  const [personToPutOnYear, setPersonToPutOnYear] = useState<Person | null>(null);
 
   // Layer visibility toggles
   const [showFigures, setShowFigures] = useState<boolean>(true);
@@ -103,8 +113,14 @@ export default function TimelinePage({
   }, []);
 
   // 1. Process People with Lifespans & Parent Relationship
+  // Only include people who have both birth and death (or lifespan) recorded
+  // Per user request: "on the الاعمار و الاحداث dont add any one who doesn't have birth or death"
   const peopleWithLifespans = useMemo<TimelinePersonItem[]>(() => {
-    const list = people.map((person) => {
+    const eligiblePeople = people.filter((person) => {
+      return hasPersonBirth(person) && hasPersonDeath(person);
+    });
+
+    const list = eligiblePeople.map((person) => {
       const birthYear = getBirthYear(person, people);
       const isEstimated = isBirthYearEstimated(person);
       const pAny = person as any;
@@ -139,6 +155,11 @@ export default function TimelinePage({
 
     return list.sort((a, b) => a.birthYear - b.birthYear);
   }, [people, lang]);
+
+  // People who are not placed on the timeline because they lack birth/death dates
+  const unplacedPeople = useMemo(() => {
+    return people.filter((p) => !(hasPersonBirth(p) && hasPersonDeath(p)));
+  }, [people]);
 
   // 2. Process Marriages
   const derivedMarriagesList = useMemo<TimelineMarriageItem[]>(() => {
@@ -416,24 +437,24 @@ export default function TimelinePage({
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#1A365D]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#1A365D]/25 shadow-md">
         <div>
           <div className="flex items-center gap-2">
-            <CopticCross size={26} />
-            <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+            <CopticCross size={24} />
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
               {t.navLifespans}
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-[#6B5E4E] dark:text-[#A99F8D] mt-1 max-w-2xl leading-relaxed">
             {isRTL
-              ? "استكشف تداخل أعمار الآباء والأحداث بمسارات متوازية مدمجة؛ حيث تظهر أسماء الشخصيات كاملة وتُوضع الشخصيات غير محددة تاريخ الميلاد تحت آبائها مباشرة."
-              : "Explore biblical patriarch lifespans with bars fitted to names and figures of unspecified birth dates neatly positioned under their fathers."}
+              ? "استكشف تداخل أعمار الآباء والأحداث بمسارات متوازية مدمجة وفق الأعمار والتواريخ المسجلة في أسفار العهد القديم."
+              : "Explore biblical patriarch lifespans with compact parallel bars for figures with recorded biblical lifespans and historical events."}
           </p>
         </div>
 
         {/* Quick Stats Pill */}
-        <div className="flex items-center gap-2 text-xs font-mono font-bold bg-white/80 dark:bg-[#121110] px-3.5 py-2 rounded-xl border border-[#D4AF37]/50 text-[#800020] dark:text-[#F3E5AB] shadow-xs shrink-0">
-          <Clock size={15} className="text-[#D4AF37]" />
+        <div className="flex items-center gap-2 text-xs font-mono font-bold bg-white/80 dark:bg-[#121110] px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-[#D4AF37]/50 text-[#800020] dark:text-[#F3E5AB] shadow-xs shrink-0 self-start sm:self-auto">
+          <Clock size={14} className="text-[#D4AF37]" />
           <span>
             {formatYearDisplay(minYear, lang)} — {formatYearDisplay(maxYear, lang)}
           </span>
@@ -443,8 +464,99 @@ export default function TimelinePage({
         </div>
       </div>
 
-      {/* Interactive Controls & Filters */}
-      <TimelineControls
+      {/* Primary Timeline View Tabs (Lifespans & Events vs. Adams' Chart of History) */}
+      <div className="flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 rounded-2xl bg-white/85 dark:bg-[#1C1A17]/85 backdrop-blur-md border-2 border-[#D4AF37]/50 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setActiveTimelineTab("lifespans")}
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTimelineTab === "lifespans"
+              ? "bg-[#800020] text-[#F3E5AB] shadow-md"
+              : "text-[#6B5E4E] dark:text-[#A99F8D] hover:text-[#800020] dark:hover:text-[#F3E5AB] hover:bg-[#800020]/5"
+          }`}
+        >
+          <Clock size={15} />
+          <span>{t.navLifespans}</span>
+          <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10">
+            {filteredPeople.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTimelineTab("adams")}
+          className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeTimelineTab === "adams"
+              ? "bg-[#800020] text-[#F3E5AB] shadow-md"
+              : "text-[#6B5E4E] dark:text-[#A99F8D] hover:text-[#800020] dark:hover:text-[#F3E5AB] hover:bg-[#800020]/5"
+          }`}
+        >
+          <Landmark size={15} />
+          <span>{t.timelineTabAdams}</span>
+          <span className="text-[10px] sm:text-[11px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10">
+            {events.length}
+          </span>
+        </button>
+      </div>
+
+      {activeTimelineTab === "adams" ? (
+        <AdamsChartOfHistory
+          lang={lang}
+          biblicalPeople={people}
+          biblicalEvents={events}
+        />
+      ) : (
+        <>
+          {/* Quick Actions: Put Person on Correct Year & Unplaced People */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-gradient-to-r from-[#800020]/10 via-[#FBF8EF] to-[#D4AF37]/10 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#800020]/20 border border-[#D4AF37]/50 shadow-xs">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-[#800020] dark:text-[#F3E5AB] flex items-center gap-1.5">
+                <Calendar size={15} className="text-[#D4AF37]" />
+                <span>{isRTL ? "تثبيت وضبط الأشخاص:" : "Chronological Person Placement:"}</span>
+              </span>
+              <span className="text-[11px] text-[#6B5E4E] dark:text-[#A99F8D]">
+                {isRTL
+                  ? `تم وضع ${peopleWithLifespans.length} شخص على سنواتهم الصحيحة`
+                  : `${peopleWithLifespans.length} people placed on their correct years`}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {unplacedPeople.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPersonToPutOnYear(unplacedPeople[0]);
+                    setIsPutPersonModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title={isRTL ? "أشخاص بدون تواريخ ميلاد/وفاة" : "People missing birth or death"}
+                >
+                  <AlertCircle size={13} />
+                  <span>
+                    {isRTL
+                      ? `${unplacedPeople.length} غير مثبت · اضغط لضبط سنته`
+                      : `${unplacedPeople.length} unplaced · Click to put on year`}
+                  </span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPersonToPutOnYear(null);
+                  setIsPutPersonModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#800020] via-[#9B1238] to-[#800020] text-[#F3E5AB] border border-[#D4AF37] text-xs font-bold shadow-sm hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Calendar size={13} />
+                <span>{isRTL ? "وضع شخص على سنته الصحيحة" : "Put Person on Correct Year"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Controls & Filters */}
+          <TimelineControls
         lang={lang}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -578,7 +690,7 @@ export default function TimelinePage({
               {/* Floating Detailed Hover Tooltip on Item */}
               {hoveredTooltip && (
                 <div
-                  className="absolute pointer-events-none z-50 p-3 rounded-xl bg-[#FBF8EF] dark:bg-[#121110] text-[#2D2721] dark:text-[#E6E0D4] text-xs shadow-2xl border-2 border-[#D4AF37] max-w-xs space-y-1.5"
+                  className="absolute pointer-events-none z-[100] p-3 rounded-xl bg-[#FBF8EF] dark:bg-[#121110] text-[#2D2721] dark:text-[#E6E0D4] text-xs shadow-2xl border-2 border-[#D4AF37] max-w-xs space-y-1.5"
                   style={{
                     [isRTL ? "right" : "left"]: `${Math.min(
                       timelineTrackWidth - 220,
@@ -709,19 +821,19 @@ export default function TimelinePage({
                       {packedPeopleLanes.map((lane, laneIdx) => (
                         <div
                           key={`lane_${laneIdx}`}
-                          className="relative h-7 w-full rounded-md hover:bg-[#D4AF37]/5 transition-colors"
+                          className="relative h-7 w-full rounded-md hover:bg-[#D4AF37]/5 transition-colors overflow-visible z-10 hover:z-30"
                         >
                           {lane.map(({ person, birthYear, deathYear, duration, isEstimatedBirth, isDeathUnknown, fatherName }, pIdx) => {
                             const displayName = getPersonDisplayName(person, lang);
                             const pos = getPosPx(birthYear);
                             const widthPx = getWidthPx(duration);
-                            // Bar is sized to guarantee the person's name always fits comfortably
-                            const minNameWidthPx = Math.max(92, Math.ceil(displayName.length * 8 + 36));
-                            const effectiveBarWidth = Math.max(widthPx, minNameWidthPx);
+                            // Bar is sized to person's actual lifespan duration by default, and ONLY fits full text when hovered
+                            const textFitWidthPx = Math.max(widthPx, Math.ceil(displayName.length * 8.5 + 46));
                             const matched = isMatch(person);
                             const isFemale = person.gender === "female";
                             const isHovered = hoveredItemId === person.id;
                             const isOtherHovered = Boolean(hoveredItemId && !isHovered);
+                            const effectiveBarWidth = isHovered ? textFitWidthPx : Math.max(10, widthPx);
 
                             return (
                               <div
@@ -763,16 +875,16 @@ export default function TimelinePage({
                                 }}
                                 className={`absolute top-0.5 bottom-0.5 rounded-lg px-2 flex items-center justify-between text-[11px] font-bold cursor-pointer transition-all duration-150 shadow-xs border ${
                                   matched
-                                    ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] animate-pulse z-20"
+                                    ? "ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] animate-pulse"
                                     : ""
                                 } ${
                                   isHovered
-                                    ? "z-40 scale-[1.04] shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] brightness-110 !opacity-100"
+                                    ? "z-[70] scale-[1.04] shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] brightness-110 !opacity-100"
                                     : isOtherHovered
-                                    ? "opacity-35"
+                                    ? "opacity-35 z-10"
                                     : term && !matched
-                                    ? "opacity-35 hover:opacity-100"
-                                    : "opacity-100"
+                                    ? "opacity-35 hover:opacity-100 z-10"
+                                    : "opacity-100 z-10"
                                 } ${
                                   isFemale
                                     ? "bg-gradient-to-r from-[#991B1B] via-[#BE185D] to-[#800020] text-white border-[#F472B6]"
@@ -781,7 +893,8 @@ export default function TimelinePage({
                                 style={{
                                   [isRTL ? "right" : "left"]: `${pos}px`,
                                   width: `${effectiveBarWidth}px`,
-                                  minWidth: `${minNameWidthPx}px`,
+                                  minWidth: isHovered ? `${textFitWidthPx}px` : undefined,
+                                  zIndex: isHovered ? 70 : matched ? 20 : 10,
                                 }}
                                 title={
                                   isDeathUnknown || !person.yearsLived
@@ -789,7 +902,7 @@ export default function TimelinePage({
                                     : `${displayName} (${duration} ${t.years})${fatherName ? ` - ${isRTL ? `ابن ${fatherName}` : `son of ${fatherName}`}` : ""}`
                                 }
                               >
-                                <div className="flex items-center justify-between gap-1.5 w-full whitespace-nowrap overflow-hidden px-0.5">
+                                <div className={`flex items-center justify-between gap-1.5 w-full whitespace-nowrap ${isHovered ? "overflow-visible" : "overflow-hidden"} px-0.5`}>
                                   <div className="flex items-center gap-1 min-w-0">
                                     {isEstimatedBirth && (
                                       <span
@@ -799,11 +912,11 @@ export default function TimelinePage({
                                         ↳
                                       </span>
                                     )}
-                                    <span className="font-cinzel font-bold text-[11px] truncate" title={displayName}>
+                                    <span className={`font-cinzel font-bold text-[11px] ${isHovered ? "overflow-visible" : "truncate"}`} title={displayName}>
                                       {displayName}
                                     </span>
                                   </div>
-                                  {!isDeathUnknown && person.yearsLived !== undefined && (
+                                  {(isHovered || widthPx >= 65) && !isDeathUnknown && person.yearsLived !== undefined && (
                                     <span className="text-[10px] opacity-85 font-mono shrink-0">
                                       ({duration}y)
                                     </span>
@@ -822,24 +935,24 @@ export default function TimelinePage({
                         const displayName = getPersonDisplayName(person, lang);
                         const pos = getPosPx(birthYear);
                         const widthPx = getWidthPx(duration);
-                        const minNameWidthPx = Math.max(92, Math.ceil(displayName.length * 8 + 36));
-                        const effectiveBarWidth = Math.max(widthPx, minNameWidthPx);
+                        const textFitWidthPx = Math.max(widthPx, Math.ceil(displayName.length * 8.5 + 46));
                         const matched = isMatch(person);
                         const isFemale = person.gender === "female";
                         const isHovered = hoveredItemId === person.id;
                         const isOtherHovered = Boolean(hoveredItemId && !isHovered);
+                        const effectiveBarWidth = isHovered ? textFitWidthPx : Math.max(10, widthPx);
 
                         return (
                           <div
                             key={`exp_p_${person.id}_${index}`}
                             className={`flex items-center h-8 hover:bg-[#D4AF37]/10 rounded-lg transition-all cursor-pointer group ${
                               isHovered
-                                ? "scale-[1.01] brightness-110 z-30"
+                                ? "scale-[1.01] brightness-110 z-[70]"
                                 : isOtherHovered
-                                ? "opacity-35"
+                                ? "opacity-35 z-10"
                                 : term && !matched
-                                ? "opacity-35 hover:opacity-100"
-                                : "opacity-100"
+                                ? "opacity-35 hover:opacity-100 z-10"
+                                : "opacity-100 z-10"
                             }`}
                             onMouseEnter={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
@@ -915,10 +1028,11 @@ export default function TimelinePage({
                                 style={{
                                   [isRTL ? "right" : "left"]: `${pos}px`,
                                   width: `${effectiveBarWidth}px`,
-                                  minWidth: `${minNameWidthPx}px`,
+                                  minWidth: isHovered ? `${textFitWidthPx}px` : undefined,
+                                  zIndex: isHovered ? 70 : matched ? 20 : 10,
                                 }}
                               >
-                                <span className="truncate pe-1 font-cinzel">
+                                <span className={`${isHovered ? "overflow-visible" : "truncate"} pe-1 font-cinzel`}>
                                   {displayName}
                                   {!isDeathUnknown && person.yearsLived !== undefined
                                     ? ` (${duration} ${t.years})`
@@ -984,16 +1098,16 @@ export default function TimelinePage({
                                 }}
                                 className={`absolute top-0 bottom-0 px-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#121110] text-[10px] font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer border border-[#8C6F12] whitespace-nowrap ${
                                   isHovered
-                                    ? "z-40 scale-110 shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] brightness-110 !opacity-100"
+                                    ? "z-[70] scale-105 shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#800020] brightness-110 !opacity-100"
                                     : isOtherHovered
-                                    ? "opacity-35"
-                                    : "opacity-100"
+                                    ? "opacity-35 z-10"
+                                    : "opacity-100 z-10"
                                 }`}
                                 style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                                 title={`${title} (${formatYearDisplay(marriage.year, lang)})`}
                               >
                                 <Heart size={10} className="fill-current text-[#800020] shrink-0" />
-                                <span className="truncate max-w-[130px]">{title}</span>
+                                <span className={isHovered ? "max-w-none whitespace-nowrap" : "truncate max-w-[130px]"}>{title}</span>
                               </div>
                             );
                           })}
@@ -1110,16 +1224,16 @@ export default function TimelinePage({
                                 }}
                                 className={`absolute top-0 bottom-0 px-2.5 rounded-full bg-gradient-to-r from-[#1A365D] via-[#244b7d] to-[#1A365D] text-white text-[10px] font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer border border-[#D4AF37] whitespace-nowrap ${
                                   isHovered
-                                    ? "z-40 scale-110 shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#1A365D] brightness-110 !opacity-100"
+                                    ? "z-[70] scale-105 shadow-2xl ring-2 ring-[#D4AF37] ring-offset-2 ring-offset-[#1A365D] brightness-110 !opacity-100"
                                     : isOtherHovered
-                                    ? "opacity-35"
-                                    : "opacity-100"
+                                    ? "opacity-35 z-10"
+                                    : "opacity-100 z-10"
                                 }`}
                                 style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                                 title={`${displayTitle} (${formatYearDisplay(year, lang)})`}
                               >
                                 <Sparkles size={10} className="text-[#D4AF37] shrink-0" />
-                                <span className="truncate max-w-[150px]">{displayTitle}</span>
+                                <span className={isHovered ? "max-w-none whitespace-nowrap" : "truncate max-w-[150px]"}>{displayTitle}</span>
                                 <span className="opacity-80 font-mono text-[9px]">
                                   {formatYearDisplay(year, lang)}
                                 </span>
@@ -1195,6 +1309,8 @@ export default function TimelinePage({
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Comprehensive Localized Item Detail Modal */}
       <TimelineDetailModal
@@ -1202,6 +1318,25 @@ export default function TimelinePage({
         onClose={() => setSelectedItem(null)}
         lang={lang}
         allPeople={people}
+        onSetPersonYear={(person) => {
+          setPersonToPutOnYear(person);
+          setIsPutPersonModalOpen(true);
+        }}
+      />
+
+      {/* Put Person on Correct Year Modal */}
+      <PutPersonOnYearModal
+        isOpen={isPutPersonModalOpen}
+        onClose={() => {
+          setIsPutPersonModalOpen(false);
+          setPersonToPutOnYear(null);
+        }}
+        people={people}
+        initialPersonId={personToPutOnYear?.id}
+        onSavePerson={(updatedPerson) => {
+          onUpdatePerson?.(updatedPerson);
+        }}
+        lang={lang}
       />
     </div>
   );

@@ -69,9 +69,9 @@ export default function People({
   return (
     <div className="space-y-6 animate-fadeIn" dir={lang === "ar" ? "rtl" : "ltr"}>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#D4AF37]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#800020]/25 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl border-2 border-[#D4AF37] bg-gradient-to-r from-[#800020]/15 via-[#FBF8EF] to-[#D4AF37]/15 dark:from-[#1C1A17] dark:via-[#161412] dark:to-[#800020]/25 shadow-md">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold font-cinzel text-[#800020] dark:text-[#F3E5AB]">
             {t.peopleTitle}
           </h2>
           <p className="text-xs sm:text-sm text-[#6B5E4E] dark:text-[#A99F8D] mt-1">
@@ -81,7 +81,7 @@ export default function People({
 
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#800020] to-[#A01128] text-white font-bold text-sm shadow-md hover:brightness-110 transition-all hover:scale-105"
+          className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-[#800020] to-[#A01128] text-white font-bold text-xs sm:text-sm shadow-md hover:brightness-110 transition-all hover:scale-105 self-start sm:self-auto"
         >
           <Plus size={16} />
           <span>{t.addPerson}</span>
@@ -98,14 +98,14 @@ export default function People({
           placeholder={t.searchPeoplePlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className={`w-full py-3.5 rounded-xl border-2 border-[#D4AF37]/50 bg-white/80 dark:bg-[#1C1A17] shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all ${
-            lang === "ar" ? "pr-11 pl-4 font-amiri text-base" : "pl-11 pr-4"
+          className={`w-full py-2.5 sm:py-3.5 rounded-xl border-2 border-[#D4AF37]/50 bg-white/80 dark:bg-[#1C1A17] shadow-sm text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all ${
+            lang === "ar" ? "pr-11 pl-4 font-amiri text-sm sm:text-base" : "pl-11 pr-4"
           }`}
         />
       </div>
 
       {/* People Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
         {filteredPeople.map((person, index) => {
           const displayName = getPersonDisplayName(person, lang);
           const displayNotes = getPersonDisplayNotes(person, lang);
