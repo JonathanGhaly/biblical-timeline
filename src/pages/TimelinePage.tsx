@@ -41,7 +41,7 @@ import {
   getEventTypeLabel,
 } from "../data/biblicalEventTypes";
 import { PutPersonOnYearModal } from "../components/Timeline/PutPersonOnYearModal";
-import { Calendar, UserCheck, AlertCircle } from "lucide-react";
+import { Calendar, AlertCircle } from "lucide-react";
 
 type TimelinePageProps = {
   people: Person[];

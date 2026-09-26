@@ -8,14 +8,12 @@ import {
 import {
   X,
   Calendar,
-  Clock,
   User,
   Search,
   CheckCircle2,
   HelpCircle,
   Sparkles,
   ArrowRight,
-  Filter,
 } from "lucide-react";
 import { CopticCross } from "../Coptic/CopticCross";
 import {
@@ -81,7 +79,6 @@ export const PutPersonOnYearModal: React.FC<PutPersonOnYearModalProps> = ({
     if (!activePerson) return;
 
     const hasBirth = hasPersonBirth(activePerson);
-    const hasDeath = hasPersonDeath(activePerson);
     const isEst = isBirthYearEstimated(activePerson);
 
     if (hasBirth) {
