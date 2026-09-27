@@ -543,7 +543,7 @@ export default function Timeline({
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            className="relative w-full max-w-lg p-6 rounded-2xl bg-[#FBF8EF] dark:bg-[#1C1A17] border-2 border-[#D4AF37] shadow-2xl text-[#2D2721] dark:text-[#E6E0D4] space-y-4"
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl bg-[#FBF8EF] dark:bg-[#1C1A17] border-2 border-[#D4AF37] shadow-2xl text-[#2D2721] dark:text-[#E6E0D4] space-y-4"
             onClick={(e) => e.stopPropagation()}
             dir={lang === "ar" ? "rtl" : "ltr"}
           >

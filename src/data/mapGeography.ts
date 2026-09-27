@@ -1230,7 +1230,7 @@ export const ANCIENT_ROUTES: AncientRoute[] = [
   {
     id: "abraham-route",
     name: "Abraham's Journey of Faith (Ur to Canaan & Egypt)",
-    arabicName: "مسار رحلة إبراهيم الخليل (من أور الكلدانيين إلى كنعان ومصر)",
+    arabicName: "مسار رحلة أبينا إبراهيم (من أور الكلدانيين إلى كنعان ومصر)",
     type: "abraham",
     coords: [
       [30.962, 46.104], // 1. Ur of the Chaldees (Birthplace & departure)

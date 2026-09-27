@@ -73,7 +73,7 @@ const COMMON_RECIPIENTS: { en: string; ar: string }[] = [
   { en: "Moses", ar: "موسى النبي" },
   { en: "Aaron and the Priests", ar: "هارون وبنوه الكهنة" },
   { en: "Noah and his sons", ar: "نوح وبنوه" },
-  { en: "Abraham", ar: "إبراهيم الخليل" },
+  { en: "Abraham", ar: "أبونا إبراهيم" },
   { en: "Adam", ar: "آدم" },
   { en: "All Humanity", ar: "البشرية جمعاء" },
 ];

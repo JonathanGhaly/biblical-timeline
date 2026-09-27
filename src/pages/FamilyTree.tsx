@@ -657,51 +657,143 @@ export default function FamilyTree({ people = [], lang = "en" }: FamilyTreeProps
                     </div>
 
                     {children.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {children.map((child, chIdx) => {
-                          const childDisplayName = getPersonDisplayName(
-                            child,
-                            lang
-                          );
-                          const childMother = child.motherId
-                            ? peopleMap.get(child.motherId)
-                            : undefined;
-                          const motherLabel = childMother
-                            ? getPersonDisplayName(childMother, lang)
-                            : lang === "ar"
-                            ? "غير مسجلة"
-                            : "Unrecorded";
-
-                          return (
-                            <button
-                              key={`child_${child.id}_${chIdx}`}
-                              onClick={() => setSelectedPersonForModal(child)}
-                              className="p-3 rounded-xl border border-[#D4AF37]/40 bg-white/50 dark:bg-[#121110]/50 space-y-1 hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors text-start"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-sm text-[#800020] dark:text-[#F3E5AB]">
-                                  {childDisplayName}
-                                </span>
-                                <span
-                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                                    child.gender === "male"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                                      : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
-                                  }`}
-                                >
-                                  {child.gender === "male" ? t.male : t.female}
-                                </span>
+                      wives.length > 1 ? (
+                        <div className="space-y-3">
+                          {wives.map((wife, wIdx) => {
+                            const wifeDisplayName = getPersonDisplayName(wife, lang);
+                            const wifeChildren = children.filter((c) => c.motherId === wife.id);
+                            if (wifeChildren.length === 0) return null;
+                            return (
+                              <div
+                                key={`wife_grp_${wife.id}_${wIdx}`}
+                                className="p-3 rounded-xl border border-pink-200 dark:border-pink-900/50 bg-pink-50/20 dark:bg-pink-950/10 space-y-2.5"
+                              >
+                                <div className="flex items-center gap-2 text-xs font-bold text-pink-800 dark:text-pink-300">
+                                  <Heart size={13} className="text-pink-600 dark:text-pink-400" />
+                                  <span>
+                                    {lang === "ar"
+                                      ? `أبناء من الزوجة (${wifeDisplayName}):`
+                                      : `Children with ${wifeDisplayName}:`}
+                                  </span>
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 font-mono font-bold">
+                                    {wifeChildren.length}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                  {wifeChildren.map((child, chIdx) => {
+                                    const childDisplayName = getPersonDisplayName(child, lang);
+                                    return (
+                                      <button
+                                        key={`child_${child.id}_${chIdx}`}
+                                        onClick={() => setSelectedPersonForModal(child)}
+                                        className="p-3 rounded-xl border border-[#D4AF37]/40 bg-white/70 dark:bg-[#121110]/70 space-y-1 hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors text-start shadow-sm"
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-bold text-sm text-[#800020] dark:text-[#F3E5AB]">
+                                            {childDisplayName}
+                                          </span>
+                                          <span
+                                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                              child.gender === "male"
+                                                ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                                : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
+                                            }`}
+                                          >
+                                            {child.gender === "male" ? t.male : t.female}
+                                          </span>
+                                        </div>
+                                        <div className="text-[11px] text-[#7A6E5E] dark:text-[#A99F8D]">
+                                          <span>
+                                            {t.mother}: <strong>{wifeDisplayName}</strong>
+                                          </span>
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
+                            );
+                          })}
+                          {/* Children without a designated wife */}
+                          {children.filter((c) => !wives.some((w) => c.motherId === w.id)).length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {children
+                                .filter((c) => !wives.some((w) => c.motherId === w.id))
+                                .map((child, chIdx) => {
+                                  const childDisplayName = getPersonDisplayName(child, lang);
+                                  return (
+                                    <button
+                                      key={`child_${child.id}_${chIdx}`}
+                                      onClick={() => setSelectedPersonForModal(child)}
+                                      className="p-3 rounded-xl border border-[#D4AF37]/40 bg-white/50 dark:bg-[#121110]/50 space-y-1 hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors text-start"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-bold text-sm text-[#800020] dark:text-[#F3E5AB]">
+                                          {childDisplayName}
+                                        </span>
+                                        <span
+                                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                            child.gender === "male"
+                                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                              : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
+                                          }`}
+                                        >
+                                          {child.gender === "male" ? t.male : t.female}
+                                        </span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {children.map((child, chIdx) => {
+                            const childDisplayName = getPersonDisplayName(
+                              child,
+                              lang
+                            );
+                            const childMother = child.motherId
+                              ? peopleMap.get(child.motherId)
+                              : undefined;
+                            const motherLabel = childMother
+                              ? getPersonDisplayName(childMother, lang)
+                              : lang === "ar"
+                              ? "غير مسجلة"
+                              : "Unrecorded";
 
-                              <div className="text-[11px] text-[#7A6E5E] dark:text-[#A99F8D]">
-                                <span>
-                                  {t.mother}: <strong>{motherLabel}</strong>
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
+                            return (
+                              <button
+                                key={`child_${child.id}_${chIdx}`}
+                                onClick={() => setSelectedPersonForModal(child)}
+                                className="p-3 rounded-xl border border-[#D4AF37]/40 bg-white/50 dark:bg-[#121110]/50 space-y-1 hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors text-start"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-sm text-[#800020] dark:text-[#F3E5AB]">
+                                    {childDisplayName}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                      child.gender === "male"
+                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                        : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
+                                    }`}
+                                  >
+                                    {child.gender === "male" ? t.male : t.female}
+                                  </span>
+                                </div>
+
+                                <div className="text-[11px] text-[#7A6E5E] dark:text-[#A99F8D]">
+                                  <span>
+                                    {t.mother}: <strong>{motherLabel}</strong>
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )
                     ) : (
                       <div className="text-xs text-[#8C7B6B] dark:text-[#9F9382] italic">
                         {t.noChildren}

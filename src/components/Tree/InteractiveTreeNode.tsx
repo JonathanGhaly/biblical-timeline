@@ -165,13 +165,37 @@ export const InteractiveTreeNode: React.FC<InteractiveTreeNodeProps> = ({
             />
           </div>
 
-          {/* Spouses Pill */}
-          {spouses.length > 0 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-pink-300/60 bg-pink-50/50 dark:bg-pink-950/30 text-pink-800 dark:text-pink-300">
-              <Heart size={10} />
+          {/* Mother Badge if known */}
+          {node.mother && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-pink-300/60 bg-pink-100/70 dark:bg-pink-950/40 text-pink-800 dark:text-pink-200">
+              <Heart size={9} />
               <span>
-                {spouses.map((s) => getPersonDisplayName(s, lang)).join(" + ")}
+                {isRTL
+                  ? `أم: ${getPersonDisplayName(node.mother, lang)}`
+                  : `Mother: ${getPersonDisplayName(node.mother, lang)}`}
               </span>
+            </span>
+          )}
+
+          {/* Spouses Pills */}
+          {spouses.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {spouses.map((s) => (
+                <span
+                  key={s.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectPerson(s);
+                  }}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border border-pink-300/60 bg-pink-50/50 dark:bg-pink-950/30 text-pink-800 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900 transition-colors"
+                >
+                  <Heart size={10} />
+                  <span>
+                    {isRTL ? "زوجة: " : "Wife: "}
+                    {getPersonDisplayName(s, lang)}
+                  </span>
+                </span>
+              ))}
             </div>
           )}
 
@@ -208,17 +232,91 @@ export const InteractiveTreeNode: React.FC<InteractiveTreeNodeProps> = ({
               : "ml-3.5 pl-5 border-l-2 border-[#D4AF37]/50"
           }`}
         >
-          {children.map((childNode, cIdx) => (
-            <InteractiveTreeNode
-              key={`${childNode.person.id}_${cIdx}`}
-              node={childNode}
-              lang={lang}
-              expandedIds={expandedIds}
-              toggleExpand={toggleExpand}
-              onSelectPerson={onSelectPerson}
-              searchTerm={searchTerm}
-            />
-          ))}
+          {spouses.length > 1 ? (
+            <>
+              {spouses.map((spouse) => {
+                const spouseChildren = children.filter(
+                  (c) =>
+                    c.person.motherId === spouse.id ||
+                    c.mother?.id === spouse.id
+                );
+                if (spouseChildren.length === 0) return null;
+                return (
+                  <div
+                    key={`spouse_grp_${spouse.id}`}
+                    className="p-2.5 rounded-xl border border-pink-200/80 dark:border-pink-900/50 bg-pink-50/20 dark:bg-pink-950/10 space-y-2"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-pink-800 dark:text-pink-300">
+                      <Heart size={12} className="text-pink-600 dark:text-pink-400" />
+                      <span>
+                        {isRTL
+                          ? `الأبناء من الزوجة (${getPersonDisplayName(spouse, lang)})`
+                          : `Children with ${getPersonDisplayName(spouse, lang)}`}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-pink-200 dark:bg-pink-900 text-pink-800 dark:text-pink-100 font-mono">
+                        {spouseChildren.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2.5">
+                      {spouseChildren.map((childNode, cIdx) => (
+                        <InteractiveTreeNode
+                          key={`${childNode.person.id}_${cIdx}`}
+                          node={childNode}
+                          lang={lang}
+                          expandedIds={expandedIds}
+                          toggleExpand={toggleExpand}
+                          onSelectPerson={onSelectPerson}
+                          searchTerm={searchTerm}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Other children not tied to a specific spouse */}
+              {children.filter(
+                (c) =>
+                  !spouses.some(
+                    (s) =>
+                      c.person.motherId === s.id || c.mother?.id === s.id
+                  )
+              ).length > 0 && (
+                <div className="space-y-2.5">
+                  {children
+                    .filter(
+                      (c) =>
+                        !spouses.some(
+                          (s) =>
+                            c.person.motherId === s.id || c.mother?.id === s.id
+                        )
+                    )
+                    .map((childNode, cIdx) => (
+                      <InteractiveTreeNode
+                        key={`${childNode.person.id}_${cIdx}`}
+                        node={childNode}
+                        lang={lang}
+                        expandedIds={expandedIds}
+                        toggleExpand={toggleExpand}
+                        onSelectPerson={onSelectPerson}
+                        searchTerm={searchTerm}
+                      />
+                    ))}
+                </div>
+              )}
+            </>
+          ) : (
+            children.map((childNode, cIdx) => (
+              <InteractiveTreeNode
+                key={`${childNode.person.id}_${cIdx}`}
+                node={childNode}
+                lang={lang}
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand}
+                onSelectPerson={onSelectPerson}
+                searchTerm={searchTerm}
+              />
+            ))
+          )}
         </div>
       )}
     </div>

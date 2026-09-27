@@ -620,19 +620,36 @@ export default function TimelinePage({
                 width: `${timelineTrackWidth}px`,
               }}
             >
-              {ticks.map((yr) => {
+              {ticks.map((yr, idx) => {
                 const pos = getPosPx(yr);
+                const isStartTick = idx === 0 || pos <= 2;
+                const isEndTick = idx === ticks.length - 1 || pos >= timelineTrackWidth - 2;
+
                 return (
                   <div
                     key={yr}
                     className={`absolute top-0 text-[11px] font-bold font-mono text-[#800020] dark:text-[#D4AF37] select-none whitespace-nowrap ${
-                      isRTL ? "translate-x-1/2" : "-translate-x-1/2"
+                      isStartTick
+                        ? "translate-x-0"
+                        : isEndTick
+                        ? isRTL ? "translate-x-full" : "-translate-x-full"
+                        : isRTL ? "translate-x-1/2" : "-translate-x-1/2"
                     }`}
                     style={{ [isRTL ? "right" : "left"]: `${pos}px` }}
                   >
-                    <div className="flex flex-col items-center">
-                      <span>{formatYearDisplay(yr, lang)}</span>
-                      <div className="w-0.5 h-2 bg-[#D4AF37]/60 mt-0.5" />
+                    <div className={`flex flex-col ${
+                      isStartTick
+                        ? isRTL ? "items-start text-right" : "items-start text-left"
+                        : isEndTick
+                        ? isRTL ? "items-end text-left" : "items-end text-right"
+                        : "items-center text-center"
+                    }`}>
+                      <span className="px-0.5">{formatYearDisplay(yr, lang)}</span>
+                      <div className={`mt-0.5 ${
+                        isStartTick
+                          ? "w-1 h-2.5 bg-[#800020] dark:bg-[#D4AF37]"
+                          : "w-0.5 h-2 bg-[#D4AF37]/60"
+                      }`} />
                     </div>
                   </div>
                 );
@@ -813,7 +830,7 @@ export default function TimelinePage({
                   {/* MODE A: COMPACT MULTI-TRACK VIEW (Bars fit names, children under fathers) */}
                   {viewMode === "compact" ? (
                     <div
-                      className="relative rounded-xl bg-[#FBF8EF]/60 dark:bg-[#121110]/40 border border-[#D4AF37]/30 p-1.5 space-y-1.5"
+                      className="relative rounded-xl bg-[#FBF8EF]/60 dark:bg-[#121110]/40 border border-[#D4AF37]/30 py-1.5 px-0 space-y-1.5"
                       style={{
                         minHeight: `${Math.max(80, peopleLaneCount * 34)}px`,
                       }}
@@ -993,7 +1010,7 @@ export default function TimelinePage({
                             <div
                               className={`sticky ${
                                 isRTL ? "right-0 text-right" : "left-0 text-left"
-                              } z-20 w-52 shrink-0 px-2.5 py-1 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel bg-white/95 dark:bg-[#1C1A17]/95 backdrop-blur-md border-r border-l border-[#D4AF37]/30 shadow-xs flex items-center justify-between`}
+                              } z-20 w-[220px] shrink-0 px-2.5 py-1 text-xs font-bold truncate text-[#2D2721] dark:text-[#E6E0D4] font-cinzel bg-white/95 dark:bg-[#1C1A17]/95 backdrop-blur-md border-r border-l border-[#D4AF37]/30 shadow-xs flex items-center justify-between`}
                               style={{ marginInlineStart: "-220px" }}
                               title={displayName}
                             >
@@ -1012,7 +1029,10 @@ export default function TimelinePage({
                             </div>
 
                             {/* Lifespan Bar */}
-                            <div className="relative flex-1 h-full">
+                            <div
+                              className="relative h-full shrink-0"
+                              style={{ width: `${timelineTrackWidth}px` }}
+                            >
                               <div
                                 className={`absolute top-0.5 bottom-0.5 rounded-lg px-2.5 flex items-center justify-between text-[11px] font-bold shadow-xs transition-transform group-hover:scale-y-110 border ${
                                   matched
@@ -1063,7 +1083,7 @@ export default function TimelinePage({
 
                   {viewMode === "compact" ? (
                     <div
-                      className="relative rounded-xl bg-[#FBF8EF]/40 dark:bg-[#121110]/40 border border-[#D4AF37]/30 p-1 space-y-1"
+                      className="relative rounded-xl bg-[#FBF8EF]/40 dark:bg-[#121110]/40 border border-[#D4AF37]/30 py-1 px-0 space-y-1"
                       style={{
                         minHeight: `${Math.max(40, marriagesLaneCount * 28)}px`,
                       }}
@@ -1189,7 +1209,7 @@ export default function TimelinePage({
 
                   {viewMode === "compact" ? (
                     <div
-                      className="relative rounded-xl bg-[#FBF8EF]/40 dark:bg-[#121110]/40 border border-[#D4AF37]/30 p-1 space-y-1"
+                      className="relative rounded-xl bg-[#FBF8EF]/40 dark:bg-[#121110]/40 border border-[#D4AF37]/30 py-1 px-0 space-y-1"
                       style={{
                         minHeight: `${Math.max(40, eventsLaneCount * 28)}px`,
                       }}

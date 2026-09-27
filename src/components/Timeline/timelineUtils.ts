@@ -441,12 +441,24 @@ export function generateTicks(minYear: number, maxYear: number): number[] {
   else if (span > 400) step = 50;
   else step = 25;
 
-  const roundedMin = Math.floor(minYear / step) * step;
-  const roundedMax = Math.ceil(maxYear / step) * step;
+  // Always anchor the first tick at the exact starting year (e.g. -4004 BC for Adam)
+  // so the start of every timeline aligns precisely with the year above.
+  const ticks: number[] = [minYear];
 
-  const ticks: number[] = [];
-  for (let yr = roundedMin; yr <= roundedMax; yr += step) {
-    ticks.push(yr);
+  // Round up to the first clean round interval inside the timeline range
+  const firstRounded = Math.ceil(minYear / step) * step;
+
+  for (let yr = firstRounded; yr < maxYear; yr += step) {
+    // Only add intermediate tick if it is sufficiently separated from minYear
+    if (yr - minYear >= step * 0.35) {
+      ticks.push(yr);
+    }
   }
+
+  // Include maxYear if not too close to the previous tick
+  if (maxYear - ticks[ticks.length - 1] >= step * 0.35) {
+    ticks.push(maxYear);
+  }
+
   return ticks;
 }

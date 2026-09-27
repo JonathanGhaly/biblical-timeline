@@ -18,6 +18,10 @@ import {
   Move,
   Layers,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  Compass,
 } from "lucide-react";
 
 export interface SvgGenerationalTreeProps {
@@ -46,6 +50,7 @@ interface LayoutPersonNode {
   height: number;
   children: LayoutPersonNode[];
   spouse?: ComputedPerson;
+  spouses: ComputedPerson[];
   isExpanded: boolean;
   hasChildren: boolean;
   childCount: number;
@@ -71,8 +76,8 @@ const GENERATION_NAMES: Record<number, { ar: string; en: string }> = {
   8: { ar: "متوشالح شيخ الآباء", en: "Methuselah (Longest Life)" },
   9: { ar: "لامك", en: "Lamech" },
   10: { ar: "نوح وسفينة النجاة", en: "Noah & The Ark" },
-  11: { ar: "إبراهيم وسارة", en: "Abraham & Sarah" },
-  12: { ar: "إسحاق ابن الموعد", en: "Isaac (Child of Promise)" },
+  11: { ar: "إبراهيم (سارة وهاجر)", en: "Abraham (Sarah & Hagar)" },
+  12: { ar: "إسحاق وإسماعيل", en: "Isaac & Ishmael" },
   13: { ar: "يعقوب وإسرائيل", en: "Jacob & Israel" },
   14: { ar: "الآباء الاثنا عشر", en: "The 12 Patriarchs" },
 };
@@ -91,7 +96,7 @@ const BIBLICAL_ROBE_PALETTES = [
 // Helper to get Old Testament character styling
 function getOldTestamentAvatarProps(person: ComputedPerson) {
   const id = person.id.toLowerCase();
-  const isFemale = person.gender === "female" || id === "eve" || id === "sarah";
+  const isFemale = person.gender === "female" || id === "eve" || id === "sarah" || id === "hagar";
 
   let hash = 0;
   for (let i = 0; i < person.id.length; i++) {
@@ -104,8 +109,10 @@ function getOldTestamentAvatarProps(person: ComputedPerson) {
   const isAbraham = id === "abraham";
   const isMethuselah = id === "methuselah";
   const isSarah = id === "sarah";
+  const isHagar = id === "hagar";
   const isEve = id === "eve";
   const isIsaac = id === "isaac";
+  const isIshmael = id === "ishmael";
 
   // Robe palette
   let palette = BIBLICAL_ROBE_PALETTES[hash % BIBLICAL_ROBE_PALETTES.length];
@@ -122,10 +129,14 @@ function getOldTestamentAvatarProps(person: ComputedPerson) {
     palette = { robe: "#581C87", inner: "#3B0764", head: "#E5E7EB", trim: "#D4AF37" }; // Sovereign Purple
   } else if (isSarah) {
     palette = { robe: "#9F1239", inner: "#881337", head: "#FEF08A", trim: "#D4AF37" }; // Royal Crimson & Gold
+  } else if (isHagar) {
+    palette = { robe: "#0D9488", inner: "#115E59", head: "#FEF08A", trim: "#F59E0B" }; // Nile Turquoise & Linen
   } else if (isMethuselah) {
     palette = { robe: "#92400E", inner: "#78350F", head: "#F3F4F6", trim: "#D4AF37" }; // Ancient Sand
   } else if (isIsaac) {
     palette = { robe: "#C2410C", inner: "#9A3412", head: "#E5E7EB", trim: "#FBBF24" }; // Warm Saffron
+  } else if (isIshmael) {
+    palette = { robe: "#B45309", inner: "#78350F", head: "#E5E7EB", trim: "#F59E0B" }; // Desert Archer Amber
   }
 
   // Facial Hair & Aging
@@ -192,6 +203,7 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
 
   // Toggles
   const [showGenerationGuides, setShowGenerationGuides] = useState<boolean>(true);
+  const [showNavPad, setShowNavPad] = useState<boolean>(true);
 
   // People Map for fast lookup
   const peopleMap = useMemo(() => {
@@ -282,18 +294,40 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     return map;
   }, [people]);
 
-  // 3. Spouses map
-  const spouseMap = useMemo(() => {
-    const map = new Map<string, ComputedPerson>();
+  // 3. Spouses map (supports multiple spouses such as Sarah and Hagar)
+  const spousesMap = useMemo(() => {
+    const map = new Map<string, ComputedPerson[]>();
+    people.forEach((p) => map.set(p.id, []));
+
     people.forEach((p) => {
-      const spId =
-        p.wifeId ||
-        p.husbandId ||
-        (p.spouseIds && p.spouseIds.length > 0 ? p.spouseIds[0] : undefined);
-      if (spId && peopleMap.has(spId)) {
-        map.set(p.id, peopleMap.get(spId)!);
+      // Direct spouseIds
+      if (p.spouseIds && p.spouseIds.length > 0) {
+        p.spouseIds.forEach((spId) => {
+          if (peopleMap.has(spId)) {
+            const list = map.get(p.id)!;
+            const sp = peopleMap.get(spId)!;
+            if (!list.some((existing) => existing.id === sp.id)) {
+              list.push(sp);
+            }
+          }
+        });
+      }
+      // Reciprocal husbandId / wifeId
+      if (p.husbandId && peopleMap.has(p.husbandId)) {
+        const husbandList = map.get(p.husbandId)!;
+        if (!husbandList.some((existing) => existing.id === p.id)) {
+          husbandList.push(p);
+        }
+      }
+      if (p.wifeId && peopleMap.has(p.wifeId)) {
+        const wife = peopleMap.get(p.wifeId)!;
+        const list = map.get(p.id)!;
+        if (!list.some((existing) => existing.id === wife.id)) {
+          list.push(wife);
+        }
       }
     });
+
     return map;
   }, [people, peopleMap]);
 
@@ -340,7 +374,12 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
   const rootPeople = useMemo(() => {
     let roots = people.filter((p) => {
       if (p.fatherId && peopleMap.has(p.fatherId)) return false;
-      if ((p.husbandId && peopleMap.has(p.husbandId)) || (p.id === "eve" || p.id === "sarah")) {
+      if (
+        (p.husbandId && peopleMap.has(p.husbandId)) ||
+        p.id === "eve" ||
+        p.id === "sarah" ||
+        p.id === "hagar"
+      ) {
         return false;
       }
       return true;
@@ -399,6 +438,7 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       fromPersonId: string;
       toPersonIds: string[];
       isHighlighted: boolean;
+      motherName?: string;
     }[] = [];
 
     let maxGenFound = 1;
@@ -411,8 +451,12 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       visited.add(person.id);
 
       const isExp = effectiveExpandedIds.has(person.id);
-      const spouse = spouseMap.get(person.id);
-      const unitWidth = spouse ? CARD_WIDTH * 2 + SIBLING_GAP : CARD_WIDTH;
+      const spouses = spousesMap.get(person.id) || [];
+      const spouseCount = spouses.length;
+      const unitWidth =
+        spouseCount > 0
+          ? CARD_WIDTH + spouseCount * (CARD_WIDTH + SIBLING_GAP)
+          : CARD_WIDTH;
 
       if (!isExp) return unitWidth;
 
@@ -450,6 +494,7 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
           width: CARD_WIDTH,
           height: CARD_HEIGHT,
           children: [],
+          spouses: [],
           isExpanded: false,
           hasChildren: false,
           childCount: 0,
@@ -462,8 +507,12 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       maxGenFound = Math.max(maxGenFound, gen);
 
       const y = PADDING_TOP + (gen - 1) * TIER_HEIGHT;
-      const spouse = spouseMap.get(person.id);
-      const unitWidth = spouse ? CARD_WIDTH * 2 + SIBLING_GAP : CARD_WIDTH;
+      const spouses = spousesMap.get(person.id) || [];
+      const spouseCount = spouses.length;
+      const unitWidth =
+        spouseCount > 0
+          ? CARD_WIDTH + spouseCount * (CARD_WIDTH + SIBLING_GAP)
+          : CARD_WIDTH;
 
       const isExp = effectiveExpandedIds.has(person.id);
       const directChildren = childrenMap.get(person.id) || [];
@@ -478,12 +527,26 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       const childNodes: LayoutPersonNode[] = [];
       let finalCardX = safeLeftX;
 
-      if (!isExp || directChildren.length === 0) {
+      // Group children by mother to align directly under their respective parents
+      const sortedChildren = [...directChildren].sort((a, b) => {
+        if (spouses.length > 1) {
+          const aSpouseIdx = spouses.findIndex((s) => s.id === a.motherId);
+          const bSpouseIdx = spouses.findIndex((s) => s.id === b.motherId);
+          if (aSpouseIdx !== -1 && bSpouseIdx !== -1 && aSpouseIdx !== bSpouseIdx) {
+            return aSpouseIdx - bSpouseIdx;
+          }
+          if (aSpouseIdx !== -1 && bSpouseIdx === -1) return -1;
+          if (aSpouseIdx === -1 && bSpouseIdx !== -1) return 1;
+        }
+        return (a.birthYearBC ?? 0) - (b.birthYearBC ?? 0);
+      });
+
+      if (!isExp || sortedChildren.length === 0) {
         finalCardX = safeLeftX;
         tierRightTracker.set(gen, finalCardX + unitWidth + SIBLING_GAP);
       } else {
         let childCursorX = safeLeftX;
-        directChildren.forEach((child) => {
+        sortedChildren.forEach((child) => {
           const childNode = buildLayoutNode(
             child,
             childCursorX,
@@ -520,7 +583,8 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
         width: unitWidth,
         height: CARD_HEIGHT,
         children: childNodes,
-        spouse,
+        spouse: spouses[0],
+        spouses,
         isExpanded: isExp,
         hasChildren,
         childCount: directChildren.length,
@@ -530,27 +594,89 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       nodes.push(nodeResult);
 
       if (childNodes.length > 0) {
-        const parentCenterX = spouse
-          ? finalCardX + CARD_WIDTH + SIBLING_GAP / 2
-          : finalCardX + CARD_WIDTH / 2;
-        const parentBottomY = y + CARD_HEIGHT;
+        if (spouses.length > 1) {
+          // Multiple spouses: create dedicated union bus for each spouse's children
+          // "add each child under its own parents"
+          spouses.forEach((sp, sIdx) => {
+            const spouseChildren = childNodes.filter(
+              (c) => c.person.motherId === sp.id || (person.gender === "female" && c.person.fatherId === sp.id)
+            );
+            if (spouseChildren.length > 0) {
+              const spouseCardX = finalCardX + (sIdx + 1) * (CARD_WIDTH + SIBLING_GAP);
+              // Union center: midpoint between father card and this spouse card
+              const unionCenterX = (finalCardX + CARD_WIDTH / 2 + spouseCardX + CARD_WIDTH / 2) / 2;
+              const parentBottomY = y + CARD_HEIGHT;
 
-        const childrenPoints = childNodes.map((c) => ({
-          x: c.x + CARD_WIDTH / 2,
-          y: c.y,
-        }));
+              const childrenPoints = spouseChildren.map((c) => ({
+                x: c.x + CARD_WIDTH / 2,
+                y: c.y,
+              }));
 
-        const midY = (parentBottomY + childNodes[0].y) / 2;
+              const midY =
+                (parentBottomY + spouseChildren[0].y) / 2 +
+                (sIdx % 2 === 0 ? -12 : 12);
 
-        edges.push({
-          id: `bus_${person.id}`,
-          parentCenter: { x: parentCenterX, y: parentBottomY },
-          childrenPoints,
-          midY,
-          fromPersonId: person.id,
-          toPersonIds: childNodes.map((c) => c.person.id),
-          isHighlighted: false,
-        });
+              edges.push({
+                id: `bus_${person.id}_${sp.id}`,
+                parentCenter: { x: unionCenterX, y: parentBottomY },
+                childrenPoints,
+                midY,
+                fromPersonId: person.id,
+                toPersonIds: spouseChildren.map((c) => c.person.id),
+                isHighlighted: false,
+                motherName: getPersonDisplayName(sp, lang),
+              });
+            }
+          });
+
+          // Any other children not tied to a specific spouse
+          const otherChildren = childNodes.filter(
+            (c) => !spouses.some((sp) => c.person.motherId === sp.id)
+          );
+          if (otherChildren.length > 0) {
+            const parentCenterX = finalCardX + CARD_WIDTH / 2;
+            const parentBottomY = y + CARD_HEIGHT;
+            const childrenPoints = otherChildren.map((c) => ({
+              x: c.x + CARD_WIDTH / 2,
+              y: c.y,
+            }));
+            const midY = (parentBottomY + otherChildren[0].y) / 2;
+            edges.push({
+              id: `bus_${person.id}_unassigned`,
+              parentCenter: { x: parentCenterX, y: parentBottomY },
+              childrenPoints,
+              midY,
+              fromPersonId: person.id,
+              toPersonIds: otherChildren.map((c) => c.person.id),
+              isHighlighted: false,
+            });
+          }
+        } else {
+          // Single spouse or no spouse
+          const spouse = spouses[0];
+          const parentCenterX = spouse
+            ? finalCardX + CARD_WIDTH + SIBLING_GAP / 2
+            : finalCardX + CARD_WIDTH / 2;
+          const parentBottomY = y + CARD_HEIGHT;
+
+          const childrenPoints = childNodes.map((c) => ({
+            x: c.x + CARD_WIDTH / 2,
+            y: c.y,
+          }));
+
+          const midY = (parentBottomY + childNodes[0].y) / 2;
+
+          edges.push({
+            id: `bus_${person.id}`,
+            parentCenter: { x: parentCenterX, y: parentBottomY },
+            childrenPoints,
+            midY,
+            fromPersonId: person.id,
+            toPersonIds: childNodes.map((c) => c.person.id),
+            isHighlighted: false,
+            motherName: spouse ? getPersonDisplayName(spouse, lang) : undefined,
+          });
+        }
       }
 
       return nodeResult;
@@ -604,7 +730,7 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       bounds: { width: Math.max(1200, maxX + 90), height: totalHeight },
       generationsList: genList,
     };
-  }, [rootPeople, effectiveExpandedIds, childrenMap, spouseMap, generationMap]);
+  }, [rootPeople, effectiveExpandedIds, childrenMap, spousesMap, generationMap, lang]);
 
   // Set highlighted edges based on hovered person
   const edgesWithHighlight = useMemo(() => {
@@ -640,11 +766,19 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     });
   }, [layoutNodes, hoveredPersonId]);
 
+  // Drag suppression tracking to prevent accidental card selection while panning/scrolling
+  const didDragRef = useRef<boolean>(false);
+  const isMouseDownRef = useRef<boolean>(false);
+  const dragStartMousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
   // Pan & Zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".interactive-node")) return;
+    if ((e.target as HTMLElement).closest(".interactive-node-toggle")) return;
     setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    isMouseDownRef.current = true;
+    dragStartMousePos.current = { x: e.clientX, y: e.clientY };
+    didDragRef.current = false;
+    setDragStart({ x: e.clientX - panRef.current.x, y: e.clientY - panRef.current.y });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -652,7 +786,14 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       const rect = containerRef.current.getBoundingClientRect();
       mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
-    if (!isDragging) return;
+    if (!isDragging || !isMouseDownRef.current) return;
+    const dist = Math.hypot(
+      e.clientX - dragStartMousePos.current.x,
+      e.clientY - dragStartMousePos.current.y
+    );
+    if (dist > 5) {
+      didDragRef.current = true;
+    }
     const newPan = {
       x: e.clientX - dragStart.x,
       y: e.clientY - dragStart.y,
@@ -663,7 +804,44 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    isMouseDownRef.current = false;
+    if (didDragRef.current) {
+      setTimeout(() => {
+        didDragRef.current = false;
+      }, 80);
+    }
   };
+
+  // Stepwise pan for mobile D-pad and navigation buttons
+  const handlePanBy = useCallback((deltaX: number, deltaY: number) => {
+    const nextPanX = panRef.current.x + deltaX;
+    const nextPanY = panRef.current.y + deltaY;
+    panRef.current = { x: nextPanX, y: nextPanY };
+    setPan({ x: nextPanX, y: nextPanY });
+  }, []);
+
+  const panIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startContinuousPan = useCallback((deltaX: number, deltaY: number) => {
+    handlePanBy(deltaX, deltaY);
+    if (panIntervalRef.current) clearInterval(panIntervalRef.current);
+    panIntervalRef.current = setInterval(() => {
+      handlePanBy(deltaX, deltaY);
+    }, 60);
+  }, [handlePanBy]);
+
+  const stopContinuousPan = useCallback(() => {
+    if (panIntervalRef.current) {
+      clearInterval(panIntervalRef.current);
+      panIntervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (panIntervalRef.current) clearInterval(panIntervalRef.current);
+    };
+  }, []);
 
   // Cursor-anchored or center-anchored zoom for toolbar buttons
   const handleZoomByFactor = (factor: number) => {
@@ -688,13 +866,16 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     setPan({ x: nextPanX, y: nextPanY });
   };
 
-  // Native non-passive wheel event listener to zoom directly towards pointer and completely prevent page scroll
+  // Native non-passive wheel & touch listeners:
+  // - Enables 1-finger touch dragging/scrolling across the entire SVG tree on mobile
+  // - Enables 2-finger pinch-to-zoom with simultaneous two-finger panning
+  // - Enables mouse wheel zoom anchored to cursor
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const onWheel = (e: WheelEvent) => {
-      // Completely prevent outer window / page from scrolling
+      // Prevent outer window / page from scrolling when zooming tree
       e.preventDefault();
       e.stopPropagation();
 
@@ -717,15 +898,11 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       const nextZoom = Math.max(0.2, Math.min(3.5, currentZoom * zoomFactor));
       if (Math.abs(nextZoom - currentZoom) < 0.0001) return;
 
-      // Exact cursor-anchored transformation:
-      // The point in content coordinates under the mouse is (mouseX - currentPan.x) / currentZoom
-      // After zooming, that same point stays pinned under the cursor:
       const contentX = (mouseX - currentPan.x) / currentZoom;
       const contentY = (mouseY - currentPan.y) / currentZoom;
       const nextPanX = mouseX - contentX * nextZoom;
       const nextPanY = mouseY - contentY * nextZoom;
 
-      // Synchronously update the refs so consecutive rapid wheel events calculate against accurate values
       zoomRef.current = nextZoom;
       panRef.current = { x: nextPanX, y: nextPanY };
 
@@ -733,61 +910,143 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
       setPan({ x: nextPanX, y: nextPanY });
     };
 
-    // Touch gesture pinch-to-zoom support
-    let initialPinchDistance: number | null = null;
+    // Mobile touch interaction state: supports 1-finger scroll/pan & 2-finger pinch-zoom
+    let touchMode: "none" | "pan" | "pinch" = "none";
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartPanX = 0;
+    let touchStartPanY = 0;
+    let touchMoved = false;
+
+    let initialPinchDistance = 0;
     let initialPinchZoom = 1;
     let initialPinchCenter = { x: 0, y: 0 };
     let initialPinchPan = { x: 0, y: 0 };
 
     const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
+      const rect = container.getBoundingClientRect();
+
+      if (e.touches.length === 1) {
+        touchMode = "pan";
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchStartPanX = panRef.current.x;
+        touchStartPanY = panRef.current.y;
+        touchMoved = false;
+        didDragRef.current = false;
+      } else if (e.touches.length === 2) {
+        touchMode = "pinch";
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         const dx = touch2.clientX - touch1.clientX;
         const dy = touch2.clientY - touch1.clientY;
         initialPinchDistance = Math.hypot(dx, dy);
-
-        const rect = container.getBoundingClientRect();
+        initialPinchZoom = zoomRef.current;
         initialPinchCenter = {
           x: (touch1.clientX + touch2.clientX) / 2 - rect.left,
           y: (touch1.clientY + touch2.clientY) / 2 - rect.top,
         };
-
-        setZoom((z) => {
-          initialPinchZoom = z;
-          return z;
-        });
-        setPan((p) => {
-          initialPinchPan = p;
-          return p;
-        });
+        initialPinchPan = { ...panRef.current };
+        touchMoved = true;
+        didDragRef.current = true;
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && initialPinchDistance !== null) {
+      // Unconditionally prevent browser window scroll and pull-to-refresh on canvas
+      if (e.cancelable) {
         e.preventDefault();
+      }
+
+      if (touchMode === "pan" && e.touches.length === 1) {
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchStartX;
+        const dy = touch.clientY - touchStartY;
+        const dist = Math.hypot(dx, dy);
+
+        if (!touchMoved && dist > 3) {
+          touchMoved = true;
+          didDragRef.current = true;
+        }
+
+        const nextPanX = touchStartPanX + dx;
+        const nextPanY = touchStartPanY + dy;
+        panRef.current = { x: nextPanX, y: nextPanY };
+        setPan({ x: nextPanX, y: nextPanY });
+      } else if (e.touches.length === 2) {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         const dx = touch2.clientX - touch1.clientX;
         const dy = touch2.clientY - touch1.clientY;
-        const distance = Math.hypot(dx, dy);
+        const currentDistance = Math.hypot(dx, dy);
 
-        const factor = distance / initialPinchDistance;
-        const nextZoom = Math.max(0.25, Math.min(2.8, initialPinchZoom * factor));
+        if (initialPinchDistance <= 0) {
+          const rect = container.getBoundingClientRect();
+          touchMode = "pinch";
+          initialPinchDistance = currentDistance;
+          initialPinchZoom = zoomRef.current;
+          initialPinchCenter = {
+            x: (touch1.clientX + touch2.clientX) / 2 - rect.left,
+            y: (touch1.clientY + touch2.clientY) / 2 - rect.top,
+          };
+          initialPinchPan = { ...panRef.current };
+          touchMoved = true;
+          didDragRef.current = true;
+          return;
+        }
+
+        const rect = container.getBoundingClientRect();
+        const currentCenter = {
+          x: (touch1.clientX + touch2.clientX) / 2 - rect.left,
+          y: (touch1.clientY + touch2.clientY) / 2 - rect.top,
+        };
+
+        const factor = currentDistance / initialPinchDistance;
+        const nextZoom = Math.max(0.2, Math.min(3.5, initialPinchZoom * factor));
         const scaleRatio = nextZoom / initialPinchZoom;
 
+        const centerDeltaX = currentCenter.x - initialPinchCenter.x;
+        const centerDeltaY = currentCenter.y - initialPinchCenter.y;
+
+        const nextPanX =
+          initialPinchCenter.x -
+          (initialPinchCenter.x - initialPinchPan.x) * scaleRatio +
+          centerDeltaX;
+        const nextPanY =
+          initialPinchCenter.y -
+          (initialPinchCenter.y - initialPinchPan.y) * scaleRatio +
+          centerDeltaY;
+
+        zoomRef.current = nextZoom;
+        panRef.current = { x: nextPanX, y: nextPanY };
         setZoom(nextZoom);
-        setPan({
-          x: initialPinchCenter.x - (initialPinchCenter.x - initialPinchPan.x) * scaleRatio,
-          y: initialPinchCenter.y - (initialPinchCenter.y - initialPinchPan.y) * scaleRatio,
-        });
+        setPan({ x: nextPanX, y: nextPanY });
+        touchMoved = true;
+        didDragRef.current = true;
       }
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) {
-        initialPinchDistance = null;
+      if (e.touches.length === 0) {
+        touchMode = "none";
+        initialPinchDistance = 0;
+        if (touchMoved) {
+          setTimeout(() => {
+            didDragRef.current = false;
+          }, 120);
+        } else {
+          didDragRef.current = false;
+        }
+      } else if (e.touches.length === 1) {
+        // Smooth hand-off when lifting one finger: continue panning from remaining finger
+        touchMode = "pan";
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchStartPanX = panRef.current.x;
+        touchStartPanY = panRef.current.y;
+        initialPinchDistance = 0;
       }
     };
 
@@ -795,12 +1054,14 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     container.addEventListener("touchstart", onTouchStart, { passive: true });
     container.addEventListener("touchmove", onTouchMove, { passive: false });
     container.addEventListener("touchend", onTouchEnd, { passive: true });
+    container.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
     return () => {
       container.removeEventListener("wheel", onWheel);
       container.removeEventListener("touchstart", onTouchStart);
       container.removeEventListener("touchmove", onTouchMove);
       container.removeEventListener("touchend", onTouchEnd);
+      container.removeEventListener("touchcancel", onTouchEnd);
     };
   }, []);
 
@@ -813,12 +1074,34 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     const scaleY = (containerH - 70) / bounds.height;
     const fitScale = Math.max(0.24, Math.min(1.15, Math.min(scaleX, scaleY)));
 
-    setZoom(fitScale);
-    setPan({
+    const nextPan = {
       x: Math.max(16, (containerW - bounds.width * fitScale) / 2),
       y: 20,
-    });
+    };
+    zoomRef.current = fitScale;
+    panRef.current = nextPan;
+    setZoom(fitScale);
+    setPan(nextPan);
   }, [bounds]);
+
+  // Jump to specific generation row
+  const handleJumpToGen = useCallback((gen: number) => {
+    const nodesInGen = layoutNodes.filter((n) => n.gen === gen);
+    if (nodesInGen.length === 0 || !containerRef.current) return;
+    const containerW = containerRef.current.clientWidth || 1000;
+    const containerH = containerRef.current.clientHeight || 700;
+
+    const avgX = nodesInGen.reduce((acc, n) => acc + n.x + CARD_WIDTH / 2, 0) / nodesInGen.length;
+    const y = nodesInGen[0].y + CARD_HEIGHT / 2;
+    const targetZoom = 0.95;
+    const targetPanX = containerW / 2 - avgX * targetZoom;
+    const targetPanY = containerH / 2 - y * targetZoom;
+
+    zoomRef.current = targetZoom;
+    panRef.current = { x: targetPanX, y: targetPanY };
+    setZoom(targetZoom);
+    setPan({ x: targetPanX, y: targetPanY });
+  }, [layoutNodes]);
 
   useEffect(() => {
     handleFitToScreen();
@@ -838,6 +1121,8 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     const targetPanX = containerW / 2 - (target.x + CARD_WIDTH / 2) * targetZoom;
     const targetPanY = containerH / 2 - (target.y + CARD_HEIGHT / 2) * targetZoom;
 
+    zoomRef.current = targetZoom;
+    panRef.current = { x: targetPanX, y: targetPanY };
     setZoom(targetZoom);
     setPan({ x: targetPanX, y: targetPanY });
     setHoveredPersonId(target.person.id);
@@ -1012,6 +1297,9 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
     { id: "noah", nameAr: "نوح", nameEn: "Noah" },
     { id: "abraham", nameAr: "إبراهيم", nameEn: "Abraham" },
     { id: "isaac", nameAr: "إسحاق", nameEn: "Isaac" },
+    { id: "jacob", nameAr: "يعقوب", nameEn: "Jacob" },
+    { id: "judah", nameAr: "يهوذا", nameEn: "Judah" },
+    { id: "joseph", nameAr: "يوسف الصديق", nameEn: "Joseph" },
   ];
 
   // Render authentic Old Testament character illustration
@@ -1169,7 +1457,7 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
   };
 
   return (
-    <div className="relative rounded-2xl border border-[#3E4554] bg-[#1E222A] shadow-2xl overflow-hidden flex flex-col h-[560px] sm:h-[660px] lg:h-[760px] min-h-[480px] max-h-[85vh] select-none">
+    <div className="relative rounded-2xl border border-[#3E4554] bg-[#1E222A] shadow-2xl overflow-hidden flex flex-col h-[520px] sm:h-[660px] lg:h-[760px] min-h-[440px] max-h-[82vh] select-none">
       {/* Top Toolbar */}
       <div className="relative z-20 flex flex-col gap-2 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-[#363C4A] bg-[#252A35]/95 backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -1302,7 +1590,9 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        className={`relative flex-1 w-full h-full overflow-hidden cursor-${
+        onMouseLeave={handleMouseUp}
+        style={{ touchAction: "none" }}
+        className={`relative flex-1 w-full h-full overflow-hidden touch-none select-none cursor-${
           isDragging ? "grabbing" : "grab"
         } bg-[radial-gradient(ellipse_at_50%_25%,#3E4452_0%,#20242D_70%,#15181E_100%)]`}
       >
@@ -1310,7 +1600,8 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
           ref={svgRef}
           width="100%"
           height="100%"
-          className="w-full h-full overflow-visible"
+          style={{ touchAction: "none" }}
+          className="w-full h-full overflow-visible touch-none"
         >
           <defs>
             {/* Card Rounded Drop Shadow */}
@@ -1412,6 +1703,35 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
                         strokeLinejoin="round"
                         filter={isHighlighted ? "url(#otGoldGlow)" : undefined}
                       />
+                      <circle
+                        cx={child.x}
+                        cy={child.y}
+                        r={isHighlighted ? 3.5 : 2.5}
+                        fill={lineColor}
+                      />
+                      {edge.motherName && (
+                        <g transform={`translate(${(parentCenter.x + child.x) / 2}, ${midY})`}>
+                          <rect
+                            x="-38"
+                            y="-9"
+                            width="76"
+                            height="18"
+                            rx="9"
+                            fill="#1A1E26"
+                            stroke={isHighlighted ? "#D4AF37" : "#F472B6"}
+                            strokeWidth="1.2"
+                          />
+                          <text
+                            x="0"
+                            y="3.5"
+                            textAnchor="middle"
+                            fill={isHighlighted ? "#F3E5AB" : "#FCE7F3"}
+                            className="font-sans font-bold text-[8.5px] select-none pointer-events-none"
+                          >
+                            {isRTL ? `أم: ${edge.motherName}` : `Mother: ${edge.motherName}`}
+                          </text>
+                        </g>
+                      )}
                     </g>
                   );
                 }
@@ -1445,6 +1765,31 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
                       filter={isHighlighted ? "url(#otGoldGlow)" : undefined}
                     />
 
+                    {/* Mother indicator badge on crossbar */}
+                    {edge.motherName && (
+                      <g transform={`translate(${parentCenter.x}, ${midY})`}>
+                        <rect
+                          x="-38"
+                          y="-9"
+                          width="76"
+                          height="18"
+                          rx="9"
+                          fill="#1A1E26"
+                          stroke={isHighlighted ? "#D4AF37" : "#F472B6"}
+                          strokeWidth="1.2"
+                        />
+                        <text
+                          x="0"
+                          y="3.5"
+                          textAnchor="middle"
+                          fill={isHighlighted ? "#F3E5AB" : "#FCE7F3"}
+                          className="font-sans font-bold text-[8.5px] select-none pointer-events-none"
+                        >
+                          {isRTL ? `أم: ${edge.motherName}` : `Mother: ${edge.motherName}`}
+                        </text>
+                      </g>
+                    )}
+
                     {/* Vertical drops into each child's top center */}
                     {childrenPoints.map((childPt, cIdx) => (
                       <g key={`${edge.id}_child_${cIdx}`}>
@@ -1474,12 +1819,14 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
             {/* 3. PERSON NODES (Sleek Dark Cards with Old Testament Character Art) */}
             <g id="svg-tree-nodes">
               {sortedLayoutNodes.map((node) => {
-                const { person, x, y, spouse, isExpanded, hasChildren, childCount } = node;
+                const { person, x, y, spouses, isExpanded, hasChildren, childCount } = node;
                 const isHovered = hoveredPersonId === person.id;
                 const isMatch = matchingPersonIds.has(person.id);
 
                 const displayName = getPersonDisplayName(person, lang);
                 const subName = isRTL ? person.name : person.arabicName;
+                const mother = person.motherId ? peopleMap.get(person.motherId) : undefined;
+                const motherName = mother ? getPersonDisplayName(mother, lang) : undefined;
 
                 return (
                   <g
@@ -1491,7 +1838,10 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
                     {/* Primary Person Card */}
                     <g
                       transform={`translate(${x}, ${y})`}
-                      onClick={() => onSelectPerson && onSelectPerson(person)}
+                      onClick={() => {
+                        if (didDragRef.current) return;
+                        onSelectPerson?.(person);
+                      }}
                       className="cursor-pointer group"
                     >
                       {/* Dark Rounded-Square Card Body */}
@@ -1546,11 +1896,39 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
                           : ""}
                       </text>
 
+                      {/* Mother Indicator Badge on Child Card */}
+                      {motherName && (
+                        <g transform={`translate(${CARD_WIDTH / 2}, 107)`}>
+                          <rect
+                            x="-38"
+                            y="-6"
+                            width="76"
+                            height="13"
+                            rx="6.5"
+                            fill="#3B1525"
+                            stroke="#F472B6"
+                            strokeWidth="0.8"
+                          />
+                          <text
+                            x="0"
+                            y="2.5"
+                            textAnchor="middle"
+                            fill="#FCE7F3"
+                            className="font-sans font-bold text-[7.5px] select-none pointer-events-none"
+                          >
+                            {isRTL ? `أم: ${motherName}` : `M: ${motherName}`}
+                          </text>
+                        </g>
+                      )}
+
                       {/* Large, Easy-to-Click Expand/Collapse Button (Solves interaction difficulty!) */}
                       {hasChildren && (
                         <g
                           transform={`translate(${(CARD_WIDTH - 60) / 2}, ${CARD_HEIGHT - 12})`}
-                          onClick={(e) => toggleNodeExpand(person.id, e)}
+                          onClick={(e) => {
+                            if (didDragRef.current) return;
+                            toggleNodeExpand(person.id, e);
+                          }}
                           className="cursor-pointer hover:brightness-125 transition-all"
                         >
                           <rect
@@ -1578,75 +1956,123 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
                       )}
                     </g>
 
-                    {/* Spouse Companion Card (e.g. Eve with Adam, Sarah with Abraham) */}
-                    {spouse && (
+                    {/* Spouse Companion Cards (Supports multiple wives e.g. Sarah & Hagar for Abraham) */}
+                    {spouses && spouses.length > 0 && (
                       <g>
-                        {/* Horizontal Marriage Link Line */}
-                        <line
-                          x1={x + CARD_WIDTH}
-                          y1={y + CARD_HEIGHT / 2}
-                          x2={x + CARD_WIDTH + SIBLING_GAP}
-                          y2={y + CARD_HEIGHT / 2}
-                          stroke="#D4AF37"
-                          strokeWidth="2"
-                          strokeDasharray="3 3"
-                        />
+                        {spouses.map((sp, sIdx) => {
+                          const spouseCardX = x + (sIdx + 1) * (CARD_WIDTH + SIBLING_GAP);
+                          const prevRightX = x + sIdx * (CARD_WIDTH + SIBLING_GAP) + CARD_WIDTH;
+                          const isSpouseHovered = hoveredPersonId === sp.id;
+                          const isSpouseMatch = matchingPersonIds.has(sp.id);
+                          const spouseDisplayName = getPersonDisplayName(sp, lang);
 
-                        {/* Spouse Card */}
-                        <g
-                          transform={`translate(${x + CARD_WIDTH + SIBLING_GAP}, ${y})`}
-                          onClick={() => onSelectPerson && onSelectPerson(spouse)}
-                          className="cursor-pointer group"
-                        >
-                          <rect
-                            width={CARD_WIDTH}
-                            height={CARD_HEIGHT}
-                            rx="14"
-                            ry="14"
-                            fill="#2A2F3A"
-                            stroke={
-                              matchingPersonIds.has(spouse.id)
-                                ? "#F59E0B"
-                                : hoveredPersonId === spouse.id
-                                ? "#D4AF37"
-                                : "#4A3944"
-                            }
-                            strokeWidth={matchingPersonIds.has(spouse.id) ? 3 : 1.5}
-                            filter="url(#otCardShadow)"
-                            className="transition-all duration-150"
-                          />
+                          return (
+                            <g key={`spouse_${sp.id}_${sIdx}`}>
+                              {/* Horizontal Marriage Link Line with Ring */}
+                              <line
+                                x1={prevRightX}
+                                y1={y + CARD_HEIGHT / 2}
+                                x2={spouseCardX}
+                                y2={y + CARD_HEIGHT / 2}
+                                stroke="#D4AF37"
+                                strokeWidth="2"
+                                strokeDasharray="3 3"
+                              />
+                              <circle
+                                cx={(prevRightX + spouseCardX) / 2}
+                                cy={y + CARD_HEIGHT / 2}
+                                r="4"
+                                fill="#2A2F3A"
+                                stroke="#D4AF37"
+                                strokeWidth="1.5"
+                              />
 
-                          {/* Spouse Character Vector Avatar */}
-                          {renderOldTestamentAvatar(spouse)}
+                              {/* Spouse Card */}
+                              <g
+                                transform={`translate(${spouseCardX}, ${y})`}
+                                onClick={() => {
+                                  if (didDragRef.current) return;
+                                  onSelectPerson?.(sp);
+                                }}
+                                onMouseEnter={() => setHoveredPersonId(sp.id)}
+                                onMouseLeave={() => setHoveredPersonId(null)}
+                                className="cursor-pointer group"
+                              >
+                                <rect
+                                  width={CARD_WIDTH}
+                                  height={CARD_HEIGHT}
+                                  rx="14"
+                                  ry="14"
+                                  fill="#2A2F3A"
+                                  stroke={
+                                    isSpouseMatch
+                                      ? "#F59E0B"
+                                      : isSpouseHovered
+                                      ? "#D4AF37"
+                                      : "#503040"
+                                  }
+                                  strokeWidth={isSpouseMatch ? 3 : isSpouseHovered ? 2.5 : 1.5}
+                                  filter={isSpouseMatch || isSpouseHovered ? "url(#otGoldGlow)" : "url(#otCardShadow)"}
+                                  className="transition-all duration-150"
+                                />
 
-                          {/* Spouse Name */}
-                          <text
-                            x={CARD_WIDTH / 2}
-                            y={80}
-                            textAnchor="middle"
-                            fill="#FCE7F3"
-                            className="font-cinzel font-black text-[11px] select-none pointer-events-none"
-                          >
-                            {getPersonDisplayName(spouse, lang).length > 13
-                              ? getPersonDisplayName(spouse, lang).slice(0, 12) + "…"
-                              : getPersonDisplayName(spouse, lang)}
-                          </text>
+                                {/* Spouse Character Vector Avatar */}
+                                {renderOldTestamentAvatar(sp)}
 
-                          {/* Spouse Lifespan */}
-                          <text
-                            x={CARD_WIDTH / 2}
-                            y={94}
-                            textAnchor="middle"
-                            fill="#F472B6"
-                            className="font-mono text-[9.5px] font-bold opacity-90 select-none pointer-events-none"
-                          >
-                            {spouse.yearsLived
-                              ? `${spouse.yearsLived} ${t.years || "y"}`
-                              : isRTL
-                              ? "الزوجة"
-                              : "Spouse"}
-                          </text>
-                        </g>
+                                {/* Wife / Spouse Badge */}
+                                <g transform={`translate(${CARD_WIDTH / 2}, 63)`}>
+                                  <rect
+                                    x="-26"
+                                    y="-6"
+                                    width="52"
+                                    height="12"
+                                    rx="6"
+                                    fill="#4A1528"
+                                    stroke="#F472B6"
+                                    strokeWidth="0.8"
+                                  />
+                                  <text
+                                    x="0"
+                                    y="2.5"
+                                    textAnchor="middle"
+                                    fill="#FCE7F3"
+                                    className="font-sans font-bold text-[7.5px] select-none pointer-events-none"
+                                  >
+                                    {isRTL ? "زوجة" : "Wife"}
+                                  </text>
+                                </g>
+
+                                {/* Spouse Name */}
+                                <text
+                                  x={CARD_WIDTH / 2}
+                                  y={80}
+                                  textAnchor="middle"
+                                  fill="#FCE7F3"
+                                  className="font-cinzel font-black text-[11px] select-none pointer-events-none"
+                                >
+                                  {spouseDisplayName.length > 13
+                                    ? spouseDisplayName.slice(0, 12) + "…"
+                                    : spouseDisplayName}
+                                </text>
+
+                                {/* Spouse Lifespan */}
+                                <text
+                                  x={CARD_WIDTH / 2}
+                                  y={94}
+                                  textAnchor="middle"
+                                  fill="#F472B6"
+                                  className="font-mono text-[9.5px] font-bold opacity-90 select-none pointer-events-none"
+                                >
+                                  {sp.yearsLived
+                                    ? `${sp.yearsLived} ${t.years || "y"}`
+                                    : isRTL
+                                    ? "الزوجة"
+                                    : "Spouse"}
+                                </text>
+                              </g>
+                            </g>
+                          );
+                        })}
                       </g>
                     )}
                   </g>
@@ -1655,6 +2081,223 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
             </g>
           </g>
         </svg>
+
+        {/* Floating Mobile & Touch Navigation Controller (D-Pad & Zoom) */}
+        <div className={`absolute bottom-11 sm:bottom-12 ${isRTL ? "left-2 sm:left-3" : "right-2 sm:right-3"} z-20 flex flex-col items-end gap-1.5 select-none pointer-events-auto`}>
+          {showNavPad ? (
+            <div className="bg-[#181C28]/95 border border-[#D4AF37]/50 rounded-2xl p-1.5 sm:p-2 shadow-2xl backdrop-blur-md flex flex-col items-center gap-1.5 animate-fadeIn">
+              {/* Header row with minimize & title */}
+              <div className="w-full flex items-center justify-between gap-2 px-1 text-[10px] font-bold text-[#F3E5AB]">
+                <span className="flex items-center gap-1 text-[9.5px]">
+                  <Compass size={11} className="text-[#D4AF37]" />
+                  <span>{isRTL ? "أزرار التنقل" : "Navigator"}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowNavPad(false)}
+                  className="p-0.5 rounded text-slate-400 hover:text-white transition-colors"
+                  title={isRTL ? "إخفاء" : "Hide"}
+                >
+                  <ChevronDown size={12} />
+                </button>
+              </div>
+
+              {/* D-Pad 4-Way Cross */}
+              <div className="relative w-24 h-24 sm:w-26 sm:h-26 flex items-center justify-center">
+                {/* UP: Towards Adam & earlier ancestors */}
+                <button
+                  type="button"
+                  onMouseDown={() => startContinuousPan(0, 160)}
+                  onMouseUp={stopContinuousPan}
+                  onMouseLeave={stopContinuousPan}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    startContinuousPan(0, 160);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  onTouchCancel={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  className="absolute top-0 w-8 h-8 rounded-lg bg-[#252A35] border border-[#3E4554] active:bg-[#D4AF37] active:text-black hover:border-[#D4AF37] text-slate-200 flex items-center justify-center shadow-sm transition-all"
+                  title={isRTL ? "تحريك لأعلى (نحو الآباء الأوائل)" : "Pan Up (Ancestors)"}
+                >
+                  <ArrowUp size={15} />
+                </button>
+
+                {/* LEFT: Towards left branches */}
+                <button
+                  type="button"
+                  onMouseDown={() => startContinuousPan(160, 0)}
+                  onMouseUp={stopContinuousPan}
+                  onMouseLeave={stopContinuousPan}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    startContinuousPan(160, 0);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  onTouchCancel={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  className="absolute left-0 w-8 h-8 rounded-lg bg-[#252A35] border border-[#3E4554] active:bg-[#D4AF37] active:text-black hover:border-[#D4AF37] text-slate-200 flex items-center justify-center shadow-sm transition-all"
+                  title={isRTL ? "تحريك لليسار" : "Pan Left"}
+                >
+                  <ArrowLeft size={15} />
+                </button>
+
+                {/* CENTER: Reset & Fit All */}
+                <button
+                  type="button"
+                  onClick={handleFitToScreen}
+                  className="w-7 h-7 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37] text-[#F3E5AB] hover:bg-[#D4AF37] hover:text-black active:scale-95 flex items-center justify-center shadow-inner transition-all"
+                  title={isRTL ? "ملاءمة الشاشة" : "Fit All"}
+                >
+                  <RotateCcw size={12} />
+                </button>
+
+                {/* RIGHT: Towards right branches */}
+                <button
+                  type="button"
+                  onMouseDown={() => startContinuousPan(-160, 0)}
+                  onMouseUp={stopContinuousPan}
+                  onMouseLeave={stopContinuousPan}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    startContinuousPan(-160, 0);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  onTouchCancel={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  className="absolute right-0 w-8 h-8 rounded-lg bg-[#252A35] border border-[#3E4554] active:bg-[#D4AF37] active:text-black hover:border-[#D4AF37] text-slate-200 flex items-center justify-center shadow-sm transition-all"
+                  title={isRTL ? "تحريك لليمين" : "Pan Right"}
+                >
+                  <ArrowRight size={15} />
+                </button>
+
+                {/* DOWN: Towards later generations & 12 Patriarchs */}
+                <button
+                  type="button"
+                  onMouseDown={() => startContinuousPan(0, -160)}
+                  onMouseUp={stopContinuousPan}
+                  onMouseLeave={stopContinuousPan}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    startContinuousPan(0, -160);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  onTouchCancel={(e) => {
+                    e.stopPropagation();
+                    stopContinuousPan();
+                  }}
+                  className="absolute bottom-0 w-8 h-8 rounded-lg bg-[#252A35] border border-[#3E4554] active:bg-[#D4AF37] active:text-black hover:border-[#D4AF37] text-slate-200 flex items-center justify-center shadow-sm transition-all"
+                  title={isRTL ? "تحريك لأسفل (نحو الأبناء والأسباط)" : "Pan Down (Descendants)"}
+                >
+                  <ArrowDown size={15} />
+                </button>
+              </div>
+
+              {/* Quick Zoom In/Out & 100% */}
+              <div className="w-full flex items-center justify-between gap-1 pt-1 border-t border-[#363C4A]">
+                <button
+                  type="button"
+                  onClick={() => handleZoomByFactor(0.85)}
+                  className="flex-1 py-1 rounded bg-[#202530] border border-[#3A4252] text-slate-300 hover:text-white text-[10px] font-bold flex items-center justify-center transition-colors"
+                  title={isRTL ? "تصغير (-)" : "Zoom Out (-)"}
+                >
+                  <ZoomOut size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZoom(1);
+                    setPan({ x: 30, y: 20 });
+                  }}
+                  className="px-1.5 py-1 rounded bg-[#202530] border border-[#3A4252] text-[#F3E5AB] font-mono text-[9px] font-bold hover:border-[#D4AF37] transition-colors"
+                  title="100%"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleZoomByFactor(1.18)}
+                  className="flex-1 py-1 rounded bg-[#202530] border border-[#3A4252] text-slate-300 hover:text-white text-[10px] font-bold flex items-center justify-center transition-colors"
+                  title={isRTL ? "تكبير (+)" : "Zoom In (+)"}
+                >
+                  <ZoomIn size={12} />
+                </button>
+              </div>
+
+              {/* Quick Generation Jump Bar */}
+              <div className="w-full flex items-center justify-between gap-1 pt-0.5 text-[8.5px]">
+                <button
+                  type="button"
+                  onClick={() => handleJumpToGen(1)}
+                  className="px-1 py-0.5 rounded bg-[#202530] hover:bg-[#D4AF37]/20 border border-[#3A4252] hover:border-[#D4AF37] text-slate-300 font-semibold"
+                  title={isRTL ? "الجيل 1: آدم وحواء" : "Gen 1: Adam & Eve"}
+                >
+                  G1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToGen(7)}
+                  className="px-1 py-0.5 rounded bg-[#202530] hover:bg-[#D4AF37]/20 border border-[#3A4252] hover:border-[#D4AF37] text-slate-300 font-semibold"
+                  title={isRTL ? "الجيل 7: أخنوخ" : "Gen 7: Enoch"}
+                >
+                  G7
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToGen(10)}
+                  className="px-1 py-0.5 rounded bg-[#202530] hover:bg-[#D4AF37]/20 border border-[#3A4252] hover:border-[#D4AF37] text-slate-300 font-semibold"
+                  title={isRTL ? "الجيل 10: نوح" : "Gen 10: Noah"}
+                >
+                  G10
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToGen(11)}
+                  className="px-1 py-0.5 rounded bg-[#202530] hover:bg-[#D4AF37]/20 border border-[#3A4252] hover:border-[#D4AF37] text-slate-300 font-semibold"
+                  title={isRTL ? "الجيل 11: إبراهيم" : "Gen 11: Abraham"}
+                >
+                  G11
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToGen(14)}
+                  className="px-1 py-0.5 rounded bg-[#202530] hover:bg-[#D4AF37]/20 border border-[#3A4252] hover:border-[#D4AF37] text-[#F3E5AB] font-bold"
+                  title={isRTL ? "الجيل 14: أسباط إسرائيل" : "Gen 14: 12 Patriarchs"}
+                >
+                  G14
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowNavPad(true)}
+              className="p-2 sm:p-2.5 rounded-xl bg-[#181C28]/95 border border-[#D4AF37]/60 text-[#F3E5AB] hover:bg-[#D4AF37] hover:text-black shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition-all"
+              title={isRTL ? "إظهار أزرار التنقل والأسهم" : "Show Navigation Pad"}
+            >
+              <Compass size={15} className="text-[#D4AF37]" />
+              <span className="text-[10px] sm:text-xs font-semibold">{isRTL ? "أزرار التنقل" : "Navigator"}</span>
+            </button>
+          )}
+        </div>
 
         {/* Floating Active Person Inspection Pill (Instant biblical context & inspection on hover) */}
         {hoveredPerson ? (
@@ -1691,7 +2334,9 @@ export const SvgGenerationalTree: React.FC<SvgGenerationalTreeProps> = ({
           <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 z-10 pointer-events-none flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] font-medium px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[#181C24]/85 border border-[#3A4252] text-slate-300 shadow-lg backdrop-blur-md max-w-[calc(100%-120px)] sm:max-w-none truncate">
             <Move size={12} className="text-[#D4AF37] shrink-0" />
             <span className="truncate">
-              {t.panHint || (isRTL ? "اسحب للتحريك · قرّب بأصابعك للتكبير · اضغط للمعاينة" : "Drag to pan · Pinch/scroll to zoom · Click to inspect")}
+              {isRTL
+                ? "اسحب بإصبعك للتنقل داخل الشجرة · أو استخدم أزرار الأسهم · باعد للتكبير"
+                : "Drag to scroll tree · Or use navigation arrows · Pinch to zoom"}
             </span>
           </div>
         )}

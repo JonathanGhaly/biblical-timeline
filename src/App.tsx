@@ -21,6 +21,7 @@ import {
   cacheLocalData,
   getCachedLocalData,
 } from "./services/gistService";
+import { normalizeGenealogyPeople } from "./utils/chronology";
 import type {
   GenealogyData,
   Person,
@@ -49,7 +50,11 @@ export default function App() {
   // Central data state
   const [data, setData] = useState<GenealogyData>(() => {
     const cached = getCachedLocalData();
-    return cached || (fallbackData as GenealogyData);
+    const base = cached || (fallbackData as GenealogyData);
+    return {
+      ...base,
+      people: normalizeGenealogyPeople(base.people || []),
+    };
   });
 
   const people = data.people;
@@ -77,7 +82,10 @@ export default function App() {
   const loadGistData = useCallback(async () => {
     try {
       const res = await fetchFromGist();
-      setData(res.data);
+      setData({
+        ...res.data,
+        people: normalizeGenealogyPeople(res.data.people || []),
+      });
       setIsGistLive(res.isLive);
       setLastUpdated(res.updatedAt);
     } catch (e) {

@@ -107,7 +107,7 @@ export const BiblicalMapLegendModal: React.FC<BiblicalMapLegendModalProps> = ({
             }`}
           >
             <div className="w-3.5 h-3.5 rounded-full bg-[#F59E0B] border border-[#92400E] shrink-0" />
-            <span>{isRTL ? "مسار رحلة إبراهيم الخليل" : "Abraham's Journey of Faith"}</span>
+            <span>{isRTL ? "مسار رحلة أبينا إبراهيم" : "Abraham's Journey of Faith"}</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#FEF3C7] text-[#92400E] font-semibold">
               9 {isRTL ? "محطات" : "stations"}
             </span>

@@ -7,10 +7,97 @@ export interface ComputedPerson extends Person {
   anchorAgeUsed?: number;
 }
 
+/**
+ * Ensures baseline biblical family units (like Abraham married to Sarah and Hagar,
+ * with Isaac born to Sarah and Ishmael born to Hagar) are completely populated.
+ */
+export function normalizeGenealogyPeople(rawPeople: Person[]): Person[] {
+  const result: Person[] = rawPeople.map((p) => ({ ...p }));
+
+  // 1. Ensure Hagar exists
+  let hagar = result.find((p) => p.id === "hagar");
+  if (!hagar) {
+    hagar = {
+      id: "hagar",
+      name: "Hagar",
+      arabicName: "هاجر",
+      gender: "female",
+      husbandId: "abraham",
+      anchorPersonId: "abraham",
+      anchorPersonAgeAtBirth: 15,
+      spouseIds: ["abraham"],
+      yearsLived: 90,
+      biblicalReferences: ["Genesis 16", "Genesis 21", "Galatians 4:21-31"],
+      notes: "Egyptian maidservant of Sarah and wife of Abraham, mother of Ishmael.",
+      arabicNotes: "زوجة إبراهيم وأم إسماعيل.",
+    };
+    result.push(hagar);
+  } else {
+    hagar.husbandId = "abraham";
+    if (!hagar.spouseIds || !hagar.spouseIds.includes("abraham")) {
+      hagar.spouseIds = ["abraham"];
+    }
+  }
+
+  // 2. Ensure Ishmael exists
+  let ishmael = result.find((p) => p.id === "ishmael");
+  if (!ishmael) {
+    ishmael = {
+      id: "ishmael",
+      name: "Ishmael",
+      arabicName: "إسماعيل",
+      gender: "male",
+      fatherId: "abraham",
+      motherId: "hagar",
+      fatherAgeAtBirth: 86,
+      yearsLived: 137,
+      spouseIds: [],
+      biblicalReferences: ["Genesis 16", "Genesis 17", "Genesis 21", "Genesis 25:12-18"],
+      notes: "Firstborn son of Abraham born to Hagar.",
+      arabicNotes: "بكر إبراهيم من هاجر المصرية، عاش 137 سنة.",
+    };
+    result.push(ishmael);
+  } else {
+    ishmael.fatherId = "abraham";
+    ishmael.motherId = "hagar";
+    if (ishmael.fatherAgeAtBirth === undefined) ishmael.fatherAgeAtBirth = 86;
+  }
+
+  // 3. Ensure Abraham has Sarah and Hagar as spouses
+  const abraham = result.find((p) => p.id === "abraham");
+  if (abraham) {
+    const spouses = new Set(abraham.spouseIds || []);
+    spouses.add("sarah");
+    spouses.add("hagar");
+    abraham.spouseIds = Array.from(spouses);
+    if (!abraham.arabicName) abraham.arabicName = "إبراهيم";
+  }
+
+  // 4. Ensure Sarah has husbandId and spouseIds
+  const sarah = result.find((p) => p.id === "sarah");
+  if (sarah) {
+    sarah.husbandId = "abraham";
+    sarah.spouseIds = ["abraham"];
+    if (!sarah.arabicName) sarah.arabicName = "سارة";
+  }
+
+  // 5. Ensure Isaac is linked to Abraham and Sarah
+  const isaac = result.find((p) => p.id === "isaac");
+  if (isaac) {
+    isaac.fatherId = "abraham";
+    isaac.motherId = "sarah";
+    if (isaac.fatherAgeAtBirth === undefined) isaac.fatherAgeAtBirth = 100;
+    if (!isaac.arabicName) isaac.arabicName = "إسحاق";
+  }
+
+  return result;
+}
+
 export function computeAllDates(
-  people: Person[],
+  rawPeople: Person[],
   baseYearBC = 4000
 ): ComputedPerson[] {
+  const people = normalizeGenealogyPeople(rawPeople);
   const map = new Map<string, ComputedPerson>();
   const visiting = new Set<string>();
 

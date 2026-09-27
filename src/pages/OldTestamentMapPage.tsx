@@ -17,7 +17,6 @@ import {
   Navigation,
   Sparkles,
   Layers,
-  Check,
   Mountain,
   Waves,
   Route,
@@ -1368,6 +1367,8 @@ export default function OldTestamentMapPage({
       setSelectedStation(null); // Close route station preview if open to avoid overlap
       setSelectedEvent(null);
       setSidebarView("events");
+      // On mobile: collapse expanded sheet to peek so the city journey window has full view
+      setMobileSheetMode((prev) => (prev === "full" || prev === "half" ? "peek" : prev));
       setActiveLocationIds(new Set([loc.id]));
       setShowMajorCentersOnly(false);
       centerOnLocation(loc.coordinates[0], loc.coordinates[1], 2.8);
@@ -1664,7 +1665,9 @@ export default function OldTestamentMapPage({
             id="header-toggle-sidebar-btn"
             onClick={() => {
               setIsSidebarOpen((prev) => !prev);
-              setMobileSheetMode((prev) => (prev === "hidden" ? "peek" : "hidden"));
+              setMobileSheetMode((prev) =>
+                prev === "half" || prev === "full" ? "hidden" : "half"
+              );
             }}
             className={`px-1.5 sm:px-3 py-0.5 sm:py-1.5 rounded-lg border transition-all flex items-center gap-1 font-semibold text-[10px] sm:text-xs shadow-xs min-h-[28px] sm:min-h-[36px] active:scale-95 cursor-pointer ${
               isSidebarOpen && mobileSheetMode !== "hidden"
@@ -1672,7 +1675,7 @@ export default function OldTestamentMapPage({
                 : "bg-white border-stone-300 text-stone-700 hover:bg-[#F5E8CA] hover:text-[#800020]"
             }`}
             title={
-              isSidebarOpen && mobileSheetMode !== "hidden"
+              isSidebarOpen && (mobileSheetMode === "half" || mobileSheetMode === "full")
                 ? isRTL ? "إخفاء القائمة والدليل" : "Hide Directory"
                 : isRTL ? "إظهار دليل المواقع" : "Show Directory"
             }
@@ -2906,7 +2909,7 @@ export default function OldTestamentMapPage({
             {mobileSheetMode === "hidden" && (
               <button
                 id="mobile-reopen-sheet-btn"
-                onClick={() => setMobileSheetMode("peek")}
+                onClick={() => setMobileSheetMode("half")}
                 className={`md:hidden absolute bottom-4 ${
                   isRTL ? "right-4" : "left-4"
                 } z-40 flex items-center gap-2 px-3 py-2 bg-[#800020] text-[#D4AF37] rounded-full shadow-2xl border-2 border-[#D4AF37] font-bold text-xs transition active:scale-95 min-h-[44px] cursor-pointer`}
@@ -3034,125 +3037,288 @@ export default function OldTestamentMapPage({
                       )}
                     </button>
 
-                    {/* Dropdown Menu for Layers (Clamped safely on mobile screen) */}
+                    {/* Dropdown Menu for Layers (Mobile bottom sheet overlay & Desktop flyout) */}
                     {showLayersMenu && (
                       <>
                         <div
-                          className="md:hidden fixed inset-0 z-45 bg-black/20 backdrop-blur-[1px]"
+                          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity"
                           onClick={() => setShowLayersMenu(false)}
                         />
                         <div
                           className={`
-                            fixed inset-x-3 top-14 md:absolute md:inset-auto md:top-0
+                            fixed inset-x-0 bottom-0 md:bottom-auto md:inset-auto md:top-0
                             ${isRTL ? "md:left-full md:ml-2" : "md:right-full md:mr-2"}
-                            w-auto md:w-64 max-h-[75vh] md:max-h-[70vh] overflow-y-auto
-                            bg-[#FDFBF7] rounded-xl shadow-2xl border border-[#D4AF37]/80 p-2.5 sm:p-3
-                            z-50 text-[11px] sm:text-xs font-sans text-[#1C1917] space-y-1.5 sm:space-y-2
+                            w-full md:w-80 max-h-[85vh] md:max-h-[75vh] overflow-y-auto
+                            bg-[#FDFBF7] rounded-t-3xl md:rounded-2xl shadow-2xl border-2 border-[#D4AF37] p-4 sm:p-4.5
+                            z-50 text-xs font-sans text-[#1C1917] space-y-3 animate-in slide-in-from-bottom-5 md:slide-in-from-top-2 duration-200
                           `}
                         >
-                          <div className="flex items-center justify-between pb-1.5 border-b border-[#D4AF37]/30">
-                            <span className="font-bold text-[#800020] flex items-center gap-1.5">
-                              <Layers className="w-4 h-4 text-[#D4AF37]" />
-                              {isRTL ? "طبقات التضاريس والجغرافيا" : "Geographic Layers"}
-                            </span>
+                          {/* Mobile Drag Handle */}
+                          <div className="md:hidden flex justify-center pb-1">
+                            <div className="w-12 h-1.5 bg-[#D4AF37]/50 rounded-full" />
+                          </div>
+
+                          <div className="flex items-center justify-between pb-2 border-b border-[#D4AF37]/40">
+                            <div>
+                              <span className="font-bold text-sm sm:text-base text-[#800020] flex items-center gap-2">
+                                <Layers className="w-4 h-4 text-[#D4AF37]" />
+                                {isRTL ? "طبقات وتضاريس الخريطة الكتابية" : "Map Cartographic Layers & Overlays"}
+                              </span>
+                              <p className="text-[11px] text-stone-500 font-sans mt-0.5">
+                                {isRTL ? "التحكم في إظهار وإخفاء التضاريس والمسارات القديمة" : "Toggle terrain, holy routes, and geographical features"}
+                              </p>
+                            </div>
                             <button
+                              type="button"
                               onClick={() => setShowLayersMenu(false)}
-                              className="text-stone-400 hover:text-stone-700 p-0.5 rounded cursor-pointer"
+                              className="w-8 h-8 rounded-lg bg-stone-100 hover:bg-[#F5E8CA] text-stone-600 hover:text-[#800020] flex items-center justify-center transition cursor-pointer shrink-0"
+                              title={isRTL ? "إغلاق" : "Close"}
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
 
-                          {/* Layer Toggles */}
-                          <div className="space-y-1">
+                          {/* Layer Toggles with clear descriptions and switches */}
+                          <div className="space-y-1.5">
+                            {/* Rivers */}
                             <button
+                              type="button"
                               onClick={() => setLayers((prev) => ({ ...prev, showRivers: !prev.showRivers }))}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showRivers ? "bg-cyan-50/70 border-cyan-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <Waves className="w-3.5 h-3.5 text-[#0E4861]" />
-                                {isRTL ? "الأنهار والمسطحات المائية" : "Rivers & Waterways"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-blue-100 text-[#0E4861] flex items-center justify-center shrink-0">
+                                  <Waves className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "الأنهار والمسطحات المائية" : "Rivers & Waterways"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "نهر النيل، الأردن، الفرات، دجلة، بحيرة طبريا، البحر الميت" : "Nile, Jordan, Euphrates, Tigris, Sea of Galilee"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showRivers ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showRivers ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showRivers && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
+                            {/* Mountains */}
                             <button
+                              type="button"
                               onClick={() => setLayers((prev) => ({ ...prev, showMountains: !prev.showMountains }))}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showMountains ? "bg-amber-50/70 border-amber-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <Mountain className="w-3.5 h-3.5 text-[#92400E]" />
-                                {isRTL ? "سلاسل الجبال والقمم" : "Mountain Ranges & Summits"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-amber-100 text-[#92400E] flex items-center justify-center shrink-0">
+                                  <Mountain className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "سلاسل الجبال والقمم التوراتية" : "Mountain Ranges & Summits"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "جبل سيناء (حوريب)، جبل أرارات، جبل نيبو، جبل حرمون" : "Mt. Sinai, Ararat, Nebo, Hermon, Carmel"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showMountains ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showMountains ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showMountains && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
+                            {/* Ancient Caravan Routes */}
                             <button
+                              type="button"
                               onClick={() => setLayers((prev) => ({ ...prev, showRoutes: !prev.showRoutes }))}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showRoutes ? "bg-orange-50/70 border-orange-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <Route className="w-3.5 h-3.5 text-[#991B1B]" />
-                                {isRTL ? "طرق التجارة والقوافل القديمة" : "Ancient Caravan Routes"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-orange-100 text-[#991B1B] flex items-center justify-center shrink-0">
+                                  <Route className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "طرق التجارة والقوافل القديمة" : "Ancient Caravan Routes"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "طريق البحر (Via Maris) وطريق الملوك الدولي" : "Via Maris, King's Highway, Desert Way"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showRoutes ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showRoutes ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showRoutes && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
                             {/* Abraham's Journey Route */}
                             <button
+                              type="button"
                               onClick={() => handleToggleLayer("showAbrahamRoute")}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showAbrahamRoute !== false ? "bg-amber-50/70 border-amber-400 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]" />
-                                {isRTL ? "مسار رحلة إبراهيم (أور - كنعان - مصر)" : "Abraham's Journey of Faith"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-amber-200 text-[#D97706] flex items-center justify-center shrink-0 font-bold">
+                                  ★
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "مسار رحلة أبينا إبراهيم (أور - كنعان - مصر)" : "Abraham's Journey of Faith"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "أور الكلدانيين، حاران، شكيم، بيت إيل، الخليل، مصر" : "Ur to Haran, Shechem, Bethel, Hebron & Egypt"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showAbrahamRoute !== false ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showAbrahamRoute !== false ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showAbrahamRoute !== false && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
                             {/* Moses' Exodus Route */}
                             <button
+                              type="button"
                               onClick={() => handleToggleLayer("showExodusRoute")}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showExodusRoute !== false ? "bg-red-50/70 border-red-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />
-                                {isRTL ? "مسار خروج موسى وتيه سيناء (40 سنة)" : "Moses' Exodus & 40-Yr Route"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-red-100 text-[#DC2626] flex items-center justify-center shrink-0 font-bold">
+                                  ✝
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "مسار خروج موسى وتيه سيناء (40 سنة)" : "Moses' Exodus & 40-Yr Wilderness Route"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "رعمسيس، بحر سوف، مارة، إيليم، جبل سيناء، قادش برنيع" : "Ramses, Red Sea Crossing, Mt. Sinai, Kadesh-barnea"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showExodusRoute !== false ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showExodusRoute !== false ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showExodusRoute !== false && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
+                            {/* Fertile Crescent */}
                             <button
+                              type="button"
                               onClick={() => setLayers((prev) => ({ ...prev, showFertileCrescent: !prev.showFertileCrescent }))}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showFertileCrescent ? "bg-lime-50/70 border-lime-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5 text-[#65A30D]" />
-                                {isRTL ? "الهلال الخصيب والسهول" : "Fertile Crescent Zone"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-lime-100 text-[#65A30D] flex items-center justify-center shrink-0">
+                                  <Sparkles className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "الهلال الخصيب والسهول الزراعية" : "Fertile Crescent Zone"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "قوس الحضارات القديمة من بلاد الرافدين إلى كنعان ومصر" : "Ancient cradle from Mesopotamia to Canaan and Nile"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showFertileCrescent ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showFertileCrescent ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showFertileCrescent && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
+                            {/* Lat/Long Grid */}
                             <button
+                              type="button"
                               onClick={() => setLayers((prev) => ({ ...prev, showGraticule: !prev.showGraticule }))}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showGraticule ? "bg-stone-100 border-stone-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <Grid className="w-3.5 h-3.5 text-[#78350F]" />
-                                {isRTL ? "خطوط الطول والعرض (الشبكة)" : "Lat/Long Coordinate Grid"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-stone-200 text-[#78350F] flex items-center justify-center shrink-0">
+                                  <Grid className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "شبكة الإحداثيات وخطوط الطول/العرض" : "Coordinate Graticule Grid"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "درجات الطول والعرض الجغرافية الدقيقة" : "Precise latitude & longitude cartographic grid lines"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showGraticule ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showGraticule ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showGraticule && <Check className="w-3.5 h-3.5 text-[#800020]" />}
                             </button>
 
+                            {/* Ancient Realm Names */}
                             <button
+                              type="button"
                               onClick={() => setLayers((prev) => ({ ...prev, showRegionLabels: !prev.showRegionLabels }))}
-                              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#F5E8CA] transition text-left cursor-pointer"
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer text-left ${
+                                layers.showRegionLabels ? "bg-amber-50/70 border-amber-300 text-stone-900" : "bg-white border-stone-200 text-stone-500 opacity-75"
+                              }`}
                             >
-                              <span className="flex items-center gap-2">
-                                <Compass className="w-3.5 h-3.5 text-[#800020]" />
-                                {isRTL ? "أسماء الممالك والأقاليم" : "Ancient Realm & Empire Names"}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-amber-100 text-[#800020] flex items-center justify-center shrink-0">
+                                  <Compass className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-xs text-stone-800">
+                                    {isRTL ? "أسماء الممالك والأقاليم الكتابية" : "Ancient Realm & Empire Names"}
+                                  </div>
+                                  <div className="text-[10.5px] text-stone-500 truncate">
+                                    {isRTL ? "كنعان، مصر، آشور، بابل، آرام، فينيقيا، إدوم، موآب" : "Canaan, Egypt, Assyria, Babylon, Aram, Edom"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                layers.showRegionLabels ? "bg-[#800020] text-[#D4AF37]" : "bg-stone-200 text-stone-600"
+                              }`}>
+                                {layers.showRegionLabels ? (isRTL ? "ظاهر" : "ON") : (isRTL ? "مخفي" : "OFF")}
                               </span>
-                              {layers.showRegionLabels && <Check className="w-3.5 h-3.5 text-[#800020]" />}
+                            </button>
+                          </div>
+
+                          {/* Full Legend & Routes Guide Action Button */}
+                          <div className="pt-2 border-t border-[#D4AF37]/30">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowLayersMenu(false);
+                                setShowLegendModal(true);
+                              }}
+                              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#800020] via-[#9B1238] to-[#800020] text-[#F3E5AB] font-bold text-xs shadow-md border border-[#D4AF37] flex items-center justify-center gap-2 active:scale-98 transition cursor-pointer"
+                            >
+                              <Compass className="w-4 h-4 text-[#D4AF37]" />
+                              <span>
+                                {isRTL ? "فتح دليل المسارات ومفتاح الرموز المفصل ←" : "Open Full Routes Guide & Legend →"}
+                              </span>
                             </button>
                           </div>
                         </div>
@@ -3600,7 +3766,7 @@ export default function OldTestamentMapPage({
         >
           <div
             id="event-details-modal-card"
-            className="bg-[#FDFBF7] rounded-2xl max-w-lg w-full p-6 shadow-2xl border-2 border-[#D4AF37] space-y-4 font-sans text-sm animate-in fade-in zoom-in-95"
+            className="bg-[#FDFBF7] rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border-2 border-[#D4AF37] space-y-4 font-sans text-sm animate-in fade-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -3790,10 +3956,10 @@ export default function OldTestamentMapPage({
         <div
           id="city-journey-window"
           className={`absolute ${
-            mobileSheetMode === "peek" ? "bottom-20 md:bottom-4" : "bottom-4"
+            mobileSheetMode === "peek" ? "bottom-18 md:bottom-4" : "bottom-3 md:bottom-4"
           } ${
             isRTL ? "left-3 sm:left-6" : "right-3 sm:right-6"
-          } z-40 max-w-sm sm:max-w-md w-[calc(100%-1.5rem)] sm:w-[420px] bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 border-[#800020] p-4 sm:p-4.5 font-sans text-xs animate-in fade-in slide-in-from-bottom-3 duration-200 backdrop-blur-xs`}
+          } z-50 max-w-sm sm:max-w-md w-[calc(100%-1.5rem)] sm:w-[420px] max-h-[82vh] overflow-y-auto bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 border-[#800020] p-4 sm:p-4.5 font-sans text-xs animate-in fade-in slide-in-from-bottom-3 duration-200 backdrop-blur-xs`}
         >
           {/* Header Row: Number/Icon Badge + City/Event Title + Close Button */}
           <div className="flex items-start justify-between gap-2 mb-2">
@@ -3884,7 +4050,7 @@ export default function OldTestamentMapPage({
           <div className="space-y-1.5 mb-3">
             {cityWindowStep === 0 ? (
               <>
-                <p className="text-stone-700 text-[11.5px] leading-relaxed max-h-32 overflow-y-auto pr-1 scrollbar-thin">
+                <p className="text-stone-700 text-[11.5px] leading-relaxed max-h-52 sm:max-h-64 overflow-y-auto pr-1 scrollbar-thin">
                   {isRTL
                     ? (selectedLocation.arabicDescription || selectedLocation.description)
                     : (selectedLocation.description || selectedLocation.arabicDescription)}
@@ -3906,7 +4072,7 @@ export default function OldTestamentMapPage({
               </>
             ) : (
               selectedCityEvents[cityWindowStep - 1] && (
-                <p className="text-stone-700 text-[11.5px] leading-relaxed max-h-32 overflow-y-auto pr-1 scrollbar-thin">
+                <p className="text-stone-700 text-[11.5px] leading-relaxed max-h-52 sm:max-h-64 overflow-y-auto pr-1 scrollbar-thin">
                   {getEventDisplayDescription(selectedCityEvents[cityWindowStep - 1], lang)}
                 </p>
               )
@@ -4061,11 +4227,13 @@ export default function OldTestamentMapPage({
       {selectedStation && (
         <div
           id="selected-station-card"
-          className={`absolute bottom-4 ${
-            isRTL ? "left-4 sm:left-6" : "right-4 sm:right-6"
-          } z-40 max-w-sm w-[calc(100%-2rem)] bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 ${
+          className={`absolute ${
+            mobileSheetMode === "peek" ? "bottom-18 md:bottom-4" : "bottom-3 md:bottom-4"
+          } ${
+            isRTL ? "left-3 sm:left-6" : "right-3 sm:right-6"
+          } z-50 max-w-sm sm:max-w-md w-[calc(100%-1.5rem)] sm:w-[420px] max-h-[82vh] overflow-y-auto bg-[#FDFBF7] rounded-2xl shadow-2xl border-2 ${
             selectedStation.routeType === "abraham" ? "border-[#D97706]" : "border-[#DC2626]"
-          } p-4 font-sans text-xs animate-in fade-in slide-in-from-bottom-3 duration-200`}
+          } p-4 sm:p-4.5 font-sans text-xs animate-in fade-in slide-in-from-bottom-3 duration-200`}
         >
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
@@ -4108,7 +4276,7 @@ export default function OldTestamentMapPage({
             </span>
           )}
 
-          <p className="text-stone-700 text-[11.5px] leading-relaxed mb-2.5">
+          <p className="text-stone-700 text-[11.5px] leading-relaxed mb-2.5 max-h-52 sm:max-h-64 overflow-y-auto pr-1 scrollbar-thin">
             {isRTL ? selectedStation.arabicDescription : selectedStation.description}
           </p>
 

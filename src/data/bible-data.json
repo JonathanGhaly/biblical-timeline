@@ -123,17 +123,19 @@
     {
       "id": "abraham",
       "name": "Abraham",
+      "arabicName": "إبراهيم",
       "gender": "male",
       "fatherId": "noah",
       "fatherAgeAtBirth": 778,
       "yearsLived": 175,
-      "spouseIds": ["sarah"],
+      "spouseIds": ["sarah", "hagar"],
       "biblicalReferences": ["Genesis 11-25"],
-      "notes": "Father of the covenant nation."
+      "notes": "Father of the covenant nation, married to Sarah and Hagar."
     },
     {
       "id": "sarah",
       "name": "Sarah",
+      "arabicName": "سارة",
       "gender": "female",
       "husbandId": "abraham",
       "anchorPersonId": "abraham",
@@ -144,8 +146,35 @@
       "notes": "Wife of Abraham, mother of Isaac."
     },
     {
+      "id": "hagar",
+      "name": "Hagar",
+      "arabicName": "هاجر",
+      "gender": "female",
+      "husbandId": "abraham",
+      "anchorPersonId": "abraham",
+      "anchorPersonAgeAtBirth": 15,
+      "spouseIds": ["abraham"],
+      "yearsLived": 90,
+      "biblicalReferences": ["Genesis 16", "Genesis 21", "Galatians 4:21-31"],
+      "notes": "Wife of Abraham, mother of Ishmael."
+    },
+    {
+      "id": "ishmael",
+      "name": "Ishmael",
+      "arabicName": "إسماعيل",
+      "gender": "male",
+      "fatherId": "abraham",
+      "motherId": "hagar",
+      "fatherAgeAtBirth": 86,
+      "yearsLived": 137,
+      "spouseIds": [],
+      "biblicalReferences": ["Genesis 16", "Genesis 17", "Genesis 21", "Genesis 25:12-18"],
+      "notes": "Firstborn son of Abraham born to Hagar."
+    },
+    {
       "id": "isaac",
       "name": "Isaac",
+      "arabicName": "إسحاق",
       "gender": "male",
       "fatherId": "abraham",
       "motherId": "sarah",
@@ -232,6 +261,22 @@
       "description": "God sends fire and brimstone upon Sodom and Gomorrah because of their wickedness, while angels rescue Lot and his daughters.",
       "arabicDescription": "أمطر الرب ناراً وكبريتاً من السماء على سدوم وعمورة لشرورهما بعد شفاعة إبراهيم، وأنقذ الملاكان لوطاً وابنتيه.",
       "biblicalReferences": ["Genesis 18", "Genesis 19"]
+    },
+    {
+      "id": "ishmael-birth",
+      "title": "Birth of Ishmael",
+      "arabicTitle": "ميلاد إسماعيل بكر إبراهيم",
+      "eventType": "birth",
+      "date": {
+        "year": -2080,
+        "precision": "approximate"
+      },
+      "personIds": ["abraham", "hagar", "ishmael"],
+      "location": "Canaan",
+      "locations": ["Canaan"],
+      "description": "Ishmael is born to Abraham and Hagar when Abraham was 86 years old.",
+      "arabicDescription": "ولادة إسماعيل لإبراهيم من هاجر المصرية وكان إبراهيم ابن 86 سنة.",
+      "biblicalReferences": ["Genesis 16"]
     },
     {
       "id": "isaac-birth",

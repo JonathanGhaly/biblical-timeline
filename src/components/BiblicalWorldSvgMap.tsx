@@ -354,29 +354,29 @@ export const BiblicalWorldSvgMap: React.FC<BiblicalWorldSvgMapProps> = ({
       {/* 6. REALISTIC RIVER SYSTEMS                                    */}
       {/* ============================================================= */}
       {layerState.showRivers && (
-        <g id="river-systems" stroke="#164E63" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <g id="river-systems" stroke="#0E4861" fill="none" strokeLinecap="round" strokeLinejoin="round">
           {/* NILE RIVER & DELTA */}
-          <path d={nileMainPath} strokeWidth={Math.max(1.2, 3.5 * scale.riverStrokeScale)} />
-          <path d={nileRosettaPath} strokeWidth={Math.max(0.9, 2.2 * scale.riverStrokeScale)} />
-          <path d={nileDamiettaPath} strokeWidth={Math.max(0.9, 2.2 * scale.riverStrokeScale)} />
-          <path d={nileGoshenPath} strokeWidth={Math.max(0.7, 1.6 * scale.riverStrokeScale)} strokeDasharray="3,2" />
-          <path d={wadiTumilatPath} strokeWidth={Math.max(0.6, 1.4 * scale.riverStrokeScale)} strokeDasharray="2,2" />
+          <path d={nileMainPath} strokeWidth={Math.max(1.8, 4.2 * scale.riverStrokeScale)} />
+          <path d={nileRosettaPath} strokeWidth={Math.max(1.2, 2.6 * scale.riverStrokeScale)} />
+          <path d={nileDamiettaPath} strokeWidth={Math.max(1.2, 2.6 * scale.riverStrokeScale)} />
+          <path d={nileGoshenPath} strokeWidth={Math.max(1.0, 2.0 * scale.riverStrokeScale)} strokeDasharray="3,2" />
+          <path d={wadiTumilatPath} strokeWidth={Math.max(0.8, 1.8 * scale.riverStrokeScale)} strokeDasharray="2,2" />
 
           {/* EUPHRATES RIVER & TRIBUTARIES */}
-          <path d={euphratesPath} strokeWidth={Math.max(1.1, 3.2 * scale.riverStrokeScale)} />
-          <path d={balikhPath} strokeWidth={Math.max(0.7, 1.8 * scale.riverStrokeScale)} />
-          <path d={khaburPath} strokeWidth={Math.max(0.8, 2.0 * scale.riverStrokeScale)} />
+          <path d={euphratesPath} strokeWidth={Math.max(1.6, 3.8 * scale.riverStrokeScale)} />
+          <path d={balikhPath} strokeWidth={Math.max(1.0, 2.2 * scale.riverStrokeScale)} />
+          <path d={khaburPath} strokeWidth={Math.max(1.1, 2.4 * scale.riverStrokeScale)} />
 
           {/* TIGRIS RIVER & TRIBUTARIES */}
-          <path d={tigrisPath} strokeWidth={Math.max(1.0, 3.0 * scale.riverStrokeScale)} />
-          <path d={greatZabPath} strokeWidth={Math.max(0.7, 1.8 * scale.riverStrokeScale)} />
-          <path d={karunPath} strokeWidth={Math.max(0.8, 2.0 * scale.riverStrokeScale)} />
+          <path d={tigrisPath} strokeWidth={Math.max(1.5, 3.6 * scale.riverStrokeScale)} />
+          <path d={greatZabPath} strokeWidth={Math.max(1.0, 2.2 * scale.riverStrokeScale)} />
+          <path d={karunPath} strokeWidth={Math.max(1.1, 2.4 * scale.riverStrokeScale)} />
 
           {/* JORDAN RIVER SYSTEM */}
-          <path d={jordanPath} strokeWidth={Math.max(0.9, 2.2 * scale.riverStrokeScale)} />
-          <path d={jabbokPath} strokeWidth={Math.max(0.6, 1.6 * scale.riverStrokeScale)} />
-          <path d={arnonPath} strokeWidth={Math.max(0.6, 1.6 * scale.riverStrokeScale)} />
-          <path d={orontesPath} strokeWidth={Math.max(0.7, 1.8 * scale.riverStrokeScale)} />
+          <path d={jordanPath} strokeWidth={Math.max(1.3, 2.8 * scale.riverStrokeScale)} />
+          <path d={jabbokPath} strokeWidth={Math.max(0.9, 1.9 * scale.riverStrokeScale)} />
+          <path d={arnonPath} strokeWidth={Math.max(0.9, 1.9 * scale.riverStrokeScale)} />
+          <path d={orontesPath} strokeWidth={Math.max(1.0, 2.2 * scale.riverStrokeScale)} />
         </g>
       )}
 

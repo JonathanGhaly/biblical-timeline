@@ -304,28 +304,79 @@ export const PersonDetailModal: React.FC<PersonDetailModalProps> = ({
           </div>
 
           {children.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {children.map((child) => (
-                <button
-                  key={child.id}
-                  onClick={() => onSelectPerson(child)}
-                  className="flex items-center justify-between p-2 rounded-lg border border-[#D4AF37]/30 bg-white/60 dark:bg-[#1C1A17] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs transition-colors text-start"
-                >
-                  <span className="font-semibold text-[#800020] dark:text-[#F3E5AB] truncate">
-                    {getPersonDisplayName(child, lang)}
-                  </span>
-                  <span
-                    className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 ${
-                      child.gender === "male"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                        : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
-                    }`}
+            spouses.length > 1 ? (
+              <div className="space-y-3">
+                {spouses.map((spouse) => {
+                  const spouseChildren = children.filter(
+                    (c) => c.motherId === spouse.id || c.fatherId === spouse.id
+                  );
+                  if (spouseChildren.length === 0) return null;
+                  return (
+                    <div
+                      key={`modal_spouse_${spouse.id}`}
+                      className="p-2.5 rounded-xl border border-pink-200/70 dark:border-pink-900/50 bg-pink-50/20 dark:bg-pink-950/10 space-y-2"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-pink-800 dark:text-pink-300">
+                        <Heart size={12} className="text-pink-600 dark:text-pink-400" />
+                        <span>
+                          {lang === "ar"
+                            ? `أبناء من ${getPersonDisplayName(spouse, lang)}:`
+                            : `Children with ${getPersonDisplayName(spouse, lang)}:`}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-pink-200 dark:bg-pink-900 text-pink-800 dark:text-pink-100 font-mono font-bold">
+                          {spouseChildren.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {spouseChildren.map((child) => (
+                          <button
+                            key={child.id}
+                            onClick={() => onSelectPerson(child)}
+                            className="flex items-center justify-between p-2 rounded-lg border border-[#D4AF37]/30 bg-white/80 dark:bg-[#1C1A17] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs transition-colors text-start shadow-sm"
+                          >
+                            <span className="font-semibold text-[#800020] dark:text-[#F3E5AB] truncate">
+                              {getPersonDisplayName(child, lang)}
+                            </span>
+                            <span
+                              className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 ${
+                                child.gender === "male"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                  : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
+                              }`}
+                            >
+                              {child.gender === "male" ? t.male : t.female}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {children.map((child) => (
+                  <button
+                    key={child.id}
+                    onClick={() => onSelectPerson(child)}
+                    className="flex items-center justify-between p-2 rounded-lg border border-[#D4AF37]/30 bg-white/60 dark:bg-[#1C1A17] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs transition-colors text-start"
                   >
-                    {child.gender === "male" ? t.male : t.female}
-                  </span>
-                </button>
-              ))}
-            </div>
+                    <span className="font-semibold text-[#800020] dark:text-[#F3E5AB] truncate">
+                      {getPersonDisplayName(child, lang)}
+                    </span>
+                    <span
+                      className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 ${
+                        child.gender === "male"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                          : "bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300"
+                      }`}
+                    >
+                      {child.gender === "male" ? t.male : t.female}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )
           ) : (
             <p className="text-xs italic text-[#8C7B6B] dark:text-[#A99F8D]">
               {t.noChildren}

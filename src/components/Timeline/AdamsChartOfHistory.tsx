@@ -352,19 +352,27 @@ export const AdamsChartOfHistory: React.FC<AdamsChartOfHistoryProps> = ({
   ];
 
   // Helper to calculate X percentage position on timeline
+  // Both LTR and RTL start at effectiveMinYear (0% = start, 100% = end).
+  // In LTR, left: `${pct}%` anchors from the left.
+  // In RTL, right: `${pct}%` anchors from the right.
+  // This ensures both English and Arabic timelines begin at the start (Adam, 4004 BC) at their respective natural edge.
   const getEventPositionPct = (year: number) => {
     const clampedYear = Math.max(effectiveMinYear, Math.min(effectiveMaxYear, year));
-    const pct = ((clampedYear - effectiveMinYear) / effectiveSpan) * 100;
-    return isRTL ? 100 - pct : pct;
+    return ((clampedYear - effectiveMinYear) / effectiveSpan) * 100;
   };
 
-  // Timeline year ticks
+  // Timeline year ticks: always starts with the initial anchor year (e.g. -4004 for Adam)
   const timelineTicks = useMemo(() => {
-    const ticks: number[] = [];
+    const ticks: number[] = [effectiveMinYear];
     const step = effectiveSpan > 2000 ? 500 : effectiveSpan > 600 ? 200 : effectiveSpan > 200 ? 50 : 25;
     const start = Math.ceil(effectiveMinYear / step) * step;
-    for (let yr = start; yr <= effectiveMaxYear; yr += step) {
-      ticks.push(yr);
+    for (let yr = start; yr < effectiveMaxYear; yr += step) {
+      if (yr - effectiveMinYear >= step * 0.35) {
+        ticks.push(yr);
+      }
+    }
+    if (effectiveMaxYear - ticks[ticks.length - 1] >= step * 0.35) {
+      ticks.push(effectiveMaxYear);
     }
     return ticks;
   }, [effectiveMinYear, effectiveMaxYear, effectiveSpan]);
@@ -732,20 +740,33 @@ export const AdamsChartOfHistory: React.FC<AdamsChartOfHistoryProps> = ({
             >
               {/* Year Scale Header Axis */}
               <div className="relative h-10 border-b-2 border-[#D4AF37] mb-4">
-                {timelineTicks.map((yr) => {
+                {timelineTicks.map((yr, idx) => {
                   const posPct = getEventPositionPct(yr);
+                  const isStartTick = idx === 0 || posPct <= 0.5;
+                  const isEndTick = idx === timelineTicks.length - 1 || posPct >= 99.5;
+
                   return (
                     <div
                       key={`axis_tick_${yr}`}
-                      className="absolute top-0 bottom-0 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                      className={`absolute top-0 bottom-0 pointer-events-none flex flex-col ${
+                        isStartTick
+                          ? isRTL ? "translate-x-0 items-start text-right" : "translate-x-0 items-start text-left"
+                          : isEndTick
+                          ? isRTL ? "translate-x-full items-end text-left" : "-translate-x-full items-end text-right"
+                          : isRTL ? "translate-x-1/2 items-center text-center" : "-translate-x-1/2 items-center text-center"
+                      }`}
                       style={{
                         [isRTL ? "right" : "left"]: `${posPct}%`,
                       }}
                     >
-                      <span className="text-[11px] font-mono font-bold text-[#800020] dark:text-[#D4AF37] bg-[#FAF7F0] dark:bg-[#161412] px-1">
+                      <span className="text-[11px] font-mono font-bold text-[#800020] dark:text-[#D4AF37] bg-[#FAF7F0] dark:bg-[#161412] px-1 whitespace-nowrap">
                         {formatYearDisplay(yr, lang)}
                       </span>
-                      <div className="w-0.5 h-2 bg-[#D4AF37] mt-auto" />
+                      <div className={`mt-auto ${
+                        isStartTick
+                          ? "w-1 h-3 bg-[#800020] dark:bg-[#D4AF37]"
+                          : "w-0.5 h-2 bg-[#D4AF37]"
+                      }`} />
                     </div>
                   );
                 })}
@@ -809,13 +830,16 @@ export const AdamsChartOfHistory: React.FC<AdamsChartOfHistoryProps> = ({
                           const isHovered = hoveredEvent?.id === evt.id;
                           const isSelected = selectedEvent?.id === evt.id;
                           const isUser = evt.isUserEntered;
+                          const isNearEnd = posPct >= 92;
 
                           return (
                             <div
                               key={`stream_node_${evt.id}`}
-                              className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group cursor-pointer ${
-                                isHovered ? "z-50" : "z-10"
-                              }`}
+                              className={`absolute top-1/2 -translate-y-1/2 group cursor-pointer ${
+                                isNearEnd
+                                  ? isRTL ? "translate-x-full" : "-translate-x-full"
+                                  : "translate-x-0"
+                              } ${isHovered ? "z-50" : "z-10"}`}
                               style={{
                                 [isRTL ? "right" : "left"]: `${posPct}%`,
                               }}
@@ -922,18 +946,31 @@ export const AdamsChartOfHistory: React.FC<AdamsChartOfHistoryProps> = ({
 
               {/* Bottom Year Scale Axis */}
               <div className="relative h-8 border-t-2 border-[#D4AF37] mt-4 pt-1">
-                {timelineTicks.map((yr) => {
+                {timelineTicks.map((yr, idx) => {
                   const posPct = getEventPositionPct(yr);
+                  const isStartTick = idx === 0 || posPct <= 0.5;
+                  const isEndTick = idx === timelineTicks.length - 1 || posPct >= 99.5;
+
                   return (
                     <div
                       key={`axis_bottom_tick_${yr}`}
-                      className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                      className={`absolute top-0 pointer-events-none flex flex-col ${
+                        isStartTick
+                          ? isRTL ? "translate-x-0 items-start text-right" : "translate-x-0 items-start text-left"
+                          : isEndTick
+                          ? isRTL ? "translate-x-full items-end text-left" : "-translate-x-full items-end text-right"
+                          : isRTL ? "translate-x-1/2 items-center text-center" : "-translate-x-1/2 items-center text-center"
+                      }`}
                       style={{
                         [isRTL ? "right" : "left"]: `${posPct}%`,
                       }}
                     >
-                      <div className="w-0.5 h-2 bg-[#D4AF37] mb-0.5" />
-                      <span className="text-[10px] font-mono text-[#7A6E5E] dark:text-[#A99F8D]">
+                      <div className={`mb-0.5 ${
+                        isStartTick
+                          ? "w-1 h-3 bg-[#800020] dark:bg-[#D4AF37]"
+                          : "w-0.5 h-2 bg-[#D4AF37]"
+                      }`} />
+                      <span className="text-[10px] font-mono text-[#7A6E5E] dark:text-[#A99F8D] whitespace-nowrap">
                         {formatYearDisplay(yr, lang)}
                       </span>
                     </div>
